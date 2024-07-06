@@ -1,35 +1,38 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import React from 'react';
+import { Routes, Route } from 'react-router-dom';
+import { AuthProvider } from './contexts/AuthContext';
+import Layout from './components/Layout/Layout';
+import PrivateRoute from './components/Common/PrivateRoute';
+import HomePage from './pages/HomePage';
+import LoginPage from './pages/LoginPage';
+import RegisterPage from './pages/RegisterPage';
+import ProtestaListPage from './pages/ProtestaListPage';
+import ProtestaFormPage from './pages/ProtestaFormPage';
+import ProtestaDetailPage from './pages/ProtestaDetailPage';
+import CabecillaListPage from './pages/CabecillaListPage';
+import CabecillaFormPage from './pages/CabecillaFormPage';
+import NaturalezaListPage from './pages/NaturalezaListPage';
+import NaturalezaFormPage from './pages/NaturalezaFormPage';
 
-function App() {
-  const [count, setCount] = useState(0)
-
+const App: React.FC = () => {
   return (
-    <>
-      <div>
-        <a href="https://vitejs.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.tsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
-  )
-}
+    <AuthProvider>
+      <Layout>
+        <Routes>
+          <Route path="/" element={<HomePage />} />
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/register" element={<RegisterPage />} />
+          <Route path="/protestas" element={<PrivateRoute><ProtestaListPage /></PrivateRoute>} />
+          <Route path="/protestas/new" element={<PrivateRoute><ProtestaFormPage /></PrivateRoute>} />
+          <Route path="/protestas/:id" element={<PrivateRoute><ProtestaDetailPage /></PrivateRoute>} />
+          <Route path="/cabecillas" element={<PrivateRoute><CabecillaListPage /></PrivateRoute>} />
+          <Route path="/cabecillas/new" element={<PrivateRoute><CabecillaFormPage /></PrivateRoute>} />
+          <Route path="/naturalezas" element={<PrivateRoute><NaturalezaListPage /></PrivateRoute>} />
+          <Route path="/naturalezas/new" element={<PrivateRoute><NaturalezaFormPage /></PrivateRoute>} />
+        </Routes>
+      </Layout>
+    </AuthProvider>
+  );
+};
 
-export default App
+export default App;
