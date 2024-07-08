@@ -9,7 +9,7 @@ const HomePage: React.FC = () => {
   return (
     <Box>
       <Typography variant="h4" gutterBottom>
-        Welcome to the Protestas App
+        Bienvenido a la aplicación Protestas
       </Typography>
       {user ? (
         <Grid container spacing={3}>
@@ -63,14 +63,13 @@ const HomePage: React.FC = () => {
         <Card>
           <CardContent>
             <Typography variant="body1" paragraph>
-              Please log in or register to use the app.
+              Por favor, inicie sesión o regístrese para usar la aplicación.
             </Typography>
             <Box sx={{ '& > :not(style)': { m: 1 } }}>
               <Button component={RouterLink} to="/login" variant="contained" color="primary">
-                Login
-              </Button>
+                Iniciar sesión              </Button>
               <Button component={RouterLink} to="/register" variant="contained" color="secondary">
-                Register
+                Registrarse
               </Button>
             </Box>
           </CardContent>

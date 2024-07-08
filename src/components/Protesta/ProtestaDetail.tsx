@@ -2,24 +2,33 @@ import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Typography, Button, Box, List, ListItem, ListItemText } from '@mui/material';
 import { useApi } from '../../hooks/useApi';
-import { Protesta } from '../../types';
+import { Protesta, Naturaleza, Provincia } from '../../types';
 
 const ProtestaDetail: React.FC = () => {
   const [protesta, setProtesta] = useState<Protesta | null>(null);
+  const [naturaleza, setNaturaleza] = useState<Naturaleza | null>(null);
+  const [provincia, setProvincia] = useState<Provincia | null>(null);
   const { request } = useApi();
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
 
   useEffect(() => {
-    const fetchProtesta = async () => {
+    const fetchData = async () => {
       try {
-        const data = await request('get', `/protestas/${id}`);
-        setProtesta(data);
+        const protestaData = await request<Protesta>('get', `/protestas/${id}`);
+        setProtesta(protestaData);
+
+        const [naturalezaData, provinciaData] = await Promise.all([
+          request<Naturaleza>('get', `/naturalezas/${protestaData.naturaleza_id}`),
+          request<Provincia>('get', `/provincias/${protestaData.provincia_id}`)
+        ]);
+        setNaturaleza(naturalezaData);
+        setProvincia(provinciaData);
       } catch (err) {
-        console.error('Error fetching protesta:', err);
+        console.error('Error fetching data:', err);
       }
     };
-    fetchProtesta();
+    fetchData();
   }, [id, request]);
 
   const handleDelete = async () => {
@@ -31,7 +40,7 @@ const ProtestaDetail: React.FC = () => {
     }
   };
 
-  if (!protesta) return <div>Loading...</div>;
+  if (!protesta || !naturaleza || !provincia) return <div>Loading...</div>;
 
   return (
     <Box>
@@ -45,10 +54,10 @@ const ProtestaDetail: React.FC = () => {
         Date: {new Date(protesta.fecha_evento).toLocaleDateString()}
       </Typography>
       <Typography variant="body2">
-        Naturaleza: {protesta.naturaleza.nombre}
+        Naturaleza: {naturaleza.nombre}
       </Typography>
       <Typography variant="body2">
-        Provincia: {protesta.provincia.nombre}
+        Provincia: {provincia.nombre}
       </Typography>
       <Typography variant="h6" gutterBottom>
         Cabecillas:

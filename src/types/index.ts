@@ -3,15 +3,19 @@ export interface User {
   nombre: string;
   apellidos: string;
   email: string;
+  foto?: string;
 }
 
 export interface Protesta {
   id: string;
   nombre: string;
+  naturaleza_id: string;
+  provincia_id: string;
   resumen: string;
   fecha_evento: string;
-  naturaleza: Naturaleza;
-  provincia: Provincia;
+  creado_por: string;
+  fecha_creacion: string;
+  soft_delete: boolean;
   cabecillas: Cabecilla[];
 }
 

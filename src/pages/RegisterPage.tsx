@@ -6,7 +6,7 @@ const RegisterPage: React.FC = () => {
   return (
     <Box>
       <Typography variant="h4" gutterBottom>
-        Register
+        Registrarse
       </Typography>
       <Register />
     </Box>

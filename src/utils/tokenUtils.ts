@@ -1,4 +1,4 @@
-export const getStoredToken = (type: 'accessToken' | 'refreshToken' = 'accessToken') => {
+export const getStoredToken = (type: 'accessToken' | 'refreshToken' = 'accessToken'): string | null => {
   return localStorage.getItem(type);
 };
 

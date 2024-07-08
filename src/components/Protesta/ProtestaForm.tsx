@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { TextField, Button, Select, MenuItem, FormControl, InputLabel, Box } from '@mui/material';
+import { TextField, Button, Select, MenuItem, FormControl, InputLabel, Box, SelectChangeEvent } from '@mui/material';
 import { useApi } from '../../hooks/useApi';
-import { Naturaleza, Provincia, Cabecilla } from '../../types';
+import { Naturaleza, Provincia, Cabecilla, Protesta } from '../../types';
 
 interface ProtestaFormData {
   nombre: string;
@@ -31,32 +31,42 @@ const ProtestaForm: React.FC = () => {
 
   useEffect(() => {
     const fetchData = async () => {
-      const [naturalezasData, provinciasData, cabecillasData] = await Promise.all([
-        request('get', '/naturalezas'),
-        request('get', '/provincias'),
-        request('get', '/cabecillas'),
-      ]);
-      setNaturalezas(naturalezasData);
-      setProvincias(provinciasData);
-      setCabecillas(cabecillasData);
+      try {
+        const [naturalezasData, provinciasData, cabecillasData] = await Promise.all([
+          request<Naturaleza[]>('get', '/naturalezas'),
+          request<Provincia[]>('get', '/provincias'),
+          request<Cabecilla[]>('get', '/cabecillas'),
+        ]);
+        setNaturalezas(naturalezasData);
+        setProvincias(provinciasData);
+        setCabecillas(cabecillasData);
 
-      if (id) {
-        const protestaData = await request('get', `/protestas/${id}`);
-        setFormData({
-          nombre: protestaData.nombre,
-          resumen: protestaData.resumen,
-          fecha_evento: protestaData.fecha_evento,
-          naturaleza_id: protestaData.naturaleza_id,
-          provincia_id: protestaData.provincia_id,
-          cabecillas: protestaData.cabecillas.map((c: Cabecilla) => c.id),
-        });
+        if (id) {
+          const protestaData = await request<Protesta>('get', `/protestas/${id}`);
+          setFormData({
+            nombre: protestaData.nombre,
+            resumen: protestaData.resumen,
+            fecha_evento: protestaData.fecha_evento,
+            naturaleza_id: protestaData.naturaleza_id,
+            provincia_id: protestaData.provincia_id,
+            cabecillas: protestaData.cabecillas.map((c) => c.id),
+          });
+        }
+      } catch (error) {
+        console.error('Error fetching data:', error);
       }
     };
     fetchData();
   }, [id, request]);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | { name?: string; value: unknown }>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name as string]: value }));
+  };
+
+  const handleSelectChange = (e: SelectChangeEvent<string | string[]>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -69,7 +79,7 @@ const ProtestaForm: React.FC = () => {
       }
       navigate('/protestas');
     } catch (err) {
-      console.error('Error saving protesta:', err);
+      console.error('Error al guardar protesta:', err);
     }
   };
 
@@ -116,7 +126,7 @@ const ProtestaForm: React.FC = () => {
           id="naturaleza_id"
           name="naturaleza_id"
           value={formData.naturaleza_id}
-          onChange={handleChange}
+          onChange={handleSelectChange}
         >
           {naturalezas.map((naturaleza) => (
             <MenuItem key={naturaleza.id} value={naturaleza.id}>
@@ -132,7 +142,7 @@ const ProtestaForm: React.FC = () => {
           id="provincia_id"
           name="provincia_id"
           value={formData.provincia_id}
-          onChange={handleChange}
+          onChange={handleSelectChange}
         >
           {provincias.map((provincia) => (
             <MenuItem key={provincia.id} value={provincia.id}>
@@ -149,7 +159,7 @@ const ProtestaForm: React.FC = () => {
           name="cabecillas"
           multiple
           value={formData.cabecillas}
-          onChange={handleChange}
+          onChange={handleSelectChange}
         >
           {cabecillas.map((cabecilla) => (
             <MenuItem key={cabecilla.id} value={cabecilla.id}>

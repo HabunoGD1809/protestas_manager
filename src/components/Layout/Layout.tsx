@@ -1,9 +1,12 @@
-import React from 'react';
+import React, { ReactNode } from 'react';
 import { Container, Box, CssBaseline } from '@mui/material';
 import Header from './Header';
 import Footer from './Footer';
+interface LayoutProps {
+  children: ReactNode;
+}
 
-const Layout: React.FC = ({ children }) => {
+const Layout: React.FC<LayoutProps> = ({ children }) => {
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
       <CssBaseline />

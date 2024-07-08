@@ -6,8 +6,7 @@ const LoginPage: React.FC = () => {
   return (
     <Box>
       <Typography variant="h4" gutterBottom>
-        Login
-      </Typography>
+        Iniciar sesión      </Typography>
       <Login />
     </Box>
   );

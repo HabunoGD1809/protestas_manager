@@ -2,22 +2,30 @@ import React, { useEffect, useState } from 'react';
 import { Link as RouterLink } from 'react-router-dom';
 import { Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Button } from '@mui/material';
 import { useApi } from '../../hooks/useApi';
-import { Protesta } from '../../types';
+import { Protesta, Naturaleza, Provincia } from '../../types';
 
 const ProtestaList: React.FC = () => {
   const [protestas, setProtestas] = useState<Protesta[]>([]);
+  const [naturalezas, setNaturalezas] = useState<{[key: string]: Naturaleza}>({});
+  const [provincias, setProvincias] = useState<{[key: string]: Provincia}>({});
   const { request, loading, error } = useApi();
 
   useEffect(() => {
-    const fetchProtestas = async () => {
+    const fetchData = async () => {
       try {
-        const data = await request('get', '/protestas');
-        setProtestas(data);
+        const [protestasData, naturalezasData, provinciasData] = await Promise.all([
+          request<Protesta[]>('get', '/protestas'),
+          request<Naturaleza[]>('get', '/naturalezas'),
+          request<Provincia[]>('get', '/provincias')
+        ]);
+        setProtestas(protestasData);
+        setNaturalezas(naturalezasData.reduce((acc, nat) => ({...acc, [nat.id]: nat}), {}));
+        setProvincias(provinciasData.reduce((acc, prov) => ({...acc, [prov.id]: prov}), {}));
       } catch (err) {
-        console.error('Error fetching protestas:', err);
+        console.error('Error fetching data:', err);
       }
     };
-    fetchProtestas();
+    fetchData();
   }, [request]);
 
   if (loading) return <div>Loading...</div>;
@@ -40,8 +48,8 @@ const ProtestaList: React.FC = () => {
             <TableRow key={protesta.id}>
               <TableCell>{protesta.nombre}</TableCell>
               <TableCell>{new Date(protesta.fecha_evento).toLocaleDateString()}</TableCell>
-              <TableCell>{protesta.naturaleza.nombre}</TableCell>
-              <TableCell>{protesta.provincia.nombre}</TableCell>
+              <TableCell>{naturalezas[protesta.naturaleza_id]?.nombre}</TableCell>
+              <TableCell>{provincias[protesta.provincia_id]?.nombre}</TableCell>
               <TableCell>
                 <Button component={RouterLink} to={`/protestas/${protesta.id}`}>
                   View
