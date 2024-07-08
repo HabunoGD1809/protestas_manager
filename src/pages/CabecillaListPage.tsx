@@ -10,7 +10,7 @@ const CabecillaListPage: React.FC = () => {
         Cabecillas
       </Typography>
       <Button component={RouterLink} to="/cabecillas/new" variant="contained" color="primary" sx={{ mb: 2 }}>
-        Create New Cabecilla
+        Crear nuevo Cabecilla
       </Button>
       <CabecillaList />
     </Box>

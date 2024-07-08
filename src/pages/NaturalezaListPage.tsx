@@ -10,7 +10,7 @@ const NaturalezaListPage: React.FC = () => {
         Naturalezas
       </Typography>
       <Button component={RouterLink} to="/naturalezas/new" variant="contained" color="primary" sx={{ mb: 2 }}>
-        Create New Naturaleza
+        Crear nueva Naturaleza
       </Button>
       <NaturalezaList />
     </Box>

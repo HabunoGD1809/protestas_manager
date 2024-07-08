@@ -9,7 +9,7 @@ const NaturalezaFormPage: React.FC = () => {
   return (
     <Box>
       <Typography variant="h4" gutterBottom>
-        {id ? 'Edit Naturaleza' : 'Create New Naturaleza'}
+        {id ? 'Edit Naturaleza' : 'Crear nueva Naturaleza'}
       </Typography>
       <NaturalezaForm />
     </Box>

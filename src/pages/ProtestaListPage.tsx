@@ -11,7 +11,7 @@ const ProtestaListPage: React.FC = () => {
       </Typography>
       <Box sx={{ mb: 2 }}>
         <Button component={RouterLink} to="/protestas/new" variant="contained" color="primary">
-          Create New Protesta
+          Crear nueva Protesta
         </Button>
       </Box>
       <Card>

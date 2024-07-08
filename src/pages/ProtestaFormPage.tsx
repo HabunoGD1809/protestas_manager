@@ -9,7 +9,7 @@ const ProtestaFormPage: React.FC = () => {
   return (
     <Box>
       <Typography variant="h4" gutterBottom>
-        {id ? 'Edit Protesta' : 'Create New Protesta'}
+        {id ? 'Edit Protesta' : 'Crear nueva Protesta'}
       </Typography>
       <ProtestaForm />
     </Box>

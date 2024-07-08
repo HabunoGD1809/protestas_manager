@@ -20,10 +20,10 @@ const HomePage: React.FC = () => {
                   Protestas
                 </Typography>
                 <Typography variant="body2" color="text.secondary" paragraph>
-                  View and manage protests.
+                  Ver y gestionar protestas.
                 </Typography>
                 <Button component={RouterLink} to="/protestas" variant="contained" color="primary" fullWidth>
-                  View Protestas
+                  Ver Protestas
                 </Button>
               </CardContent>
             </Card>
@@ -35,10 +35,10 @@ const HomePage: React.FC = () => {
                   Cabecillas
                 </Typography>
                 <Typography variant="body2" color="text.secondary" paragraph>
-                  Manage protest leaders.
+                  Gestionar líderes de protesta.
                 </Typography>
                 <Button component={RouterLink} to="/cabecillas" variant="contained" color="primary" fullWidth>
-                  View Cabecillas
+                  Ver Cabecillas
                 </Button>
               </CardContent>
             </Card>
@@ -50,10 +50,10 @@ const HomePage: React.FC = () => {
                   Naturalezas
                 </Typography>
                 <Typography variant="body2" color="text.secondary" paragraph>
-                  Manage protest natures.
+                  Gestionar tipos de protesta.
                 </Typography>
                 <Button component={RouterLink} to="/naturalezas" variant="contained" color="primary" fullWidth>
-                  View Naturalezas
+                  Ver Naturalezas
                 </Button>
               </CardContent>
             </Card>

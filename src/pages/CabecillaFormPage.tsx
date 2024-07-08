@@ -9,7 +9,7 @@ const CabecillaFormPage: React.FC = () => {
   return (
     <Box>
       <Typography variant="h4" gutterBottom>
-        {id ? 'Edit Cabecilla' : 'Create New Cabecilla'}
+        {id ? 'Edit Cabecilla' : 'Crear nuevo Cabecilla'}
       </Typography>
       <CabecillaForm />
     </Box>
