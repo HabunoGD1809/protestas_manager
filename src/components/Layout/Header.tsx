@@ -59,8 +59,8 @@ const Header: React.FC = () => {
                 open={Boolean(anchorEl)}
                 onClose={handleClose}
               >
-                <MenuItem onClick={handleClose}>Profile</MenuItem>
-                <MenuItem onClick={handleLogout}>Logout</MenuItem>
+                <MenuItem onClick={handleClose}>Perfil</MenuItem>
+                <MenuItem onClick={handleLogout}>Salir</MenuItem>
               </Menu>
             </>
           ) : (
