@@ -1,6 +1,6 @@
 import axios, { AxiosInstance, AxiosResponse, InternalAxiosRequestConfig } from 'axios';
 import { getStoredToken, setStoredToken, removeStoredToken } from '../utils/tokenUtils';
-import { Protesta, Cabecilla, Naturaleza, CreateProtestaData, UpdateProtestaData } from '../types';
+import { Protesta, Cabecilla, Naturaleza } from '../types';
 
 const BASE_URL = 'http://localhost:8000'; 
 
@@ -83,21 +83,17 @@ export const obtenerUsuarioActual = async () => {
   return response.data;
 };
 
-// Protesta API calls
 export const getProtestas = (): Promise<AxiosResponse<Protesta[]>> => api.get('/protestas');
-export const getProtesta = (id: string): Promise<AxiosResponse<Protesta>> => api.get(`/protestas/${id}`);
-export const createProtesta = (data: CreateProtestaData): Promise<AxiosResponse<Protesta>> => api.post('/protestas', data);
-export const updateProtesta = (id: string, data: UpdateProtestaData): Promise<AxiosResponse<Protesta>> => api.put(`/protestas/${id}`, data);
+export const createProtesta = (data: Omit<Protesta, 'id' | 'fecha_creacion' | 'soft_delete'>): Promise<AxiosResponse<Protesta>> => api.post('/protestas', data);
+export const updateProtesta = (id: string, data: Partial<Omit<Protesta, 'id' | 'fecha_creacion' | 'soft_delete'>>): Promise<AxiosResponse<Protesta>> => api.put(`/protestas/${id}`, data);
 export const deleteProtesta = (id: string): Promise<AxiosResponse<void>> => api.delete(`/protestas/${id}`);
 
-// Cabecilla API calls
 export const getCabecillas = (): Promise<AxiosResponse<Cabecilla[]>> => api.get('/cabecillas');
-export const createCabecilla = (data: Omit<Cabecilla, 'id' | 'creado_por' | 'fecha_creacion' | 'soft_delete'>): Promise<AxiosResponse<Cabecilla>> => api.post('/cabecillas', data);
-export const updateCabecilla = (id: string, data: Partial<Omit<Cabecilla, 'id' | 'creado_por' | 'fecha_creacion' | 'soft_delete'>>): Promise<AxiosResponse<Cabecilla>> => api.put(`/cabecillas/${id}`, data);
+export const createCabecilla = (data: Omit<Cabecilla, 'id'>): Promise<AxiosResponse<Cabecilla>> => api.post('/cabecillas', data);
+export const updateCabecilla = (id: string, data: Partial<Omit<Cabecilla, 'id'>>): Promise<AxiosResponse<Cabecilla>> => api.put(`/cabecillas/${id}`, data);
 export const deleteCabecilla = (id: string): Promise<AxiosResponse<void>> => api.delete(`/cabecillas/${id}`);
 
-// Naturaleza API calls
 export const getNaturalezas = (): Promise<AxiosResponse<Naturaleza[]>> => api.get('/naturalezas');
-export const createNaturaleza = (data: Omit<Naturaleza, 'id' | 'creado_por' | 'fecha_creacion' | 'soft_delete'>): Promise<AxiosResponse<Naturaleza>> => api.post('/naturalezas', data);
-export const updateNaturaleza = (id: string, data: Partial<Omit<Naturaleza, 'id' | 'creado_por' | 'fecha_creacion' | 'soft_delete'>>): Promise<AxiosResponse<Naturaleza>> => api.put(`/naturalezas/${id}`, data);
+export const createNaturaleza = (data: Omit<Naturaleza, 'id'>): Promise<AxiosResponse<Naturaleza>> => api.post('/naturalezas', data);
+export const updateNaturaleza = (id: string, data: Partial<Omit<Naturaleza, 'id'>>): Promise<AxiosResponse<Naturaleza>> => api.put(`/naturalezas/${id}`, data);
 export const deleteNaturaleza = (id: string): Promise<AxiosResponse<void>> => api.delete(`/naturalezas/${id}`);
