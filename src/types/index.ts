@@ -23,7 +23,7 @@ export interface Naturaleza {
   id: string;
   nombre: string;
   color: string;
-  icono?: string;
+  icono: string;
 }
 
 export interface Provincia {
