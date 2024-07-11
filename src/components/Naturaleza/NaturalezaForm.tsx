@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { TextField, Button, Box, Typography } from '@mui/material';
+import { TextField, Button, Box, Typography, Popover } from '@mui/material';
+import { ChromePicker, ColorResult } from 'react-color';
 import { useApi } from '../../hooks/useApi';
 import { Naturaleza } from '../../types';
 import IconSelector from '../../utils/IconSelector';
@@ -15,10 +16,12 @@ interface NaturalezaFormData extends Record<string, unknown> {
 const NaturalezaForm: React.FC = () => {
   const [formData, setFormData] = useState<NaturalezaFormData>({
     nombre: '',
-    color: '',
+    color: '#111111',
     icono: '',
   });
   const [isIconSelectorOpen, setIsIconSelectorOpen] = useState(false);
+  const [isColorPickerOpen, setIsColorPickerOpen] = useState(false);
+  const [colorAnchorEl, setColorAnchorEl] = useState<HTMLElement | null>(null);
   const { request } = useApi();
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
@@ -64,11 +67,16 @@ const NaturalezaForm: React.FC = () => {
     setFormData(prev => ({ ...prev, icono: iconName }));
   };
 
+  const handleColorChange = (color: ColorResult) => {
+    setFormData(prev => ({ ...prev, color: color.hex }));
+  };
+
   const SelectedIcon = formData.icono ? Icons[formData.icono as keyof typeof Icons] : null;
 
   return (
     <Box component="form" onSubmit={handleSubmit} sx={{ mt: 1 }}>
       <Typography variant="h6" sx={{ mb: 2 }}>
+        {id ? 'Editar' : 'Crear'} Naturaleza
       </Typography>
       <TextField
         margin="normal"
@@ -80,22 +88,57 @@ const NaturalezaForm: React.FC = () => {
         value={formData.nombre}
         onChange={handleChange}
       />
-      <TextField
-        margin="normal"
-        required
-        fullWidth
-        id="color"
-        label="Color"
-        name="color"
-        type="color"
-        value={formData.color}
-        onChange={handleChange}
-      />
+      <Box sx={{ mt: 2, mb: 2 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+          <Button
+            variant="outlined"
+            onClick={(e) => {
+              setColorAnchorEl(e.currentTarget);
+              setIsColorPickerOpen(true);
+            }}
+            sx={{ mr: 2 }}
+          >
+            Seleccionar Color
+          </Button>
+          <Box
+            sx={{
+              width: 40,
+              height: 40,
+              backgroundColor: formData.color,
+              border: '1px solid #000',
+              borderRadius: 1
+            }}
+          />
+        </Box>
+        <Popover
+          open={isColorPickerOpen}
+          anchorEl={colorAnchorEl}
+          onClose={() => setIsColorPickerOpen(false)}
+          anchorOrigin={{
+            vertical: 'bottom',
+            horizontal: 'left',
+          }}
+        >
+          <ChromePicker
+            color={formData.color}
+            onChange={handleColorChange}
+            disableAlpha
+          />
+        </Popover>
+      </Box>
       <Box sx={{ display: 'flex', alignItems: 'center', mt: 2, mb: 2 }}>
         <Button 
           variant="outlined"
           onClick={() => setIsIconSelectorOpen(true)}
           startIcon={SelectedIcon && <SelectedIcon />}
+          sx={{
+            borderColor: formData.color,
+            color: formData.color,
+            '&:hover': {
+              borderColor: formData.color,
+              backgroundColor: `${formData.color}10`,
+            }
+          }}
         >
           {formData.icono ? 'Cambiar Icono' : 'Seleccionar Icono'}
         </Button>
