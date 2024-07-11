@@ -1,6 +1,6 @@
-import axios, { AxiosInstance, AxiosResponse, InternalAxiosRequestConfig } from 'axios';
+import axios, { AxiosInstance, InternalAxiosRequestConfig } from 'axios';
 import { getStoredToken, setStoredToken, removeStoredToken } from '../utils/tokenUtils';
-import { Protesta, Cabecilla, Naturaleza } from '../types';
+import { Protesta, Cabecilla, Naturaleza, PaginatedResponse } from '../types';
 
 const BASE_URL = 'http://localhost:8000'; 
 
@@ -83,17 +83,27 @@ export const obtenerUsuarioActual = async () => {
   return response.data;
 };
 
-export const getProtestas = (): Promise<AxiosResponse<Protesta[]>> => api.get('/protestas');
-export const createProtesta = (data: Omit<Protesta, 'id' | 'fecha_creacion' | 'soft_delete'>): Promise<AxiosResponse<Protesta>> => api.post('/protestas', data);
-export const updateProtesta = (id: string, data: Partial<Omit<Protesta, 'id' | 'fecha_creacion' | 'soft_delete'>>): Promise<AxiosResponse<Protesta>> => api.put(`/protestas/${id}`, data);
-export const deleteProtesta = (id: string): Promise<AxiosResponse<void>> => api.delete(`/protestas/${id}`);
+export const protestaService = {
+  getAll: (page: number = 1, pageSize: number = 10) => 
+    api.get<PaginatedResponse<Protesta>>(`/protestas?page=${page}&page_size=${pageSize}`),
+  getById: (id: string) => api.get<Protesta>(`/protestas/${id}`),
+  create: (protesta: Omit<Protesta, 'id'>) => api.post<Protesta>('/protestas', protesta),
+  update: (id: string, protesta: Omit<Protesta, 'id'>) => api.put<Protesta>(`/protestas/${id}`, protesta),
+  delete: (id: string) => api.delete(`/protestas/${id}`),
+};
 
-export const getCabecillas = (): Promise<AxiosResponse<Cabecilla[]>> => api.get('/cabecillas');
-export const createCabecilla = (data: Omit<Cabecilla, 'id'>): Promise<AxiosResponse<Cabecilla>> => api.post('/cabecillas', data);
-export const updateCabecilla = (id: string, data: Partial<Omit<Cabecilla, 'id'>>): Promise<AxiosResponse<Cabecilla>> => api.put(`/cabecillas/${id}`, data);
-export const deleteCabecilla = (id: string): Promise<AxiosResponse<void>> => api.delete(`/cabecillas/${id}`);
+export const cabecillaService = {
+  getAll: () => api.get<Cabecilla[]>('/cabecillas'),
+  getById: (id: string) => api.get<Cabecilla>(`/cabecillas/${id}`),
+  create: (cabecilla: Omit<Cabecilla, 'id'>) => api.post<Cabecilla>('/cabecillas', cabecilla),
+  update: (id: string, cabecilla: Omit<Cabecilla, 'id'>) => api.put<Cabecilla>(`/cabecillas/${id}`, cabecilla),
+  delete: (id: string) => api.delete(`/cabecillas/${id}`),
+};
 
-export const getNaturalezas = (): Promise<AxiosResponse<Naturaleza[]>> => api.get('/naturalezas');
-export const createNaturaleza = (data: Omit<Naturaleza, 'id'>): Promise<AxiosResponse<Naturaleza>> => api.post('/naturalezas', data);
-export const updateNaturaleza = (id: string, data: Partial<Omit<Naturaleza, 'id'>>): Promise<AxiosResponse<Naturaleza>> => api.put(`/naturalezas/${id}`, data);
-export const deleteNaturaleza = (id: string): Promise<AxiosResponse<void>> => api.delete(`/naturalezas/${id}`);
+export const naturalezaService = {
+  getAll: () => api.get<Naturaleza[]>('/naturalezas'),
+  getById: (id: string) => api.get<Naturaleza>(`/naturalezas/${id}`),
+  create: (naturaleza: Omit<Naturaleza, 'id'>) => api.post<Naturaleza>('/naturalezas', naturaleza),
+  update: (id: string, naturaleza: Omit<Naturaleza, 'id'>) => api.put<Naturaleza>(`/naturalezas/${id}`, naturaleza),
+  delete: (id: string) => api.delete(`/naturalezas/${id}`),
+};

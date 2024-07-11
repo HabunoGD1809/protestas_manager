@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Link as RouterLink } from 'react-router-dom';
-import { Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Button } from '@mui/material';
+import { Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Button, Avatar } from '@mui/material';
 import { useApi } from '../../hooks/useApi';
 import { Cabecilla } from '../../types';
 
@@ -11,7 +11,7 @@ const CabecillaList: React.FC = () => {
   useEffect(() => {
     const fetchCabecillas = async () => {
       try {
-        const data = await request('get', '/cabecillas');
+        const data = await request<Cabecilla[]>('get', '/cabecillas');
         setCabecillas(data);
       } catch (err) {
         console.error('Error fetching cabecillas:', err);
@@ -28,6 +28,7 @@ const CabecillaList: React.FC = () => {
       <Table>
         <TableHead>
           <TableRow>
+            <TableCell>Foto</TableCell>
             <TableCell>Nombre</TableCell>
             <TableCell>Apellido</TableCell>
             <TableCell>Cédula</TableCell>
@@ -37,7 +38,10 @@ const CabecillaList: React.FC = () => {
         <TableBody>
           {cabecillas.map((cabecilla) => (
             <TableRow key={cabecilla.id}>
-            <TableCell>{cabecilla.nombre}</TableCell>
+              <TableCell>
+                <Avatar src={cabecilla.foto || undefined} alt={`${cabecilla.nombre} ${cabecilla.apellido}`} />
+              </TableCell>
+              <TableCell>{cabecilla.nombre}</TableCell>
               <TableCell>{cabecilla.apellido}</TableCell>
               <TableCell>{cabecilla.cedula}</TableCell>
               <TableCell>

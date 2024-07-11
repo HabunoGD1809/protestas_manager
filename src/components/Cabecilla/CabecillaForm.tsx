@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { TextField, Button, Box } from '@mui/material';
+import { TextField, Button, Box, Avatar } from '@mui/material';
 import { useApi } from '../../hooks/useApi';
+import { Cabecilla } from '../../types';
 
 interface CabecillaFormData {
   nombre: string;
@@ -19,6 +20,8 @@ const CabecillaForm: React.FC = () => {
     telefono: '',
     direccion: '',
   });
+  const [foto, setFoto] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const { request } = useApi();
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
@@ -27,8 +30,17 @@ const CabecillaForm: React.FC = () => {
     if (id) {
       const fetchCabecilla = async () => {
         try {
-          const data = await request('get', `/cabecillas/${id}`);
-          setFormData(data);
+          const data = await request<Cabecilla>('get', `/cabecillas/${id}`);
+          setFormData({
+            nombre: data.nombre,
+            apellido: data.apellido,
+            cedula: data.cedula,
+            telefono: data.telefono || '',
+            direccion: data.direccion || '',
+          });
+          if (data.foto) {
+            setPreviewUrl(data.foto);
+          }
         } catch (err) {
           console.error('Error fetching cabecilla:', err);
         }
@@ -41,13 +53,29 @@ const CabecillaForm: React.FC = () => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      setFoto(file);
+      setPreviewUrl(URL.createObjectURL(file));
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
+      const formDataToSend = new FormData();
+      Object.entries(formData).forEach(([key, value]) => {
+        formDataToSend.append(key, value);
+      });
+      if (foto) {
+        formDataToSend.append('foto', foto);
+      }
+
       if (id) {
-        await request('put', `/cabecillas/${id}`, formData);
+        await request('put', `/cabecillas/${id}`, formDataToSend);
       } else {
-        await request('post', '/cabecillas', formData);
+        await request('post', '/cabecillas', formDataToSend);
       }
       navigate('/cabecillas');
     } catch (err) {
@@ -57,6 +85,13 @@ const CabecillaForm: React.FC = () => {
 
   return (
     <Box component="form" onSubmit={handleSubmit} sx={{ mt: 1 }}>
+      <Box sx={{ display: 'flex', justifyContent: 'center', mb: 2 }}>
+        <Avatar src={previewUrl || undefined} sx={{ width: 100, height: 100 }} />
+      </Box>
+      <Button variant="contained" component="label" fullWidth sx={{ mb: 2 }}>
+        Subir Foto
+        <input type="file" hidden onChange={handleFileChange} accept="image/*" />
+      </Button>
       <TextField
         margin="normal"
         required
@@ -106,7 +141,7 @@ const CabecillaForm: React.FC = () => {
         onChange={handleChange}
       />
       <Button type="submit" fullWidth variant="contained" sx={{ mt: 3, mb: 2 }}>
-        {id ? 'Update' : 'Create'} Cabecilla
+        {id ? 'Actualizar' : 'Crear'} Cabecilla
       </Button>
     </Box>
   );

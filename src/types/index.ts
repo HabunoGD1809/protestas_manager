@@ -33,9 +33,18 @@ export interface Provincia {
 
 export interface Cabecilla {
   id: string;
+  foto?: string;
   nombre: string;
   apellido: string;
   cedula: string;
   telefono?: string;
   direccion?: string;
+}
+
+export interface PaginatedResponse<T> {
+  items: T[];
+  total: number;
+  page: number;
+  page_size: number;
+  pages: number;
 }
