@@ -39,7 +39,11 @@ const ProtestaFormPage: React.FC = () => {
       navigate('/protestas');
     } catch (error) {
       console.error('Error al guardar la protesta', error);
-      message.error('Error al guardar la protesta');
+      if (error instanceof Error) {
+        message.error(`Error al guardar la protesta: ${error.message}`);
+      } else {
+        message.error('Error al guardar la protesta');
+      }
     }
   };
 

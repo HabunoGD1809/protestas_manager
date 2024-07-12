@@ -23,7 +23,7 @@ const ProtestaList: React.FC = () => {
       setProtestas(data.items);
       setPagination({
         current: data.page,
-        pageSize: data.page_size,
+        pageSize: data.page_size,   
         total: data.total
       });
     } catch (error) {
@@ -34,6 +34,7 @@ const ProtestaList: React.FC = () => {
 
   useEffect(() => {
     fetchProtestas(pagination.current, pagination.pageSize);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fetchProtestas, pagination.current, pagination.pageSize]);
 
   useEffect(() => {

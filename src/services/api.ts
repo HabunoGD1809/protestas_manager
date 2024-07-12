@@ -132,11 +132,11 @@ export const resumenService = {
   getPaginaPrincipal: async () => {
     try {
       const response = await api.get<ResumenPrincipal>('/pagina-principal');
-      console.log('Respuesta de la API:', response.data);  // Log para debugging
+      console.log('Respuesta de la API:', response.data); 
       return response.data;
     } catch (error) {
       console.error('Error al obtener el resumen principal:', error);
       throw error;
-    }
+    } 
   },
 };
