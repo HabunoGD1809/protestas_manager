@@ -25,10 +25,13 @@ const App: React.FC = () => {
           <Route path="/protestas" element={<PrivateRoute><ProtestaListPage /></PrivateRoute>} />
           <Route path="/protestas/new" element={<PrivateRoute><ProtestaFormPage /></PrivateRoute>} />
           <Route path="/protestas/:id" element={<PrivateRoute><ProtestaDetailPage /></PrivateRoute>} />
+          <Route path="/protestas/editar/:id" element={<PrivateRoute><ProtestaFormPage /></PrivateRoute>} />
           <Route path="/cabecillas" element={<PrivateRoute><CabecillaListPage /></PrivateRoute>} />
           <Route path="/cabecillas/new" element={<PrivateRoute><CabecillaFormPage /></PrivateRoute>} />
+          <Route path="/cabecillas/:id" element={<PrivateRoute><CabecillaFormPage /></PrivateRoute>} />
           <Route path="/naturalezas" element={<PrivateRoute><NaturalezaListPage /></PrivateRoute>} />
           <Route path="/naturalezas/new" element={<PrivateRoute><NaturalezaFormPage /></PrivateRoute>} />
+          <Route path="/naturalezas/:id" element={<PrivateRoute><NaturalezaFormPage /></PrivateRoute>} />
         </Routes>
       </Layout>
     </AuthProvider>

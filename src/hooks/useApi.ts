@@ -3,13 +3,12 @@ import { api } from '../services/api';
 import { AxiosError } from 'axios';
 
 type HttpMethod = 'get' | 'post' | 'put' | 'delete';
-type RequestData = Record<string, unknown> | FormData | undefined;
 
 export const useApi = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const request = useCallback(async <T>(method: HttpMethod, url: string, data?: RequestData): Promise<T> => {
+  const request = useCallback(async <T, D = unknown>(method: HttpMethod, url: string, data?: D): Promise<T> => {
     setLoading(true);
     setError(null);
     try {

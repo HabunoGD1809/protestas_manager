@@ -1,30 +1,38 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
-import { Protesta, Naturaleza, Provincia, Cabecilla } from '../../types';
+import { Protesta, Naturaleza, Provincia, Cabecilla, CrearProtesta } from '../../types';
 import { useApi } from '../../hooks/useApi';
 import { Form, Input, DatePicker, Select, Button, message } from 'antd';
-import { protestaService, naturalezaService, provinciaService, cabecillaService } from '../../services/api';
+import { naturalezaService, provinciaService, cabecillaService } from '../../services/api';
 import dayjs from 'dayjs';
 
 const { TextArea } = Input;
 const { Option } = Select;
 
-const ProtestaForm: React.FC = () => {
-  const [form] = Form.useForm();
-  const { request, loading, error } = useApi();
-  const navigate = useNavigate();
-  const { id } = useParams<{ id: string }>();
+interface ProtestaFormProps {
+  initialData?: Protesta;
+  onSubmit: (values: CrearProtesta) => Promise<void>;
+}
 
+const ProtestaForm: React.FC<ProtestaFormProps> = ({ initialData, onSubmit }) => {
+  const [form] = Form.useForm();
+  const { loading, error } = useApi();
   const [naturalezas, setNaturalezas] = useState<Naturaleza[]>([]);
   const [provincias, setProvincias] = useState<Provincia[]>([]);
   const [cabecillas, setCabecillas] = useState<Cabecilla[]>([]);
 
   useEffect(() => {
     fetchFormData();
-    if (id) {
-      fetchProtesta(id);
+  }, []);
+
+  useEffect(() => {
+    if (initialData) {
+      form.setFieldsValue({
+        ...initialData,
+        fecha_evento: dayjs(initialData.fecha_evento),
+        cabecillas: initialData.cabecillas.map(c => c.id),
+      });
     }
-  }, [id]);
+  }, [initialData, form]);
 
   const fetchFormData = async () => {
     try {
@@ -37,44 +45,25 @@ const ProtestaForm: React.FC = () => {
       setProvincias(provinciasData);
       setCabecillas(cabecillasData);
     } catch (error) {
+      console.error('Error al cargar los datos del formulario', error);
       message.error('Error al cargar los datos del formulario');
     }
   };
 
-  const fetchProtesta = async (protestaId: string) => {
-    try {
-      const protesta = await protestaService.getById(protestaId);
-      form.setFieldsValue({
-        ...protesta,
-        fecha_evento: dayjs(protesta.fecha_evento),
-        cabecillas: protesta.cabecillas.map(c => c.id),
-      });
-    } catch (error) {
-      message.error('Error al cargar los datos de la protesta');
-    }
-  };
-
-  const onFinish = async (values: any) => {
-    try {
-      const data = {
-        ...values,
-        fecha_evento: values.fecha_evento.format('YYYY-MM-DD'),
-      };
-      if (id) {
-        await protestaService.update(id, data);
-        message.success('Protesta actualizada con éxito');
-      } else {
-        await protestaService.create(data);
-        message.success('Protesta creada con éxito');
-      }
-      navigate('/protestas');
-    } catch (error) {
-      message.error('Error al guardar la protesta');
-    }
+  const handleFinish = async (values: any) => {
+    const protestaData: CrearProtesta = {
+      nombre: values.nombre,
+      naturaleza_id: values.naturaleza_id,
+      provincia_id: values.provincia_id,
+      resumen: values.resumen,
+      fecha_evento: values.fecha_evento.format('YYYY-MM-DD'),
+      cabecillas: values.cabecillas || [],
+    };
+    await onSubmit(protestaData);
   };
 
   return (
-    <Form form={form} onFinish={onFinish} layout="vertical">
+    <Form form={form} onFinish={handleFinish} layout="vertical">
       <Form.Item name="nombre" label="Nombre" rules={[{ required: true }]}>
         <Input />
       </Form.Item>
@@ -107,7 +96,7 @@ const ProtestaForm: React.FC = () => {
       </Form.Item>
       <Form.Item>
         <Button type="primary" htmlType="submit" loading={loading}>
-          {id ? 'Actualizar' : 'Crear'} Protesta
+          {initialData ? 'Actualizar' : 'Crear'} Protesta
         </Button>
       </Form.Item>
       {error && <p style={{ color: 'red' }}>{error}</p>}

@@ -1,13 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
-import ProtestaForm from '../components/Protesta/ProtestaForm';
-import { Protesta } from '../types';
+import { useParams, useNavigate } from 'react-router-dom';
+import { Protesta, CrearProtesta } from '../types';
 import { useApi } from '../hooks/useApi';
+import { message } from 'antd';
+import ProtestaForm from '../components/Protesta/ProtestaForm';
 
 const ProtestaFormPage: React.FC = () => {
-  const [protesta, setProtesta] = useState<Protesta | undefined>(undefined);
+  const [initialData, setInitialData] = useState<Protesta | undefined>(undefined);
   const { id } = useParams<{ id: string }>();
   const { request, loading, error } = useApi();
+  const navigate = useNavigate();
 
   useEffect(() => {
     if (id) {
@@ -18,9 +20,26 @@ const ProtestaFormPage: React.FC = () => {
   const fetchProtesta = async (protestaId: string) => {
     try {
       const data = await request<Protesta>('get', `/protestas/${protestaId}`);
-      setProtesta(data);
+      setInitialData(data);
     } catch (error) {
       console.error('Error al cargar la protesta', error);
+      message.error('Error al cargar los datos de la protesta');
+    }
+  };
+
+  const handleSubmit = async (values: CrearProtesta) => {
+    try {
+      if (id) {
+        await request<Protesta, CrearProtesta>('put', `/protestas/${id}`, values);
+        message.success('Protesta actualizada con éxito');
+      } else {
+        await request<Protesta, CrearProtesta>('post', '/protestas', values);
+        message.success('Protesta creada con éxito');
+      }
+      navigate('/protestas');
+    } catch (error) {
+      console.error('Error al guardar la protesta', error);
+      message.error('Error al guardar la protesta');
     }
   };
 
@@ -30,7 +49,7 @@ const ProtestaFormPage: React.FC = () => {
   return (
     <div>
       <h1>{id ? 'Editar' : 'Crear'} Protesta</h1>
-      <ProtestaForm initialData={protesta} />
+      <ProtestaForm initialData={initialData} onSubmit={handleSubmit} />
     </div>
   );
 };
