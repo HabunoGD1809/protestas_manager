@@ -1,6 +1,6 @@
 import axios, { AxiosInstance, InternalAxiosRequestConfig } from 'axios';
 import { getStoredToken, setStoredToken, removeStoredToken } from '../utils/tokenUtils';
-import { Protesta, Cabecilla, Naturaleza, PaginatedResponse } from '../types';
+import { Protesta, Cabecilla, Naturaleza, Provincia, PaginatedResponse, CrearProtesta, CrearCabecilla, CrearNaturaleza, ResumenPrincipal, User, Token } from '../types';
 
 const BASE_URL = 'http://localhost:8000'; 
 
@@ -29,8 +29,8 @@ api.interceptors.response.use(
       if (refreshTokenValue) {
         try {
           const response = await refreshToken(refreshTokenValue);
-          setStoredToken(response.access_token, response.refresh_token);
-          api.defaults.headers.common['Authorization'] = `Bearer ${response.access_token}`;
+          setStoredToken(response.token_acceso, response.token_actualizacion);
+          api.defaults.headers.common['Authorization'] = `Bearer ${response.token_acceso}`;
           return api(originalRequest);
         } catch (refreshError) {
           removeStoredToken();
@@ -52,7 +52,7 @@ export const login = async (email: string, password: string) => {
   formData.append('username', email);
   formData.append('password', password);
 
-  const response = await api.post('/token', formData.toString(), {
+  const response = await api.post<Token>('/token', formData.toString(), {
     headers: {
       'Content-Type': 'application/x-www-form-urlencoded',
     },
@@ -61,7 +61,7 @@ export const login = async (email: string, password: string) => {
 };
 
 export const register = async (userData: FormData) => {
-  const response = await api.post('/registro', userData, {
+  const response = await api.post<User>('/registro', userData, {
     headers: {
       'Content-Type': 'multipart/form-data',
     },
@@ -70,7 +70,7 @@ export const register = async (userData: FormData) => {
 };
 
 export const refreshToken = async (refreshToken: string) => {
-  const response = await api.post('/token/renovar', { refresh_token: refreshToken });
+  const response = await api.post<Token>('/token/renovar', { refresh_token: refreshToken });
   return response.data;
 };
 
@@ -79,31 +79,64 @@ export const logout = () => {
 };
 
 export const obtenerUsuarioActual = async () => {
-  const response = await api.get('/usuarios/me');
+  const response = await api.get<User>('/usuarios/me');
   return response.data;
 };
 
 export const protestaService = {
-  getAll: (page: number = 1, pageSize: number = 10) => 
-    api.get<PaginatedResponse<Protesta>>(`/protestas?page=${page}&page_size=${pageSize}`),
-  getById: (id: string) => api.get<Protesta>(`/protestas/${id}`),
-  create: (protesta: Omit<Protesta, 'id'>) => api.post<Protesta>('/protestas', protesta),
-  update: (id: string, protesta: Omit<Protesta, 'id'>) => api.put<Protesta>(`/protestas/${id}`, protesta),
-  delete: (id: string) => api.delete(`/protestas/${id}`),
+  getAll: async (page: number = 1, pageSize: number = 10, filters?: Record<string, string>) => {
+    const response = await api.get<PaginatedResponse<Protesta>>('/protestas', { 
+      params: { 
+        page, 
+        page_size: pageSize, 
+        ...filters 
+      } 
+    });
+    return response.data;
+  },
+  getById: (id: string) => api.get<Protesta>(`/protestas/${id}`).then(res => res.data),
+  create: (protesta: CrearProtesta) => api.post<Protesta>('/protestas', protesta).then(res => res.data),
+  update: (id: string, protesta: CrearProtesta) => api.put<Protesta>(`/protestas/${id}`, protesta).then(res => res.data),
+  delete: (id: string) => api.delete(`/protestas/${id}`).then(res => res.data),
 };
 
 export const cabecillaService = {
-  getAll: () => api.get<Cabecilla[]>('/cabecillas'),
-  getById: (id: string) => api.get<Cabecilla>(`/cabecillas/${id}`),
-  create: (cabecilla: Omit<Cabecilla, 'id'>) => api.post<Cabecilla>('/cabecillas', cabecilla),
-  update: (id: string, cabecilla: Omit<Cabecilla, 'id'>) => api.put<Cabecilla>(`/cabecillas/${id}`, cabecilla),
-  delete: (id: string) => api.delete(`/cabecillas/${id}`),
+  getAll: () => api.get<Cabecilla[]>('/cabecillas').then(res => res.data),
+  getById: (id: string) => api.get<Cabecilla>(`/cabecillas/${id}`).then(res => res.data),
+  create: (cabecilla: CrearCabecilla) => api.post<Cabecilla>('/cabecillas', cabecilla).then(res => res.data),
+  update: (id: string, cabecilla: CrearCabecilla) => api.put<Cabecilla>(`/cabecillas/${id}`, cabecilla).then(res => res.data),
+  delete: (id: string) => api.delete(`/cabecillas/${id}`).then(res => res.data),
+  updateFoto: (id: string, foto: File) => {
+    const formData = new FormData();
+    formData.append('foto', foto);
+    return api.post<Cabecilla>(`/cabecillas/${id}/foto`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    }).then(res => res.data);
+  },
 };
 
 export const naturalezaService = {
-  getAll: () => api.get<Naturaleza[]>('/naturalezas'),
-  getById: (id: string) => api.get<Naturaleza>(`/naturalezas/${id}`),
-  create: (naturaleza: Omit<Naturaleza, 'id'>) => api.post<Naturaleza>('/naturalezas', naturaleza),
-  update: (id: string, naturaleza: Omit<Naturaleza, 'id'>) => api.put<Naturaleza>(`/naturalezas/${id}`, naturaleza),
-  delete: (id: string) => api.delete(`/naturalezas/${id}`),
+  getAll: () => api.get<Naturaleza[]>('/naturalezas').then(res => res.data),
+  getById: (id: string) => api.get<Naturaleza>(`/naturalezas/${id}`).then(res => res.data),
+  create: (naturaleza: CrearNaturaleza) => api.post<Naturaleza>('/naturalezas', naturaleza).then(res => res.data),
+  update: (id: string, naturaleza: CrearNaturaleza) => api.put<Naturaleza>(`/naturalezas/${id}`, naturaleza).then(res => res.data),
+  delete: (id: string) => api.delete(`/naturalezas/${id}`).then(res => res.data),
+};
+
+export const provinciaService = {
+  getAll: () => api.get<Provincia[]>('/provincias').then(res => res.data),
+  getById: (id: string) => api.get<Provincia>(`/provincias/${id}`).then(res => res.data),
+};
+
+export const resumenService = {
+  getPaginaPrincipal: async () => {
+    try {
+      const response = await api.get<ResumenPrincipal>('/pagina-principal');
+      console.log('Respuesta de la API:', response.data);  // Log para debugging
+      return response.data;
+    } catch (error) {
+      console.error('Error al obtener el resumen principal:', error);
+      throw error;
+    }
+  },
 };

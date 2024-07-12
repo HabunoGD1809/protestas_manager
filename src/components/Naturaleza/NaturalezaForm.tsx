@@ -76,7 +76,6 @@ const NaturalezaForm: React.FC = () => {
   return (
     <Box component="form" onSubmit={handleSubmit} sx={{ mt: 1 }}>
       <Typography variant="h6" sx={{ mb: 2 }}>
-        {id ? 'Editar' : 'Crear'} Naturaleza
       </Typography>
       <TextField
         margin="normal"

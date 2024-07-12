@@ -38,7 +38,9 @@ export const useApi = () => {
     } catch (err) {
       setLoading(false);
       if (err instanceof AxiosError) {
-        setError(err.response?.data?.detail || err.message);
+        setError(err.response?.data?.detail || err.message || 'Error en la solicitud');
+      } else if (err instanceof Error) {
+        setError(err.message);
       } else {
         setError('Ha ocurrido un error inesperado');
       }

@@ -1,65 +1,179 @@
-import React, { useEffect, useState } from 'react';
-import { Link as RouterLink } from 'react-router-dom';
-import { Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Button } from '@mui/material';
-import { useApi } from '../../hooks/useApi';
+import React, { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Protesta, Naturaleza, Provincia } from '../../types';
+import { useApi } from '../../hooks/useApi';
+import { Button, Table, Space, message, Modal } from 'antd';
+import { EditOutlined, DeleteOutlined, PlusOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
+import ProtestaFilter from './ProtestaFilter';
+import Pagination from '../Common/Pagination';
+import { protestaService, naturalezaService, provinciaService } from '../../services/api';
 
 const ProtestaList: React.FC = () => {
   const [protestas, setProtestas] = useState<Protesta[]>([]);
-  const [naturalezas, setNaturalezas] = useState<{[key: string]: Naturaleza}>({});
-  const [provincias, setProvincias] = useState<{[key: string]: Provincia}>({});
-  const { request, loading, error } = useApi();
+  const [naturalezas, setNaturalezas] = useState<Naturaleza[]>([]);
+  const [provincias, setProvincias] = useState<Provincia[]>([]);
+  const [pagination, setPagination] = useState({ current: 1, pageSize: 10, total: 0 });
+  const [filters, setFilters] = useState<Record<string, string>>({});
+  const { loading, error } = useApi();
+  const navigate = useNavigate();
+
+  const fetchProtestas = useCallback(async (page: number, pageSize: number) => {
+    try {
+      const data = await protestaService.getAll(page, pageSize, filters);
+      setProtestas(data.items);
+      setPagination({
+        current: data.page,
+        pageSize: data.page_size,
+        total: data.total
+      });
+    } catch (error) {
+      console.error('Error fetching protestas:', error);
+      message.error('Error al cargar las protestas');
+    }
+  }, [filters]);
 
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const [protestasData, naturalezasData, provinciasData] = await Promise.all([
-          request<Protesta[]>('get', '/protestas'),
-          request<Naturaleza[]>('get', '/naturalezas'),
-          request<Provincia[]>('get', '/provincias')
-        ]);
-        setProtestas(protestasData);
-        setNaturalezas(naturalezasData.reduce((acc, nat) => ({...acc, [nat.id]: nat}), {}));
-        setProvincias(provinciasData.reduce((acc, prov) => ({...acc, [prov.id]: prov}), {}));
-      } catch (err) {
-        console.error('Error fetching data:', err);
-      }
-    };
-    fetchData();
-  }, [request]);
+    fetchProtestas(pagination.current, pagination.pageSize);
+  }, [fetchProtestas, pagination.current, pagination.pageSize]);
 
-  if (loading) return <div>Loading...</div>;
-  if (error) return <div>Error: {error}</div>;
+  useEffect(() => {
+    fetchNaturalezas();
+    fetchProvincias();
+  }, []);
+
+  const fetchNaturalezas = async () => {
+    try {
+      const data = await naturalezaService.getAll();
+      setNaturalezas(data);
+    } catch (error) {
+      console.error('Error fetching naturalezas:', error);
+      message.error('Error al cargar las naturalezas');
+    }
+  };
+
+  const fetchProvincias = async () => {
+    try {
+      const data = await provinciaService.getAll();
+      setProvincias(data);
+    } catch (error) {
+      console.error('Error fetching provincias:', error);
+      message.error('Error al cargar las provincias');
+    }
+  };
+
+  const handleDelete = (id: string) => {
+    Modal.confirm({
+      title: '¿Estás seguro de que quieres eliminar esta protesta?',
+      icon: <ExclamationCircleOutlined />,
+      content: 'Esta acción no se puede deshacer.',
+      okText: 'Sí',
+      okType: 'danger',
+      cancelText: 'No',
+      onOk: async () => {
+        try {
+          await protestaService.delete(id);
+          message.success('Protesta eliminada con éxito');
+          fetchProtestas(pagination.current, pagination.pageSize);
+        } catch (error) {
+          console.error('Error deleting protesta:', error);
+          message.error('Error al eliminar la protesta');
+        }
+      },
+    });
+  };
+
+  const handleFilter = (newFilters: Record<string, string>) => {
+    setFilters(newFilters);
+    fetchProtestas(1, pagination.pageSize);
+  };
+
+  const handlePaginationChange = (page: number, pageSize?: number) => {
+    fetchProtestas(page, pageSize || pagination.pageSize);
+  };
+
+  const columns = [
+    {
+      title: 'Nombre',
+      dataIndex: 'nombre',
+      key: 'nombre',
+    },
+    {
+      title: 'Naturaleza',
+      dataIndex: 'naturaleza_id',
+      key: 'naturaleza_id',
+      render: (naturalezaId: string) => {
+        const naturaleza = naturalezas.find(n => n.id === naturalezaId);
+        return naturaleza ? naturaleza.nombre : 'N/A';
+      },
+    },
+    {
+      title: 'Provincia',
+      dataIndex: 'provincia_id',
+      key: 'provincia_id',
+      render: (provinciaId: string) => {
+        const provincia = provincias.find(p => p.id === provinciaId);
+        return provincia ? provincia.nombre : 'N/A';
+      },
+    },
+    {
+      title: 'Fecha del Evento',
+      dataIndex: 'fecha_evento',
+      key: 'fecha_evento',
+    },
+    {
+      title: 'Acciones',
+      key: 'actions',
+      render: (_: any, record: Protesta) => (
+        <Space size="middle">
+          <Button 
+            icon={<EditOutlined />} 
+            onClick={() => navigate(`/protestas/${record.id}`)}
+          >
+            Editar
+          </Button>
+          <Button 
+            icon={<DeleteOutlined />} 
+            danger
+            onClick={() => handleDelete(record.id)}
+          >
+            Eliminar
+          </Button>
+        </Space>
+      ),
+    },
+  ];
 
   return (
-    <TableContainer component={Paper}>
-      <Table>
-        <TableHead>
-          <TableRow>
-            <TableCell>Nombre</TableCell>
-            <TableCell>Fecha</TableCell>
-            <TableCell>Naturaleza</TableCell>
-            <TableCell>Provincia</TableCell>
-            <TableCell>Actions</TableCell>
-          </TableRow>
-        </TableHead>
-        <TableBody>
-          {protestas.map((protesta) => (
-            <TableRow key={protesta.id}>
-              <TableCell>{protesta.nombre}</TableCell>
-              <TableCell>{new Date(protesta.fecha_evento).toLocaleDateString()}</TableCell>
-              <TableCell>{naturalezas[protesta.naturaleza_id]?.nombre}</TableCell>
-              <TableCell>{provincias[protesta.provincia_id]?.nombre}</TableCell>
-              <TableCell>
-                <Button component={RouterLink} to={`/protestas/${protesta.id}`}>
-                  View
-                </Button>
-              </TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
-    </TableContainer>
+    <div>
+      <h1>Lista de Protestas</h1>
+      <ProtestaFilter 
+        naturalezas={naturalezas}
+        provincias={provincias}
+        onFilter={handleFilter}
+      />
+      <Button 
+        type="primary" 
+        icon={<PlusOutlined />} 
+        onClick={() => navigate('/protestas/crear')}
+        style={{ marginBottom: 16 }}
+      >
+        Añadir Protesta
+      </Button>
+      <Table 
+        columns={columns} 
+        dataSource={protestas} 
+        rowKey="id"
+        loading={loading}
+        pagination={false}
+      />
+      <Pagination
+        current={pagination.current}
+        total={pagination.total}
+        pageSize={pagination.pageSize}
+        onChange={handlePaginationChange}
+      />
+      {error && <p style={{ color: 'red' }}>{error}</p>}
+    </div>
   );
 };
 

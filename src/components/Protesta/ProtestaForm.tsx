@@ -1,177 +1,117 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { TextField, Button, Select, MenuItem, FormControl, InputLabel, Box, SelectChangeEvent } from '@mui/material';
+import { Protesta, Naturaleza, Provincia, Cabecilla } from '../../types';
 import { useApi } from '../../hooks/useApi';
-import { Naturaleza, Provincia, Cabecilla, Protesta } from '../../types';
+import { Form, Input, DatePicker, Select, Button, message } from 'antd';
+import { protestaService, naturalezaService, provinciaService, cabecillaService } from '../../services/api';
+import dayjs from 'dayjs';
 
-interface ProtestaFormData {
-  nombre: string;
-  resumen: string;
-  fecha_evento: string;
-  naturaleza_id: string;
-  provincia_id: string;
-  cabecillas: string[];
-}
+const { TextArea } = Input;
+const { Option } = Select;
 
 const ProtestaForm: React.FC = () => {
-  const [formData, setFormData] = useState<ProtestaFormData>({
-    nombre: '',
-    resumen: '',
-    fecha_evento: '',
-    naturaleza_id: '',
-    provincia_id: '',
-    cabecillas: [],
-  });
-  const [naturalezas, setNaturalezas] = useState<Naturaleza[]>([]);
-  const [provincias, setProvincias] = useState<Provincia[]>([]);
-  const [cabecillas, setCabecillas] = useState<Cabecilla[]>([]);
-  const { request } = useApi();
+  const [form] = Form.useForm();
+  const { request, loading, error } = useApi();
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
 
+  const [naturalezas, setNaturalezas] = useState<Naturaleza[]>([]);
+  const [provincias, setProvincias] = useState<Provincia[]>([]);
+  const [cabecillas, setCabecillas] = useState<Cabecilla[]>([]);
+
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const [naturalezasData, provinciasData, cabecillasData] = await Promise.all([
-          request<Naturaleza[]>('get', '/naturalezas'),
-          request<Provincia[]>('get', '/provincias'),
-          request<Cabecilla[]>('get', '/cabecillas'),
-        ]);
-        setNaturalezas(naturalezasData);
-        setProvincias(provinciasData);
-        setCabecillas(cabecillasData);
+    fetchFormData();
+    if (id) {
+      fetchProtesta(id);
+    }
+  }, [id]);
 
-        if (id) {
-          const protestaData = await request<Protesta>('get', `/protestas/${id}`);
-          setFormData({
-            nombre: protestaData.nombre,
-            resumen: protestaData.resumen,
-            fecha_evento: protestaData.fecha_evento,
-            naturaleza_id: protestaData.naturaleza_id,
-            provincia_id: protestaData.provincia_id,
-            cabecillas: protestaData.cabecillas.map((c) => c.id),
-          });
-        }
-      } catch (error) {
-        console.error('Error fetching data:', error);
-      }
-    };
-    fetchData();
-  }, [id, request]);
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | { name?: string; value: unknown }>) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name as string]: value }));
-  };
-
-  const handleSelectChange = (e: SelectChangeEvent<string | string[]>) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const fetchFormData = async () => {
     try {
+      const [naturalezasData, provinciasData, cabecillasData] = await Promise.all([
+        naturalezaService.getAll(),
+        provinciaService.getAll(),
+        cabecillaService.getAll(),
+      ]);
+      setNaturalezas(naturalezasData);
+      setProvincias(provinciasData);
+      setCabecillas(cabecillasData);
+    } catch (error) {
+      message.error('Error al cargar los datos del formulario');
+    }
+  };
+
+  const fetchProtesta = async (protestaId: string) => {
+    try {
+      const protesta = await protestaService.getById(protestaId);
+      form.setFieldsValue({
+        ...protesta,
+        fecha_evento: dayjs(protesta.fecha_evento),
+        cabecillas: protesta.cabecillas.map(c => c.id),
+      });
+    } catch (error) {
+      message.error('Error al cargar los datos de la protesta');
+    }
+  };
+
+  const onFinish = async (values: any) => {
+    try {
+      const data = {
+        ...values,
+        fecha_evento: values.fecha_evento.format('YYYY-MM-DD'),
+      };
       if (id) {
-        await request('put', `/protestas/${id}`, formData);
+        await protestaService.update(id, data);
+        message.success('Protesta actualizada con éxito');
       } else {
-        await request('post', '/protestas', formData);
+        await protestaService.create(data);
+        message.success('Protesta creada con éxito');
       }
       navigate('/protestas');
-    } catch (err) {
-      console.error('Error al guardar protesta:', err);
+    } catch (error) {
+      message.error('Error al guardar la protesta');
     }
   };
 
   return (
-    <Box component="form" onSubmit={handleSubmit} sx={{ mt: 1 }}>
-      <TextField
-        margin="normal"
-        required
-        fullWidth
-        id="nombre"
-        label="Nombre"
-        name="nombre"
-        value={formData.nombre}
-        onChange={handleChange}
-      />
-      <TextField
-        margin="normal"
-        required
-        fullWidth
-        id="resumen"
-        label="Resumen"
-        name="resumen"
-        multiline
-        rows={4}
-        value={formData.resumen}
-        onChange={handleChange}
-      />
-      <TextField
-        margin="normal"
-        required
-        fullWidth
-        id="fecha_evento"
-        label="Fecha del evento"
-        name="fecha_evento"
-        type="date"
-        InputLabelProps={{ shrink: true }}
-        value={formData.fecha_evento}
-        onChange={handleChange}
-      />
-      <FormControl fullWidth margin="normal">
-        <InputLabel id="naturaleza-label">Naturaleza</InputLabel>
-        <Select
-          labelId="naturaleza-label"
-          id="naturaleza_id"
-          name="naturaleza_id"
-          value={formData.naturaleza_id}
-          onChange={handleSelectChange}
-        >
-          {naturalezas.map((naturaleza) => (
-            <MenuItem key={naturaleza.id} value={naturaleza.id}>
-              {naturaleza.nombre}
-            </MenuItem>
+    <Form form={form} onFinish={onFinish} layout="vertical">
+      <Form.Item name="nombre" label="Nombre" rules={[{ required: true }]}>
+        <Input />
+      </Form.Item>
+      <Form.Item name="naturaleza_id" label="Naturaleza" rules={[{ required: true }]}>
+        <Select>
+          {naturalezas.map(n => (
+            <Option key={n.id} value={n.id}>{n.nombre}</Option>
           ))}
         </Select>
-      </FormControl>
-      <FormControl fullWidth margin="normal">
-        <InputLabel id="provincia-label">Provincia</InputLabel>
-        <Select
-          labelId="provincia-label"
-          id="provincia_id"
-          name="provincia_id"
-          value={formData.provincia_id}
-          onChange={handleSelectChange}
-        >
-          {provincias.map((provincia) => (
-            <MenuItem key={provincia.id} value={provincia.id}>
-              {provincia.nombre}
-            </MenuItem>
+      </Form.Item>
+      <Form.Item name="provincia_id" label="Provincia" rules={[{ required: true }]}>
+        <Select>
+          {provincias.map(p => (
+            <Option key={p.id} value={p.id}>{p.nombre}</Option>
           ))}
         </Select>
-      </FormControl>
-      <FormControl fullWidth margin="normal">
-        <InputLabel id="cabecillas-label">Cabecillas</InputLabel>
-        <Select
-          labelId="cabecillas-label"
-          id="cabecillas"
-          name="cabecillas"
-          multiple
-          value={formData.cabecillas}
-          onChange={handleSelectChange}
-        >
-          {cabecillas.map((cabecilla) => (
-            <MenuItem key={cabecilla.id} value={cabecilla.id}>
-              {cabecilla.nombre} {cabecilla.apellido}
-            </MenuItem>
+      </Form.Item>
+      <Form.Item name="resumen" label="Resumen" rules={[{ required: true }]}>
+        <TextArea rows={4} />
+      </Form.Item>
+      <Form.Item name="fecha_evento" label="Fecha del Evento" rules={[{ required: true }]}>
+        <DatePicker />
+      </Form.Item>
+      <Form.Item name="cabecillas" label="Cabecillas">
+        <Select mode="multiple">
+          {cabecillas.map(c => (
+            <Option key={c.id} value={c.id}>{`${c.nombre} ${c.apellido}`}</Option>
           ))}
         </Select>
-      </FormControl>
-      <Button type="submit" fullWidth variant="contained" sx={{ mt: 3, mb: 2 }}>
-        {id ? 'Update' : 'Create'} Protesta
-      </Button>
-    </Box>
+      </Form.Item>
+      <Form.Item>
+        <Button type="primary" htmlType="submit" loading={loading}>
+          {id ? 'Actualizar' : 'Crear'} Protesta
+        </Button>
+      </Form.Item>
+      {error && <p style={{ color: 'red' }}>{error}</p>}
+    </Form>
   );
 };
 
