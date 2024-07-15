@@ -22,7 +22,7 @@ const ProtestaFormPage: React.FC = () => {
       const data = await request<Protesta>('get', `/protestas/${protestaId}`);
       setInitialData(data);
     } catch (error) {
-      console.error('Error al cargar la protesta', error);
+      console.error('Error al cargar la protesta:', error);
       message.error('Error al cargar los datos de la protesta');
     }
   };
@@ -30,15 +30,15 @@ const ProtestaFormPage: React.FC = () => {
   const handleSubmit = async (values: CrearProtesta) => {
     try {
       if (id) {
-        await request<Protesta, CrearProtesta>('put', `/protestas/${id}`, values);
+        await request<Protesta>('put', `/protestas/${id}`, values);
         message.success('Protesta actualizada con éxito');
       } else {
-        await request<Protesta, CrearProtesta>('post', '/protestas', values);
+        await request<Protesta>('post', '/protestas', values);
         message.success('Protesta creada con éxito');
       }
       navigate('/protestas');
     } catch (error) {
-      console.error('Error al guardar la protesta', error);
+      console.error('Error al guardar la protesta:', error);
       if (error instanceof Error) {
         message.error(`Error al guardar la protesta: ${error.message}`);
       } else {

@@ -2,8 +2,9 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Protesta, Naturaleza, Provincia } from '../../types';
 import { useApi } from '../../hooks/useApi';
-import { Card, Descriptions, Button, Space, message, Tag, Avatar, Modal } from 'antd';
+import { Card, Descriptions, Button, Space, message, Tag, Modal } from 'antd';
 import { EditOutlined, DeleteOutlined, ArrowLeftOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
+import CustomAvatar from '../Common/CustomAvatar';
 
 const ProtestaDetail: React.FC = () => {
   const [protesta, setProtesta] = useState<Protesta | null>(null);
@@ -14,18 +15,27 @@ const ProtestaDetail: React.FC = () => {
   const navigate = useNavigate();
 
   const fetchProtesta = useCallback(async (protestaId: string) => {
+    if (protestaId === 'crear') {
+      navigate('/protestas/crear');
+      return;
+    }
     try {
       const data = await request<Protesta>('get', `/protestas/${protestaId}`);
       setProtesta(data);
-      fetchNaturaleza(data.naturaleza_id);
-      fetchProvincia(data.provincia_id);
+      if (data.naturaleza_id) {
+        fetchNaturaleza(data.naturaleza_id);
+      }
+      if (data.provincia_id) {
+        fetchProvincia(data.provincia_id);
+      }
     } catch (error) {
+      console.error('Error al cargar los detalles de la protesta:', error);
       message.error('Error al cargar los detalles de la protesta');
     }
-  }, [request]);
+  }, [request, navigate]);
 
   useEffect(() => {
-    if (id) {
+    if (id && id !== 'crear') {
       fetchProtesta(id);
     }
   }, [id, fetchProtesta]);
@@ -35,7 +45,7 @@ const ProtestaDetail: React.FC = () => {
       const data = await request<Naturaleza>('get', `/naturalezas/${naturalezaId}`);
       setNaturaleza(data);
     } catch (error) {
-      message.error('Error al cargar los detalles de la naturaleza');
+      console.error('Error al cargar los detalles de la naturaleza:', error);
     }
   };
 
@@ -44,7 +54,7 @@ const ProtestaDetail: React.FC = () => {
       const data = await request<Provincia>('get', `/provincias/${provinciaId}`);
       setProvincia(data);
     } catch (error) {
-      message.error('Error al cargar los detalles de la provincia');
+      console.error('Error al cargar los detalles de la provincia:', error);
     }
   };
 
@@ -63,6 +73,7 @@ const ProtestaDetail: React.FC = () => {
             message.success('Protesta eliminada con éxito');
             navigate('/protestas');
           } catch (error) {
+            console.error('Error al eliminar la protesta:', error);
             message.error('Error al eliminar la protesta');
           }
         },
@@ -105,7 +116,7 @@ const ProtestaDetail: React.FC = () => {
       <Descriptions column={2}>
         <Descriptions.Item label="Naturaleza">
           {naturaleza && (
-            <Tag color={naturaleza.color} icon={naturaleza.icono && <span className={naturaleza.icono} />}>
+            <Tag color={naturaleza.color}>
               {naturaleza.nombre}
             </Tag>
           )}
@@ -118,10 +129,10 @@ const ProtestaDetail: React.FC = () => {
         <Descriptions.Item label="Resumen">{protesta.resumen}</Descriptions.Item>
       </Descriptions>
       <Descriptions title="Cabecillas" column={1}>
-        {protesta.cabecillas.map(c => (
+        {protesta.cabecillas && protesta.cabecillas.map(c => (
           <Descriptions.Item key={c.id}>
             <Space>
-              <Avatar src={c.foto} />
+              <CustomAvatar src={c.foto} alt={`${c.nombre} ${c.apellido}`} />
               {`${c.nombre} ${c.apellido}`}
             </Space>
           </Descriptions.Item>

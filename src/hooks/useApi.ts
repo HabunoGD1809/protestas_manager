@@ -37,11 +37,15 @@ export const useApi = () => {
     } catch (err) {
       setLoading(false);
       if (err instanceof AxiosError) {
-        setError(err.response?.data?.detail || err.message || 'Error en la solicitud');
+        const errorMessage = err.response?.data?.detail || err.message || 'Error en la solicitud';
+        setError(typeof errorMessage === 'string' ? errorMessage : JSON.stringify(errorMessage));
+        console.error('Error de API:', errorMessage, err.response?.data);
       } else if (err instanceof Error) {
         setError(err.message);
+        console.error('Error:', err.message);
       } else {
         setError('Ha ocurrido un error inesperado');
+        console.error('Error inesperado:', err);
       }
       throw err;
     }
