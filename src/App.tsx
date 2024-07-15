@@ -1,5 +1,5 @@
-import React from 'react';
-import { Routes, Route } from 'react-router-dom';
+import React, { useEffect } from 'react';
+import { Routes, Route, useNavigate } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
 import Layout from './components/Layout/Layout';
 import PrivateRoute from './components/Common/PrivateRoute';
@@ -15,6 +15,22 @@ import NaturalezaListPage from './pages/NaturalezaListPage';
 import NaturalezaFormPage from './pages/NaturalezaFormPage';
 
 const App: React.FC = () => {
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const handleAuthError = (event: Event) => {
+      const customEvent = event as CustomEvent;
+      console.log('Auth error:', customEvent.detail);
+      navigate('/login');
+    };
+
+    window.addEventListener('auth-error', handleAuthError);
+
+    return () => {
+      window.removeEventListener('auth-error', handleAuthError);
+    };
+  }, [navigate]);
+
   return (
     <AuthProvider>
       <Layout>

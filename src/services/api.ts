@@ -33,14 +33,18 @@ api.interceptors.response.use(
           api.defaults.headers.common['Authorization'] = `Bearer ${response.token_acceso}`;
           return api(originalRequest);
         } catch (refreshError) {
+          // Manejar el error de refresh token
           removeStoredToken();
-          window.location.href = '/login';
-          return Promise.reject(refreshError);
+          // En lugar de redirigir directamente, lanzamos un evento personalizado
+          window.dispatchEvent(new CustomEvent('auth-error', { detail: 'Session expired' }));
+          // Rechazamos la promesa con un error específico
+          return Promise.reject(new Error('Session expired'));
         }
       } else {
+        // No hay refresh token disponible
         removeStoredToken();
-        window.location.href = '/login';
-        return Promise.reject(new Error('No hay token de actualización disponible'));
+        window.dispatchEvent(new CustomEvent('auth-error', { detail: 'No refresh token available' }));
+        return Promise.reject(new Error('No refresh token available'));
       }
     }
     return Promise.reject(error);
