@@ -4,6 +4,7 @@ export interface User {
   apellidos: string;
   email: string;
   foto?: string;
+  rol: 'admin' | 'usuario';
 }
 
 export interface Protesta {
@@ -81,4 +82,12 @@ export interface Token {
   token_acceso: string;
   token_actualizacion: string;
   tipo_token: string;
+}
+
+export interface UserListResponse {
+  items: User[];
+  total: number;
+  page: number;
+  page_size: number;
+  pages: number;
 }

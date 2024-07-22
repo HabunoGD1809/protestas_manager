@@ -3,6 +3,7 @@ import { Routes, Route, useNavigate } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
 import Layout from './components/Layout/Layout';
 import PrivateRoute from './components/Common/PrivateRoute';
+import AdminRoute from './components/Common/AdminRoute';
 import HomePage from './pages/HomePage';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
@@ -13,6 +14,7 @@ import CabecillaListPage from './pages/CabecillaListPage';
 import CabecillaFormPage from './pages/CabecillaFormPage';
 import NaturalezaListPage from './pages/NaturalezaListPage';
 import NaturalezaFormPage from './pages/NaturalezaFormPage';
+import UserListPage from './pages/UserListPage';
 
 const App: React.FC = () => {
   const navigate = useNavigate();
@@ -48,6 +50,8 @@ const App: React.FC = () => {
           <Route path="/naturalezas" element={<PrivateRoute><NaturalezaListPage /></PrivateRoute>} />
           <Route path="/naturalezas/new" element={<PrivateRoute><NaturalezaFormPage /></PrivateRoute>} />
           <Route path="/naturalezas/:id" element={<PrivateRoute><NaturalezaFormPage /></PrivateRoute>} />
+          <Route path="/usuarios" element={<AdminRoute><UserListPage /></AdminRoute>} />
+
         </Routes>
       </Layout>
     </AuthProvider>

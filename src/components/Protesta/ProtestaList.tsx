@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Protesta, Naturaleza, Provincia } from '../../types';
 import { useApi } from '../../hooks/useApi';
+import { useAuth } from '../../hooks/useAuth';
 import { Button, Table, Space, message, Modal } from 'antd';
 import { EditOutlined, DeleteOutlined, PlusOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
 import ProtestaFilter from './ProtestaFilter';
@@ -16,6 +17,8 @@ const ProtestaList: React.FC = () => {
   const [filters, setFilters] = useState<Record<string, string>>({});
   const { loading, error } = useApi();
   const navigate = useNavigate();
+
+    const { isAdmin } = useAuth();
 
   const fetchProtestas = useCallback(async (page: number, pageSize: number) => {
     try {
@@ -132,13 +135,15 @@ const ProtestaList: React.FC = () => {
           >
             Editar
           </Button>
-          <Button 
-            icon={<DeleteOutlined />} 
-            danger
-            onClick={() => handleDelete(record.id)}
-          >
-            Eliminar
-          </Button>
+          {isAdmin() && (
+            <Button 
+              icon={<DeleteOutlined />} 
+              danger
+              onClick={() => handleDelete(record.id)}
+            >
+              Eliminar
+            </Button>
+          )}
         </Space>
       ),
     },

@@ -1,15 +1,16 @@
 import React, { useState } from 'react';
 import { Link as RouterLink } from 'react-router-dom';
-import { AppBar, Toolbar, Typography, Button, Box, Avatar, Menu, MenuItem, IconButton, Tooltip,Container } from '@mui/material';
+import { AppBar, Toolbar, Typography, Button, Box, Avatar, Menu, MenuItem, IconButton, Tooltip, Container } from '@mui/material';
 import MenuIcon from '@mui/icons-material/Menu';
 import ProtestIcon from '@mui/icons-material/Gavel';
 import LeaderIcon from '@mui/icons-material/Person';
 import NatureIcon from '@mui/icons-material/Nature';
 import AccountCircleIcon from '@mui/icons-material/AccountCircle';
+import PeopleIcon from '@mui/icons-material/People';
 import { useAuth } from '../../hooks/useAuth';
 
 const Header: React.FC = () => {
-  const { user, logout } = useAuth();
+  const { user, logout, isAdmin } = useAuth();
   const [anchorElNav, setAnchorElNav] = useState<null | HTMLElement>(null);
   const [anchorElUser, setAnchorElUser] = useState<null | HTMLElement>(null);
 
@@ -37,6 +38,7 @@ const Header: React.FC = () => {
     { text: 'Protestas', path: '/protestas', icon: <ProtestIcon /> },
     { text: 'Cabecillas', path: '/cabecillas', icon: <LeaderIcon /> },
     { text: 'Naturalezas', path: '/naturalezas', icon: <NatureIcon /> },
+    ...(isAdmin() ? [{ text: 'Usuarios', path: '/usuarios', icon: <PeopleIcon /> }] : []),
   ] : [];
 
   return (

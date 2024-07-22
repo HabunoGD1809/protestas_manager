@@ -8,6 +8,7 @@ export interface AuthContextType {
   login: (email: string, password: string) => Promise<void>;
   register: (userData: FormData) => Promise<void>;
   logout: () => void;
+  isAdmin: () => boolean;
 }
 
 export const AuthContext = createContext<AuthContextType>({
@@ -15,6 +16,7 @@ export const AuthContext = createContext<AuthContextType>({
   login: async () => {},
   register: async () => {},
   logout: () => {},
+  isAdmin: () => false,
 });
 
 interface AuthProviderProps {
@@ -55,7 +57,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     try {
       const { token_acceso, token_actualizacion } = await login(email, password);
       setStoredToken(token_acceso, token_actualizacion);
-      
+
       // Obtener información del usuario
       const userData = await obtenerUsuarioActual();
       setUser(userData);
@@ -83,6 +85,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     removeStoredUser();
   };
 
+  const isAdmin = () => {
+    return user?.rol === 'admin';
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -90,6 +96,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         login: handleLogin,
         register: handleRegister,
         logout: handleLogout,
+        isAdmin,
       }}
     >
       {children}

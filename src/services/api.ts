@@ -1,6 +1,6 @@
 import axios, { AxiosInstance, InternalAxiosRequestConfig } from 'axios';
 import { getStoredToken, setStoredToken, removeStoredToken } from '../utils/tokenUtils';
-import { Protesta, Cabecilla, Naturaleza, Provincia, PaginatedResponse, CrearProtesta, CrearCabecilla, CrearNaturaleza, ResumenPrincipal, User, Token } from '../types';
+import { Protesta, Cabecilla, Naturaleza, Provincia, PaginatedResponse, CrearProtesta, CrearCabecilla, CrearNaturaleza, ResumenPrincipal, User, Token, UserListResponse } from '../types';
 
 const BASE_URL = 'http://localhost:8000'; 
 
@@ -143,4 +143,16 @@ export const resumenService = {
       throw error;
     } 
   },
+};
+
+export const userService = {
+  getAll: async (page: number = 1, pageSize: number = 10) => {
+    const response = await api.get<UserListResponse>('/usuarios', { 
+      params: { page, page_size: pageSize } 
+    });
+    return response.data;
+  },
+  getById: (id: string) => api.get<User>(`/usuarios/${id}`).then(res => res.data),
+  updateRole: (id: string, role: 'admin' | 'usuario') => 
+    api.put<User>(`/usuarios/${id}/rol`, { nuevo_rol: role }).then(res => res.data),
 };

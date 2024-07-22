@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Protesta, Naturaleza, Provincia } from '../../types';
 import { useApi } from '../../hooks/useApi';
+import { useAuth } from '../../hooks/useAuth';
 import { Card, Descriptions, Button, Space, message, Tag, Modal } from 'antd';
 import { EditOutlined, DeleteOutlined, ArrowLeftOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
 import CustomAvatar from '../Common/CustomAvatar';
@@ -13,6 +14,9 @@ const ProtestaDetail: React.FC = () => {
   const { request, loading, error } = useApi();
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+
+    const { isAdmin } = useAuth();
+
 
   const fetchProtesta = useCallback(async (protestaId: string) => {
     if (protestaId === 'crear') {
@@ -103,13 +107,15 @@ const ProtestaDetail: React.FC = () => {
           >
             Editar
           </Button>
-          <Button 
-            icon={<DeleteOutlined />} 
-            danger 
-            onClick={handleDelete}
-          >
-            Eliminar
-          </Button>
+          {isAdmin() && (
+            <Button 
+              icon={<DeleteOutlined />} 
+              danger 
+              onClick={handleDelete}
+            >
+              Eliminar
+            </Button>
+          )}
         </Space>
       }
     >
