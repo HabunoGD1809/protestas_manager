@@ -1,5 +1,5 @@
-import React, { useEffect } from 'react';
-import { Form, Input, DatePicker, Select, Button } from 'antd';
+import React, { useState, useEffect } from 'react';
+import { Form, Input, DatePicker, Select, Button, Spin, message } from 'antd';
 import { Protesta, CrearProtesta, Naturaleza, Provincia, Cabecilla } from '../../types';
 import { useApi } from '../../hooks/useApi';
 import moment from 'moment';
@@ -23,55 +23,43 @@ interface ProtestaFormValues {
 const ProtestaForm: React.FC<ProtestaFormProps> = ({ initialData, onSubmit }) => {
   const [form] = Form.useForm<ProtestaFormValues>();
   const { request, loading } = useApi();
-  const [naturalezas, setNaturalezas] = React.useState<Naturaleza[]>([]);
-  const [provincias, setProvincias] = React.useState<Provincia[]>([]);
-  const [cabecillas, setCabecillas] = React.useState<Cabecilla[]>([]);
+  const [naturalezas, setNaturalezas] = useState<Naturaleza[]>([]);
+  const [provincias, setProvincias] = useState<Provincia[]>([]);
+  const [cabecillas, setCabecillas] = useState<Cabecilla[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    fetchNaturalezas();
-    fetchProvincias();
-    fetchCabecillas();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    const fetchData = async () => {
+      setIsLoading(true);
+      try {
+        const [naturalezasResponse, provinciasResponse, cabecillasResponse] = await Promise.all([
+          request<{ items: Naturaleza[] }>('get', '/naturalezas'),
+          request<Provincia[]>('get', '/provincias'),
+          request<{ items: Cabecilla[] }>('get', '/cabecillas')
+        ]);
 
-  useEffect(() => {
-    if (initialData) {
-      form.setFieldsValue({
-        ...initialData,
-        fecha_evento: moment(initialData.fecha_evento),
-        cabecillas: initialData.cabecillas.map(c => c.id)
-      });
-    }
-  }, [initialData, form]);
+        setNaturalezas(naturalezasResponse.items || []);
+        setProvincias(Array.isArray(provinciasResponse) ? provinciasResponse : []);
+        setCabecillas(cabecillasResponse.items || []);
 
-  const fetchNaturalezas = async () => {
-    try {
-      const data = await request<Naturaleza[]>('get', '/naturalezas');
-      setNaturalezas(data);
-    } catch (error) {
-      console.error('Error fetching naturalezas:', error);
-    }
-  };
+        if (initialData) {
+          form.setFieldsValue({
+            ...initialData,
+            fecha_evento: moment(initialData.fecha_evento),
+            cabecillas: initialData.cabecillas.map(c => c.id)
+          });
+        }
+      } catch (error) {
+        console.error('Error fetching data:', error);
+        message.error('Error al cargar los datos');
+      } finally {
+        setIsLoading(false);
+      }
+    };
 
-  const fetchProvincias = async () => {
-    try {
-      const data = await request<Provincia[]>('get', '/provincias');
-      setProvincias(data);
-    } catch (error) {
-      console.error('Error fetching provincias:', error);
-    }
-  };
+    fetchData();
+  }, [initialData, form, request]);
 
-  const fetchCabecillas = async () => {
-    try {
-      const data = await request<Cabecilla[]>('get', '/cabecillas');
-      setCabecillas(data);
-    } catch (error) {
-      console.error('Error fetching cabecillas:', error);
-    }
-  };
-
-  // Función handleSubmit modificada con el tipo correcto
   const handleSubmit = (values: ProtestaFormValues) => {
     const protestaData: CrearProtesta = {
       ...values,
@@ -80,6 +68,10 @@ const ProtestaForm: React.FC<ProtestaFormProps> = ({ initialData, onSubmit }) =>
     };
     onSubmit(protestaData);
   };
+
+  if (isLoading) {
+    return <Spin size="large" />;
+  }
 
   return (
     <Form form={form} onFinish={handleSubmit} layout="vertical">

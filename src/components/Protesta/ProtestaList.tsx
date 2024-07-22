@@ -17,12 +17,13 @@ const ProtestaList: React.FC = () => {
   const [filters, setFilters] = useState<Record<string, string>>({});
   const { loading, error } = useApi();
   const navigate = useNavigate();
-
-    const { isAdmin } = useAuth();
+  const { isAdmin } = useAuth();
 
   const fetchProtestas = useCallback(async (page: number, pageSize: number) => {
     try {
+      console.log('Fetching protestas with filters:', filters);
       const data = await protestaService.getAll(page, pageSize, filters);
+      console.log('Protestas data received:', data);
       setProtestas(data.items);
       setPagination({
         current: data.page,
@@ -37,7 +38,6 @@ const ProtestaList: React.FC = () => {
 
   useEffect(() => {
     fetchProtestas(pagination.current, pagination.pageSize);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fetchProtestas, pagination.current, pagination.pageSize]);
 
   useEffect(() => {
@@ -48,7 +48,7 @@ const ProtestaList: React.FC = () => {
   const fetchNaturalezas = async () => {
     try {
       const data = await naturalezaService.getAll();
-      setNaturalezas(data);
+      setNaturalezas(data.items);
     } catch (error) {
       console.error('Error fetching naturalezas:', error);
       message.error('Error al cargar las naturalezas');
@@ -87,6 +87,7 @@ const ProtestaList: React.FC = () => {
   };
 
   const handleFilter = (newFilters: Record<string, string>) => {
+    console.log('New filters:', newFilters);
     setFilters(newFilters);
     fetchProtestas(1, pagination.pageSize);
   };

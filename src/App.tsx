@@ -15,6 +15,10 @@ import CabecillaFormPage from './pages/CabecillaFormPage';
 import NaturalezaListPage from './pages/NaturalezaListPage';
 import NaturalezaFormPage from './pages/NaturalezaFormPage';
 import UserListPage from './pages/UserListPage';
+import CabecillaList from './components/Cabecilla/CabecillaList';
+import CabecillaForm from './components/Cabecilla/CabecillaForm';
+import NaturalezaList from './components/Naturaleza/NaturalezaList';
+import NaturalezaForm from './components/Naturaleza/NaturalezaForm';
 
 const App: React.FC = () => {
   const navigate = useNavigate();
@@ -51,7 +55,14 @@ const App: React.FC = () => {
           <Route path="/naturalezas/new" element={<PrivateRoute><NaturalezaFormPage /></PrivateRoute>} />
           <Route path="/naturalezas/:id" element={<PrivateRoute><NaturalezaFormPage /></PrivateRoute>} />
           <Route path="/usuarios" element={<AdminRoute><UserListPage /></AdminRoute>} />
-
+          <Route path="/cabecillas" element={<PrivateRoute><CabecillaList /></PrivateRoute>} />
+          <Route path="/cabecillas/new" element={<PrivateRoute><CabecillaForm /></PrivateRoute>} />
+          <Route path="/cabecillas/edit/:id" element={<PrivateRoute><CabecillaForm /></PrivateRoute>} />
+          <Route path="/naturalezas" element={<PrivateRoute><NaturalezaList /></PrivateRoute>} />
+          <Route path="/naturalezas/new" element={<PrivateRoute><NaturalezaForm /></PrivateRoute>} />
+          <Route path="/naturalezas/edit/:id" element={<PrivateRoute><NaturalezaForm /></PrivateRoute>} />
+          <Route path="/naturalezas/new" element={<PrivateRoute><NaturalezaFormPage /></PrivateRoute>} />
+          <Route path="/naturalezas/edit/:id" element={<PrivateRoute><NaturalezaFormPage /></PrivateRoute>} />
         </Routes>
       </Layout>
     </AuthProvider>

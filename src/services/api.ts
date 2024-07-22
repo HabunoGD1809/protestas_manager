@@ -33,15 +33,11 @@ api.interceptors.response.use(
           api.defaults.headers.common['Authorization'] = `Bearer ${response.token_acceso}`;
           return api(originalRequest);
         } catch (refreshError) {
-          // Manejar el error de refresh token
           removeStoredToken();
-          // En lugar de redirigir directamente, lanzamos un evento personalizado
           window.dispatchEvent(new CustomEvent('auth-error', { detail: 'Session expired' }));
-          // Rechazamos la promesa con un error específico
           return Promise.reject(new Error('Session expired'));
         }
       } else {
-        // No hay refresh token disponible
         removeStoredToken();
         window.dispatchEvent(new CustomEvent('auth-error', { detail: 'No refresh token available' }));
         return Promise.reject(new Error('No refresh token available'));
@@ -105,7 +101,16 @@ export const protestaService = {
 };
 
 export const cabecillaService = {
-  getAll: () => api.get<Cabecilla[]>('/cabecillas').then(res => res.data),
+  getAll: async (page: number = 1, pageSize: number = 10, filters?: Record<string, string>) => {
+    const response = await api.get<PaginatedResponse<Cabecilla>>('/cabecillas', { 
+      params: { 
+        page, 
+        page_size: pageSize, 
+        ...filters 
+      } 
+    });
+    return response.data;
+  },
   getById: (id: string) => api.get<Cabecilla>(`/cabecillas/${id}`).then(res => res.data),
   create: (cabecilla: CrearCabecilla) => api.post<Cabecilla>('/cabecillas', cabecilla).then(res => res.data),
   update: (id: string, cabecilla: CrearCabecilla) => api.put<Cabecilla>(`/cabecillas/${id}`, cabecilla).then(res => res.data),
@@ -120,7 +125,16 @@ export const cabecillaService = {
 };
 
 export const naturalezaService = {
-  getAll: () => api.get<Naturaleza[]>('/naturalezas').then(res => res.data),
+  getAll: async (page: number = 1, pageSize: number = 10, filters?: Record<string, string>) => {
+    const response = await api.get<PaginatedResponse<Naturaleza>>('/naturalezas', { 
+      params: { 
+        page, 
+        page_size: pageSize, 
+        ...filters 
+      } 
+    });
+    return response.data;
+  },
   getById: (id: string) => api.get<Naturaleza>(`/naturalezas/${id}`).then(res => res.data),
   create: (naturaleza: CrearNaturaleza) => api.post<Naturaleza>('/naturalezas', naturaleza).then(res => res.data),
   update: (id: string, naturaleza: CrearNaturaleza) => api.put<Naturaleza>(`/naturalezas/${id}`, naturaleza).then(res => res.data),
