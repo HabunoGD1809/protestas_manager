@@ -60,8 +60,8 @@ export const login = async (email: string, password: string) => {
   return response.data;
 };
 
-export const register = async (userData: FormData) => {
-  const response = await api.post<User>('/registro', userData, {
+export const register = async (userData: FormData): Promise<{ user: User; token: Token }> => {
+  const response = await api.post<{ user: User; token: Token }>('/registro', userData, {
     headers: {
       'Content-Type': 'multipart/form-data',
     },
