@@ -22,25 +22,20 @@ api.interceptors.request.use((config: InternalAxiosRequestConfig) => {
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
-    const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
+    const originalRequest = error.config;
     if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;
-      const refreshTokenValue = getStoredToken('refreshToken');
-      if (refreshTokenValue) {
-        try {
-          const response = await refreshToken(refreshTokenValue);
-          setStoredToken(response.token_acceso, response.token_actualizacion);
-          api.defaults.headers.common['Authorization'] = `Bearer ${response.token_acceso}`;
-          return api(originalRequest);
-        } catch (refreshError) {
-          removeStoredToken();
-          window.dispatchEvent(new CustomEvent('auth-error', { detail: 'Session expired' }));
-          return Promise.reject(new Error('Session expired'));
+      try {
+        const refreshTokenValue = getStoredToken('refreshToken');
+        if (!refreshTokenValue) {
+          throw new Error('No refresh token available');
         }
-      } else {
-        removeStoredToken();
-        window.dispatchEvent(new CustomEvent('auth-error', { detail: 'No refresh token available' }));
-        return Promise.reject(new Error('No refresh token available'));
+        await refreshToken(refreshTokenValue);
+        return api(originalRequest);
+      } catch (refreshError) {
+        console.error('Error refreshing token:', refreshError);
+        window.dispatchEvent(new CustomEvent('auth-error', { detail: 'Session expired' }));
+        return Promise.reject(refreshError);
       }
     }
     return Promise.reject(error);
@@ -70,8 +65,19 @@ export const register = async (userData: FormData): Promise<{ user: User; token:
 };
 
 export const refreshToken = async (refreshToken: string) => {
-  const response = await api.post<Token>('/token/renovar', { refresh_token: refreshToken });
-  return response.data;
+  console.log('Refreshing token');
+  try {
+    const response = await axios.post<Token>(`${BASE_URL}/token/renovar`, { token_actualizacion: refreshToken });
+    console.log('Token refreshed successfully');
+    const { token_acceso, token_actualizacion } = response.data;
+    setStoredToken(token_acceso, token_actualizacion);
+    return response.data;
+  } catch (error) {
+    console.error('Error in refreshToken:', error);
+    removeStoredToken();
+    window.dispatchEvent(new CustomEvent('auth-error', { detail: 'Error refreshing token' }));
+    throw error;
+  }
 };
 
 export const logout = () => {

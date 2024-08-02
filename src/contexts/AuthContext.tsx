@@ -24,76 +24,71 @@ interface AuthProviderProps {
   children: ReactNode;
 }
 
-const INACTIVITY_TIMEOUT = 15 * 60 * 1000; // 15 minutos
-const TOKEN_REFRESH_INTERVAL = 14 * 60 * 1000; // 14 minutos
+const INACTIVITY_TIMEOUT = 1 * 60 * 1000; // 10 minutes
+const TOKEN_REFRESH_INTERVAL = 1 * 60 * 1000; // 14 minutes
 
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(getStoredUser());
   const [showInactivityDialog, setShowInactivityDialog] = useState(false);
-  const [inactivityTimer, setInactivityTimer] = useState<NodeJS.Timeout | null>(null);
-  const [refreshTimer, setRefreshTimer] = useState<NodeJS.Timeout | null>(null);
+  const [isAuthenticated, setIsAuthenticated] = useState(!!getStoredToken());
 
   const handleLogout = useCallback(() => {
+    console.log('Logging out user');
     apiLogout();
     setUser(null);
+    setIsAuthenticated(false);
     removeStoredToken();
     removeStoredUser();
-    if (inactivityTimer) {
-      clearTimeout(inactivityTimer);
-    }
-    if (refreshTimer) {
-      clearInterval(refreshTimer);
-    }
-  }, [inactivityTimer, refreshTimer]);
+  }, []);
 
-  const startInactivityTimer = useCallback(() => {
-    if (inactivityTimer) {
-      clearTimeout(inactivityTimer);
-    }
-    const timer = setTimeout(() => {
-      setShowInactivityDialog(true);
-    }, INACTIVITY_TIMEOUT);
-    setInactivityTimer(timer);
-  }, [inactivityTimer]);
-
-  const startRefreshTokenTimer = useCallback(() => {
-    if (refreshTimer) {
-      clearInterval(refreshTimer);
-    }
-    const timer = setInterval(async () => {
-      try {
-        const refreshTokenValue = getStoredToken('refreshToken');
-        if (refreshTokenValue) {
-          const newTokens = await refreshToken(refreshTokenValue);
-          setStoredToken(newTokens.token_acceso, newTokens.token_actualizacion);
-        }
-      } catch (error) {
-        console.error('Error refreshing token:', error);
-        handleLogout();
+  const refreshUserToken = useCallback(async () => {
+    try {
+      const refreshTokenValue = getStoredToken('refreshToken');
+      if (refreshTokenValue) {
+        console.log('Refreshing token');
+        const newTokens = await refreshToken(refreshTokenValue);
+        setStoredToken(newTokens.token_acceso, newTokens.token_actualizacion);
+        return true;
       }
-    }, TOKEN_REFRESH_INTERVAL);
-    setRefreshTimer(timer);
+    } catch (error) {
+      console.error('Error refreshing token:', error);
+      handleLogout();
+    }
+    return false;
   }, [handleLogout]);
 
+  const startInactivityTimer = useCallback(() => {
+    return setTimeout(() => {
+      setShowInactivityDialog(true);
+    }, INACTIVITY_TIMEOUT);
+  }, []);
+
+  const startRefreshTokenTimer = useCallback(() => {
+    return setInterval(async () => {
+      await refreshUserToken();
+    }, TOKEN_REFRESH_INTERVAL);
+  }, [refreshUserToken]);
+
   useEffect(() => {
-    if (user) {
-      setStoredUser(user);
-      startInactivityTimer();
-      startRefreshTokenTimer();
-    } else {
-      removeStoredUser();
-      if (inactivityTimer) {
-        clearTimeout(inactivityTimer);
-      }
-      if (refreshTimer) {
-        clearInterval(refreshTimer);
-      }
+    let inactivityTimer: NodeJS.Timeout | null = null;
+    let refreshTimer: NodeJS.Timeout | null = null;
+
+    if (isAuthenticated) {
+      inactivityTimer = startInactivityTimer();
+      refreshTimer = startRefreshTokenTimer();
     }
-  }, [user, startInactivityTimer, startRefreshTokenTimer, inactivityTimer, refreshTimer]);
+
+    return () => {
+      if (inactivityTimer) clearTimeout(inactivityTimer);
+      if (refreshTimer) clearInterval(refreshTimer);
+    };
+  }, [isAuthenticated, startInactivityTimer, startRefreshTokenTimer]);
 
   useEffect(() => {
     const resetTimers = () => {
-      startInactivityTimer();
+      if (isAuthenticated) {
+        startInactivityTimer();
+      }
     };
 
     window.addEventListener('mousemove', resetTimers);
@@ -103,32 +98,36 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       window.removeEventListener('mousemove', resetTimers);
       window.removeEventListener('keypress', resetTimers);
     };
-  }, [startInactivityTimer]);
+  }, [isAuthenticated, startInactivityTimer]);
 
   const handleLogin = async (email: string, password: string) => {
     try {
+      console.log('Attempting login');
       const { token_acceso, token_actualizacion } = await apiLogin(email, password);
       setStoredToken(token_acceso, token_actualizacion);
 
       const userData = await obtenerUsuarioActual();
       setUser(userData);
-      startInactivityTimer();
-      startRefreshTokenTimer();
+      setIsAuthenticated(true);
+      setStoredUser(userData);
+      console.log('Login successful');
     } catch (error) {
-      console.error('Error durante el inicio de sesión:', error);
+      console.error('Error during login:', error);
       throw error;
     }
   };
 
   const handleRegister = async (userData: FormData) => {
     try {
+      console.log('Attempting registration');
       const { user: newUser, token } = await apiRegister(userData);
       setUser(newUser);
+      setIsAuthenticated(true);
       setStoredToken(token.token_acceso, token.token_actualizacion);
-      startInactivityTimer();
-      startRefreshTokenTimer();
+      setStoredUser(newUser);
+      console.log('Registration successful');
     } catch (error) {
-      console.error('Error durante el registro:', error);
+      console.error('Error during registration:', error);
       throw error;
     }
   };
@@ -138,23 +137,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   };
 
   const handleKeepSessionActive = async () => {
+    console.log('Keeping session active');
     setShowInactivityDialog(false);
-    try {
-      const refreshTokenValue = getStoredToken('refreshToken');
-      if (refreshTokenValue) {
-        const newTokens = await refreshToken(refreshTokenValue);
-        setStoredToken(newTokens.token_acceso, newTokens.token_actualizacion);
-        startInactivityTimer();
-      } else {
-        throw new Error('No refresh token available');
-      }
-    } catch (error) {
-      console.error('Error refreshing session:', error);
-      handleLogout();
-    }
+    await refreshUserToken();
   };
 
   const handleEndSession = () => {
+    console.log('Ending session due to inactivity');
     setShowInactivityDialog(false);
     handleLogout();
   };
@@ -170,11 +159,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       }}
     >
       {children}
-      <InactivityDialog
-        open={showInactivityDialog}
-        onKeepActive={handleKeepSessionActive}
-        onLogout={handleEndSession}
-      />
+      {isAuthenticated && (
+        <InactivityDialog
+          open={showInactivityDialog}
+          onKeepActive={handleKeepSessionActive}
+          onLogout={handleEndSession}
+        />
+      )}
     </AuthContext.Provider>
   );
 };

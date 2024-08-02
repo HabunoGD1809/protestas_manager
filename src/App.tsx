@@ -24,16 +24,15 @@ const App: React.FC = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    const handleAuthError = (event: Event) => {
-      const customEvent = event as CustomEvent;
-      console.log('Auth error:', customEvent.detail);
+    const handleAuthError = (event: CustomEvent<string>) => {
+      console.error('Auth error:', event.detail);
       navigate('/login');
     };
 
-    window.addEventListener('auth-error', handleAuthError);
+    window.addEventListener('auth-error', handleAuthError as EventListener);
 
     return () => {
-      window.removeEventListener('auth-error', handleAuthError);
+      window.removeEventListener('auth-error', handleAuthError as EventListener);
     };
   }, [navigate]);
 
