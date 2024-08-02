@@ -24,16 +24,34 @@ interface AuthProviderProps {
   children: ReactNode;
 }
 
-const INACTIVITY_TIMEOUT = 1 * 60 * 1000; // 10 minutes
-const TOKEN_REFRESH_INTERVAL = 1 * 60 * 1000; // 14 minutes
+const INACTIVITY_TIMEOUT = 5 * 60 * 1000; // 5 minuto
+const TOKEN_REFRESH_INTERVAL = 14 * 60 * 1000; // 14 minutos
 
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(getStoredUser());
   const [showInactivityDialog, setShowInactivityDialog] = useState(false);
-  const [isAuthenticated, setIsAuthenticated] = useState(!!getStoredToken());
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+
+  useEffect(() => {
+    const initAuth = async () => {
+      const token = getStoredToken();
+      if (token) {
+        try {
+          const userData = await obtenerUsuarioActual();
+          setUser(userData);
+          setIsAuthenticated(true);
+        } catch (error) {
+          console.error('Error al inicializar la autenticación:', error);
+          handleLogout();
+        }
+      }
+    };
+
+    initAuth();
+  }, []);
 
   const handleLogout = useCallback(() => {
-    console.log('Logging out user');
+    console.log('Cerrando sesión del usuario');
     apiLogout();
     setUser(null);
     setIsAuthenticated(false);
@@ -42,17 +60,17 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   }, []);
 
   const refreshUserToken = useCallback(async () => {
-    try {
-      const refreshTokenValue = getStoredToken('refreshToken');
-      if (refreshTokenValue) {
-        console.log('Refreshing token');
+    const refreshTokenValue = getStoredToken('refreshToken');
+    if (refreshTokenValue) {
+      try {
+        console.log('Renovando token');
         const newTokens = await refreshToken(refreshTokenValue);
         setStoredToken(newTokens.token_acceso, newTokens.token_actualizacion);
         return true;
+      } catch (error) {
+        console.error('Error al renovar el token:', error);
+        handleLogout();
       }
-    } catch (error) {
-      console.error('Error refreshing token:', error);
-      handleLogout();
     }
     return false;
   }, [handleLogout]);
@@ -85,24 +103,28 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   }, [isAuthenticated, startInactivityTimer, startRefreshTokenTimer]);
 
   useEffect(() => {
-    const resetTimers = () => {
+    const resetInactivityTimer = () => {
       if (isAuthenticated) {
-        startInactivityTimer();
+        if (inactivityTimer) clearTimeout(inactivityTimer);
+        inactivityTimer = startInactivityTimer();
       }
     };
 
-    window.addEventListener('mousemove', resetTimers);
-    window.addEventListener('keypress', resetTimers);
+    let inactivityTimer: NodeJS.Timeout | null = null;
+
+    window.addEventListener('mousemove', resetInactivityTimer);
+    window.addEventListener('keypress', resetInactivityTimer);
 
     return () => {
-      window.removeEventListener('mousemove', resetTimers);
-      window.removeEventListener('keypress', resetTimers);
+      window.removeEventListener('mousemove', resetInactivityTimer);
+      window.removeEventListener('keypress', resetInactivityTimer);
+      if (inactivityTimer) clearTimeout(inactivityTimer);
     };
   }, [isAuthenticated, startInactivityTimer]);
 
   const handleLogin = async (email: string, password: string) => {
     try {
-      console.log('Attempting login');
+      console.log('Intentando iniciar sesión');
       const { token_acceso, token_actualizacion } = await apiLogin(email, password);
       setStoredToken(token_acceso, token_actualizacion);
 
@@ -110,24 +132,24 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setUser(userData);
       setIsAuthenticated(true);
       setStoredUser(userData);
-      console.log('Login successful');
+      console.log('Inicio de sesión exitoso');
     } catch (error) {
-      console.error('Error during login:', error);
+      console.error('Error durante el inicio de sesión:', error);
       throw error;
     }
   };
 
   const handleRegister = async (userData: FormData) => {
     try {
-      console.log('Attempting registration');
+      console.log('Intentando registrar');
       const { user: newUser, token } = await apiRegister(userData);
       setUser(newUser);
       setIsAuthenticated(true);
       setStoredToken(token.token_acceso, token.token_actualizacion);
       setStoredUser(newUser);
-      console.log('Registration successful');
+      console.log('Registro exitoso');
     } catch (error) {
-      console.error('Error during registration:', error);
+      console.error('Error durante el registro:', error);
       throw error;
     }
   };
@@ -137,13 +159,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   };
 
   const handleKeepSessionActive = async () => {
-    console.log('Keeping session active');
+    console.log('Manteniendo la sesión activa');
     setShowInactivityDialog(false);
     await refreshUserToken();
   };
 
   const handleEndSession = () => {
-    console.log('Ending session due to inactivity');
+    console.log('Finalizando sesión por inactividad');
     setShowInactivityDialog(false);
     handleLogout();
   };

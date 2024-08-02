@@ -1,4 +1,4 @@
-import axios, { AxiosInstance, InternalAxiosRequestConfig } from 'axios';
+import axios, { AxiosInstance } from 'axios';
 import { getStoredToken, setStoredToken, removeStoredToken } from '../utils/tokenUtils';
 import { Protesta, Cabecilla, Naturaleza, Provincia, PaginatedResponse, CrearProtesta, CrearCabecilla, CrearNaturaleza, ResumenPrincipal, User, Token, UserListResponse } from '../types';
 
@@ -11,30 +11,35 @@ export const api: AxiosInstance = axios.create({
   },
 });
 
-api.interceptors.request.use((config: InternalAxiosRequestConfig) => {
-  const token = getStoredToken();
-  if (token) {
-    config.headers.set('Authorization', `Bearer ${token}`);
-  }
-  return config;
-});
+api.interceptors.request.use(
+  async (config) => {
+    const token = getStoredToken('accessToken');
+    if (token) {
+      config.headers['Authorization'] = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
 
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config;
-    if (error.response?.status === 401 && !originalRequest._retry) {
+    if (error.response.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;
       try {
         const refreshTokenValue = getStoredToken('refreshToken');
         if (!refreshTokenValue) {
-          throw new Error('No refresh token available');
+          throw new Error('No hay token de actualización');
         }
-        await refreshToken(refreshTokenValue);
+        const { token_acceso, token_actualizacion } = await refreshToken(refreshTokenValue);
+        setStoredToken(token_acceso, token_actualizacion);
+        originalRequest.headers['Authorization'] = `Bearer ${token_acceso}`;
         return api(originalRequest);
       } catch (refreshError) {
-        console.error('Error refreshing token:', refreshError);
-        window.dispatchEvent(new CustomEvent('auth-error', { detail: 'Session expired' }));
+        console.error('Error al renovar el token:', refreshError);
+        window.dispatchEvent(new CustomEvent('auth-error', { detail: 'Sesión expirada' }));
         return Promise.reject(refreshError);
       }
     }
@@ -65,17 +70,11 @@ export const register = async (userData: FormData): Promise<{ user: User; token:
 };
 
 export const refreshToken = async (refreshToken: string) => {
-  console.log('Refreshing token');
   try {
-    const response = await axios.post<Token>(`${BASE_URL}/token/renovar`, { token_actualizacion: refreshToken });
-    console.log('Token refreshed successfully');
-    const { token_acceso, token_actualizacion } = response.data;
-    setStoredToken(token_acceso, token_actualizacion);
+    const response = await api.post('/token/renovar', { token_actualizacion: refreshToken });
     return response.data;
   } catch (error) {
-    console.error('Error in refreshToken:', error);
-    removeStoredToken();
-    window.dispatchEvent(new CustomEvent('auth-error', { detail: 'Error refreshing token' }));
+    console.error('Error en refreshToken:', error);
     throw error;
   }
 };

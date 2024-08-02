@@ -25,13 +25,11 @@ const InactivityDialog: React.FC<InactivityDialogProps> = ({ open, onKeepActive,
         });
       }, 1000);
     }
-    return () => {
-      if (timer) clearInterval(timer);
-    };
+    return () => clearInterval(timer);
   }, [open, onLogout]);
 
   const handleKeepActive = () => {
-    setCountdown(60); 
+    setCountdown(60);
     onKeepActive();
   };
 

@@ -1,3 +1,5 @@
+import { User } from '../types/index'; 
+
 export const getStoredToken = (type: 'accessToken' | 'refreshToken' = 'accessToken'): string | null => {
   return localStorage.getItem(type);
 };
@@ -12,12 +14,12 @@ export const removeStoredToken = () => {
   localStorage.removeItem('refreshToken');
 };
 
-export const getStoredUser = () => {
+export const getStoredUser = (): User | null => {
   const userStr = localStorage.getItem('user');
   return userStr ? JSON.parse(userStr) : null;
 };
 
-export const setStoredUser = (user: any) => {
+export const setStoredUser = (user: User) => {
   localStorage.setItem('user', JSON.stringify(user));
 };
 
