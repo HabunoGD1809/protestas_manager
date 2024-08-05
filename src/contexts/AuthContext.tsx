@@ -8,7 +8,7 @@ import axios from 'axios';
 export interface AuthContextType {
   user: User | null;
   login: (email: string, password: string) => Promise<void>;
-  register: (userData: FormData) => Promise<void>;
+  register: (userData: FormData) => Promise<User>;
   logout: () => void;
   isAdmin: () => boolean;
   refreshUserToken: () => Promise<boolean>;
@@ -17,7 +17,7 @@ export interface AuthContextType {
 export const AuthContext = createContext<AuthContextType>({
   user: null,
   login: async () => {},
-  register: async () => {},
+  register: async () => ({} as User),
   logout: () => {},
   isAdmin: () => false,
   refreshUserToken: async () => false,
@@ -27,7 +27,7 @@ interface AuthProviderProps {
   children: ReactNode;
 }
 
-const INACTIVITY_TIMEOUT = 1 * 60 * 1000; // 5 minutos
+const INACTIVITY_TIMEOUT = 5 * 60 * 1000; // 5 minutos
 const TOKEN_REFRESH_INTERVAL = 14 * 60 * 1000; // 14 minutos
 
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
@@ -208,21 +208,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const handleRegister = async (userData: FormData) => {
     try {
       console.log('Intentando registrar');
-      const response = await apiRegister(userData);
-      console.log('Respuesta del registro:', response);
+      const user = await apiRegister(userData);
+      console.log('Respuesta del registro:', user);
 
-      if (response && response.user) {
-        setUser(response.user);
-        setIsAuthenticated(true);
-        
-        if (response.token) {
-          setStoredToken(response.token.token_acceso, response.token.token_actualizacion);
-        } else {
-          console.warn('Token no encontrado en la respuesta del registro');
-        }
-        
-        setStoredUser(response.user);
+      if (user) {
         console.log('Registro exitoso');
+        return user; // Retornamos el usuario registrado
       } else {
         throw new Error('Respuesta del registro incompleta');
       }

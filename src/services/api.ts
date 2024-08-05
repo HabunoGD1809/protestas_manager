@@ -20,6 +20,7 @@ api.interceptors.request.use((config: InternalAxiosRequestConfig) => {
 });
 
 let isRefreshing = false;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 let failedQueue: any[] = [];
 
 const processQueue = (error: unknown, token: string | null = null) => {
@@ -98,8 +99,8 @@ export const login = async (email: string, password: string) => {
   return response.data;
 };
 
-export const register = async (userData: FormData): Promise<{ user: User; token: Token }> => {
-  const response = await api.post<{ user: User; token: Token }>('/registro', userData, {
+export const register = async (userData: FormData): Promise<User> => {
+  const response = await api.post<User>('/registro', userData, {
     headers: {
       'Content-Type': 'multipart/form-data',
     },

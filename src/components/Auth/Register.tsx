@@ -1,7 +1,15 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { TextField, Button, Typography, Box, Avatar } from '@mui/material';
+import { TextField, Button, Typography, Box, Avatar, Snackbar } from '@mui/material';
+import MuiAlert, { AlertProps } from '@mui/material/Alert';
 import { useAuth } from '../../hooks/useAuth';
+
+const Alert = React.forwardRef<HTMLDivElement, AlertProps>(function Alert(
+  props,
+  ref,
+) {
+  return <MuiAlert elevation={6} ref={ref} variant="filled" {...props} />;
+});
 
 const Register: React.FC = () => {
   const [formData, setFormData] = useState({
@@ -14,6 +22,7 @@ const Register: React.FC = () => {
   const [foto, setFoto] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [error, setError] = useState('');
+  const [openSnackbar, setOpenSnackbar] = useState(false);
   const { register } = useAuth();
   const navigate = useNavigate();
 
@@ -44,7 +53,10 @@ const Register: React.FC = () => {
         formDataToSend.append('foto', foto);
       }
       await register(formDataToSend);
-      navigate('/');
+      setOpenSnackbar(true);
+      setTimeout(() => {
+        navigate('/login');
+      }, 3000);
     } catch (err) {
       console.error('Error en el registro:', err);
       if (err instanceof Error) {
@@ -53,6 +65,13 @@ const Register: React.FC = () => {
         setError('Registro fallido. Por favor, inténtelo de nuevo.');
       }
     }
+  };
+
+  const handleCloseSnackbar = (_event?: React.SyntheticEvent | Event, reason?: string) => {
+    if (reason === 'clickaway') {
+      return;
+    }
+    setOpenSnackbar(false);
   };
 
   return (
@@ -128,6 +147,11 @@ const Register: React.FC = () => {
       <Button type="submit" fullWidth variant="contained" sx={{ mt: 3, mb: 2 }}>
         Registrarse
       </Button>
+      <Snackbar open={openSnackbar} autoHideDuration={3000} onClose={handleCloseSnackbar}>
+        <Alert onClose={handleCloseSnackbar} severity="success" sx={{ width: '100%' }}>
+          Registro exitoso. Redirigiendo a la página de inicio de sesión...
+        </Alert>
+      </Snackbar>
     </Box>
   );
 };
