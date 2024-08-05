@@ -46,7 +46,12 @@ const Register: React.FC = () => {
       await register(formDataToSend);
       navigate('/');
     } catch (err) {
-      setError('Registro fallido. Por favor, inténtelo de nuevo.');
+      console.error('Error en el registro:', err);
+      if (err instanceof Error) {
+        setError(`Registro fallido: ${err.message}`);
+      } else {
+        setError('Registro fallido. Por favor, inténtelo de nuevo.');
+      }
     }
   };
 

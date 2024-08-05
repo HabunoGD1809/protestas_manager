@@ -5,8 +5,10 @@ export const getStoredToken = (type: 'accessToken' | 'refreshToken' = 'accessTok
 };
 
 export const setStoredToken = (accessToken: string, refreshToken: string) => {
+  console.log('Almacenando tokens:', { accessToken, refreshToken });
   localStorage.setItem('accessToken', accessToken);
   localStorage.setItem('refreshToken', refreshToken);
+  console.log('Tokens almacenados en localStorage');
 };
 
 export const removeStoredToken = () => {
@@ -25,4 +27,23 @@ export const setStoredUser = (user: User) => {
 
 export const removeStoredUser = () => {
   localStorage.removeItem('user');
+};
+
+// Añade esta función en tokenUtils.ts
+
+export const debugTokens = () => {
+  const accessToken = localStorage.getItem('accessToken');
+  const refreshToken = localStorage.getItem('refreshToken');
+  console.log('Access Token:', accessToken);
+  console.log('Refresh Token:', refreshToken);
+  
+  if (refreshToken) {
+    const parts = refreshToken.split('.');
+    console.log('Refresh Token parts:', parts.length);
+    parts.forEach((part, index) => {
+      console.log(`Part ${index + 1}:`, part);
+    });
+  } else {
+    console.log('No refresh token found');
+  }
 };

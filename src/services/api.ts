@@ -1,4 +1,4 @@
-import axios, { AxiosInstance } from 'axios';
+import axios, { AxiosInstance, InternalAxiosRequestConfig } from 'axios';
 import { getStoredToken, setStoredToken, removeStoredToken } from '../utils/tokenUtils';
 import { Protesta, Cabecilla, Naturaleza, Provincia, PaginatedResponse, CrearProtesta, CrearCabecilla, CrearNaturaleza, ResumenPrincipal, User, Token, UserListResponse } from '../types';
 
@@ -11,36 +11,74 @@ export const api: AxiosInstance = axios.create({
   },
 });
 
-api.interceptors.request.use(
-  async (config) => {
-    const token = getStoredToken('accessToken');
-    if (token) {
-      config.headers['Authorization'] = `Bearer ${token}`;
+api.interceptors.request.use((config: InternalAxiosRequestConfig) => {
+  const token = getStoredToken();
+  if (token) {
+    config.headers.set('Authorization', `Bearer ${token}`);
+  }
+  return config;
+});
+
+let isRefreshing = false;
+let failedQueue: any[] = [];
+
+const processQueue = (error: unknown, token: string | null = null) => {
+  failedQueue.forEach(prom => {
+    if (error) {
+      prom.reject(error);
+    } else {
+      prom.resolve(token);
     }
-    return config;
-  },
-  (error) => Promise.reject(error)
-);
+  });
+  
+  failedQueue = [];
+};
 
 api.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    const newToken = response.headers['new-token'];
+    if (newToken) {
+      const refreshToken = getStoredToken('refreshToken');
+      if (refreshToken) {
+        setStoredToken(newToken, refreshToken);
+      }
+    }
+    return response;
+  },
   async (error) => {
     const originalRequest = error.config;
-    if (error.response.status === 401 && !originalRequest._retry) {
+    if (error.response?.status === 401 && !originalRequest._retry) {
+      if (isRefreshing) {
+        return new Promise((resolve, reject) => {
+          failedQueue.push({resolve, reject});
+        }).then(token => {
+          originalRequest.headers['Authorization'] = 'Bearer ' + token;
+          return api(originalRequest);
+        }).catch(err => {
+          return Promise.reject(err);
+        });
+      }
+
       originalRequest._retry = true;
+      isRefreshing = true;
+
       try {
         const refreshTokenValue = getStoredToken('refreshToken');
         if (!refreshTokenValue) {
-          throw new Error('No hay token de actualización');
+          throw new Error('No hay token de actualización disponible');
         }
-        const { token_acceso, token_actualizacion } = await refreshToken(refreshTokenValue);
-        setStoredToken(token_acceso, token_actualizacion);
-        originalRequest.headers['Authorization'] = `Bearer ${token_acceso}`;
+        const newTokens = await refreshToken(refreshTokenValue);
+        setStoredToken(newTokens.token_acceso, newTokens.token_actualizacion);
+        api.defaults.headers.common['Authorization'] = 'Bearer ' + newTokens.token_acceso;
+        processQueue(null, newTokens.token_acceso);
         return api(originalRequest);
       } catch (refreshError) {
-        console.error('Error al renovar el token:', refreshError);
+        processQueue(refreshError, null);
+        removeStoredToken();
         window.dispatchEvent(new CustomEvent('auth-error', { detail: 'Sesión expirada' }));
         return Promise.reject(refreshError);
+      } finally {
+        isRefreshing = false;
       }
     }
     return Promise.reject(error);
@@ -70,11 +108,21 @@ export const register = async (userData: FormData): Promise<{ user: User; token:
 };
 
 export const refreshToken = async (refreshToken: string) => {
+  console.log('Iniciando solicitud de renovación de token');
+  console.log('Token de actualización enviado:', refreshToken);
   try {
-    const response = await api.post('/token/renovar', { token_actualizacion: refreshToken });
+    const response = await axios.post<Token>(`${BASE_URL}/token/renovar`, { token_actualizacion: refreshToken });
+    console.log('Respuesta del servidor (renovación de token):', response.data);
+    const { token_acceso, token_actualizacion } = response.data;
+    setStoredToken(token_acceso, token_actualizacion);
     return response.data;
   } catch (error) {
     console.error('Error en refreshToken:', error);
+    if (axios.isAxiosError(error)) {
+      console.error('Detalles del error:', error.response?.data);
+    }
+    removeStoredToken();
+    window.dispatchEvent(new CustomEvent('auth-error', { detail: 'Error al renovar el token' }));
     throw error;
   }
 };
