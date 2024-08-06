@@ -70,13 +70,13 @@ export interface CrearNaturaleza {
   icono?: string;
 }
 
-export interface CrearCabecilla {
-  nombre: string;
-  apellido: string;
-  cedula: string;
-  telefono?: string;
-  direccion?: string;
-}
+// export interface CrearCabecilla {
+//   nombre: string;
+//   apellido: string;
+//   cedula: string;
+//   telefono?: string;
+//   direccion?: string;
+// }
 
 export interface Token {
   token_acceso: string;

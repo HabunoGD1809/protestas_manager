@@ -1,6 +1,6 @@
 import axios, { AxiosInstance, InternalAxiosRequestConfig } from 'axios';
 import { getStoredToken, setStoredToken, removeStoredToken } from '../utils/tokenUtils';
-import { Protesta, Cabecilla, Naturaleza, Provincia, PaginatedResponse, CrearProtesta, CrearCabecilla, CrearNaturaleza, ResumenPrincipal, User, Token, UserListResponse } from '../types';
+import { Protesta, Naturaleza, Provincia, PaginatedResponse, CrearProtesta, Cabecilla, CrearNaturaleza, ResumenPrincipal, User, Token, UserListResponse } from '../types';
 
 const BASE_URL = 'http://10.5.5.18:9001'; 
 
@@ -110,10 +110,10 @@ export const register = async (userData: FormData): Promise<User> => {
 
 export const refreshToken = async (refreshToken: string) => {
   console.log('Iniciando solicitud de renovación de token');
-  console.log('Token de actualización enviado:', refreshToken);
+  // console.log('Token de actualización enviado:', refreshToken);
   try {
     const response = await axios.post<Token>(`${BASE_URL}/token/renovar`, { token_actualizacion: refreshToken });
-    console.log('Respuesta del servidor (renovación de token):', response.data);
+    // console.log('Respuesta del servidor (renovación de token):', response.data);
     const { token_acceso, token_actualizacion } = response.data;
     setStoredToken(token_acceso, token_actualizacion);
     return response.data;
@@ -166,8 +166,8 @@ export const cabecillaService = {
     return response.data;
   },
   getById: (id: string) => api.get<Cabecilla>(`/cabecillas/${id}`).then(res => res.data),
-  create: (cabecilla: CrearCabecilla) => api.post<Cabecilla>('/cabecillas', cabecilla).then(res => res.data),
-  update: (id: string, cabecilla: CrearCabecilla) => api.put<Cabecilla>(`/cabecillas/${id}`, cabecilla).then(res => res.data),
+  create: (cabecilla: Cabecilla) => api.post<Cabecilla>('/cabecillas', cabecilla).then(res => res.data),
+  update: (id: string, cabecilla: Cabecilla) => api.put<Cabecilla>(`/cabecillas/${id}`, cabecilla).then(res => res.data),
   delete: (id: string) => api.delete(`/cabecillas/${id}`).then(res => res.data),
   updateFoto: (id: string, foto: File) => {
     const formData = new FormData();

@@ -20,13 +20,29 @@ const Login: React.FC = () => {
     }
   }, [location]);
 
+  const validateEmail = (email: string): boolean => {
+    const re = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+    return re.test(email);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError('');
+
+    if (!validateEmail(email)) {
+      setError('Por favor, introduce un email válido.');
+      return;
+    }
+
     try {
       await login(email, password);
       navigate('/');
     } catch (err) {
-      setError('Email o Contraseña inválida');
+      if (err instanceof Error) {
+        setError(`Error de autenticación: ${err.message}`);
+      } else {
+        setError('Ocurrió un error inesperado. Por favor, intenta de nuevo.');
+      }
     }
   };
 
@@ -42,14 +58,16 @@ const Login: React.FC = () => {
         required
         fullWidth
         id="email"
-        label="Email Address"
+        label="Dirección de Email"
         name="email"
         autoComplete="email"
         autoFocus
         value={email}
         onChange={(e) => setEmail(e.target.value)}
+        error={!!error && error.includes('email')}
+        helperText={error && error.includes('email') ? error : ''}
         inputProps={{
-          'aria-label': 'Email Address',
+          'aria-label': 'Dirección de Email',
         }}
       />
       <TextField
@@ -57,17 +75,17 @@ const Login: React.FC = () => {
         required
         fullWidth
         name="password"
-        label="Password"
+        label="Contraseña"
         type="password"
         id="password"
         autoComplete="current-password"
         value={password}
         onChange={(e) => setPassword(e.target.value)}
         inputProps={{
-          'aria-label': 'Password',
+          'aria-label': 'Contraseña',
         }}
       />
-      {error && (
+      {error && !error.includes('email') && (
         <Typography color="error" align="center" role="alert">
           {error}
         </Typography>
