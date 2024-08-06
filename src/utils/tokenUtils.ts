@@ -5,10 +5,10 @@ export const getStoredToken = (type: 'accessToken' | 'refreshToken' = 'accessTok
 };
 
 export const setStoredToken = (accessToken: string, refreshToken: string) => {
-  console.log('Almacenando tokens:', { accessToken, refreshToken });
+  // console.log('Almacenando tokens:', { accessToken, refreshToken });
   localStorage.setItem('accessToken', accessToken);
   localStorage.setItem('refreshToken', refreshToken);
-  console.log('Tokens almacenados en localStorage');
+  // console.log('Tokens almacenados en localStorage');
 };
 
 export const removeStoredToken = () => {

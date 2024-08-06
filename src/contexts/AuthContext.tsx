@@ -1,4 +1,5 @@
 import React, { createContext, useState, useEffect, useCallback, useRef, ReactNode } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { User } from '../types';
 import { getStoredUser, setStoredUser, removeStoredUser, getStoredToken, setStoredToken, removeStoredToken } from '../utils/tokenUtils';
 import { login as apiLogin, register as apiRegister, logout as apiLogout, refreshToken, obtenerUsuarioActual } from '../services/api';
@@ -29,6 +30,7 @@ interface AuthProviderProps {
 
 const INACTIVITY_TIMEOUT = 1 * 60 * 1000; // 5 minutos
 const TOKEN_REFRESH_INTERVAL = 14 * 60 * 1000; // 14 minutos
+const COUNTDOWN_DURATION = 60; // 60 segundos para el contador de inactividad
 
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(getStoredUser());
@@ -36,6 +38,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const inactivityTimerRef = useRef<NodeJS.Timeout | null>(null);
   const refreshTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const navigate = useNavigate();
 
   const [dialogState, setDialogState] = useState({
     open: false,
@@ -43,9 +46,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     onLogout: () => {},
   });
 
-  const COUNTDOWN_DURATION = 60; // Duración del contador en segundos
-
-  const handleLogout = useCallback(() => {
+  const handleLogout = useCallback((reason?: 'inactivity' | 'manual') => {
     console.log('Cerrando sesión del usuario');
     apiLogout();
     setUser(null);
@@ -54,7 +55,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     removeStoredUser();
     if (inactivityTimerRef.current) clearTimeout(inactivityTimerRef.current);
     if (refreshTimerRef.current) clearInterval(refreshTimerRef.current);
-  }, []);
+    
+    if (reason === 'inactivity') {
+      navigate('/login?inactivity=true');
+    } else {
+      navigate('/login');
+    }
+  }, [navigate]);
 
   const refreshUserToken = useCallback(async () => {
     if (isRefreshing) return false;
@@ -62,16 +69,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     console.log('Iniciando proceso de renovación de token');
     
     const refreshTokenValue = getStoredToken('refreshToken');
-    console.log('Token de actualización almacenado:', refreshTokenValue);
+    // console.log('Token de actualización almacenado:', refreshTokenValue);
     
     if (refreshTokenValue) {
       try {
         console.log('Intentando renovar token');
         const newTokens = await refreshToken(refreshTokenValue);
-        console.log('Respuesta de renovación de token:', newTokens);
+        // console.log('Respuesta de renovación de token:', newTokens);
         
         setStoredToken(newTokens.token_acceso, newTokens.token_actualizacion);
-        console.log('Nuevos tokens almacenados');
+        // console.log('Nuevos tokens almacenados');
         
         setIsRefreshing(false);
         return true;
@@ -104,17 +111,17 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           startInactivityTimer();
         } else {
           console.log('No se pudo mantener la sesión activa');
-          handleLogout();
+          handleLogout('inactivity');
         }
       },
       onLogout: () => {
         console.log('Finalizando sesión por inactividad');
         setDialogState(prev => ({ ...prev, open: false }));
-        handleLogout();
+        handleLogout('inactivity');
       },
     });
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [refreshUserToken, handleLogout]);
+  }, [refreshUserToken, handleLogout,]);
 
   const startInactivityTimer = useCallback(() => {
     if (inactivityTimerRef.current) {
@@ -187,7 +194,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     try {
       console.log('Intentando iniciar sesión');
       const { token_acceso, token_actualizacion } = await apiLogin(email, password);
-      console.log('Tokens recibidos:', { token_acceso, token_actualizacion });
+      // console.log('Tokens recibidos:', { token_acceso, token_actualizacion });
       setStoredToken(token_acceso, token_actualizacion);
       console.log('Tokens almacenados');
 
@@ -198,9 +205,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       console.log('Inicio de sesión exitoso');
       
       // Verificar que los tokens se hayan almacenado correctamente
-      const storedAccessToken = getStoredToken('accessToken');
-      const storedRefreshToken = getStoredToken('refreshToken');
-      console.log('Tokens almacenados después del login:', { storedAccessToken, storedRefreshToken });
+      // const storedAccessToken = getStoredToken('accessToken');
+      // const storedRefreshToken = getStoredToken('refreshToken');
+      // console.log('Tokens almacenados después del login:', { storedAccessToken, storedRefreshToken });
     } catch (error) {
       console.error('Error durante el inicio de sesión:', error);
       throw error;
@@ -215,7 +222,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
       if (user) {
         console.log('Registro exitoso');
-        return user; // Retornamos el usuario registrado
+        return user;
       } else {
         throw new Error('Respuesta del registro incompleta');
       }
@@ -238,7 +245,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         user,
         login: handleLogin,
         register: handleRegister,
-        logout: handleLogout,
+        logout: () => handleLogout('manual'), 
         isAdmin,
         refreshUserToken,
       }}
@@ -253,3 +260,4 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     </AuthContext.Provider>
   );
 };
+
