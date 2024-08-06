@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useApi } from '../../hooks/useApi';
-import { Card, Statistic, Row, Col } from 'antd';
+import { Card, Statistic, Row, Col, Alert } from 'antd';
 import { PieChartOutlined, CalendarOutlined, TeamOutlined } from '@ant-design/icons';
-import { Protesta } from '../../types';
+import { Protesta, Naturaleza, PaginatedResponse } from '../../types';
 import dayjs from 'dayjs';
 
 const ProtestaStats: React.FC = () => {
@@ -11,17 +11,43 @@ const ProtestaStats: React.FC = () => {
     protestas_este_mes: 0,
     naturaleza_mas_comun: '',
   });
+  const [errorDetails, setErrorDetails] = useState<string | null>(null);
   const { request, loading, error } = useApi();
 
   useEffect(() => {
     fetchStats();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const fetchStats = async () => {
     try {
-      const response = await request<{ items: Protesta[], total: number }>('get', '/protestas');
-      const protestas = response.items || [];
-      const totalProtestas = response.total || 0;
+      const [protestaResponse, naturalezaResponse] = await Promise.all([
+        request<PaginatedResponse<Protesta>>('get', '/protestas'),
+        request<Naturaleza[] | PaginatedResponse<Naturaleza>>('get', '/naturalezas')
+      ]);
+
+      console.log('Protesta Response:', protestaResponse);
+      console.log('Naturaleza Response:', naturalezaResponse);
+
+      if (!protestaResponse || !protestaResponse.items) {
+        throw new Error('La respuesta de protestas es inválida');
+      }
+
+      let naturalezas: Naturaleza[];
+      if (Array.isArray(naturalezaResponse)) {
+        naturalezas = naturalezaResponse;
+      } else if (naturalezaResponse && 'items' in naturalezaResponse) {
+        naturalezas = naturalezaResponse.items;
+      } else {
+        throw new Error(`La respuesta de naturalezas es inválida: ${JSON.stringify(naturalezaResponse)}`);
+      }
+
+      if (!Array.isArray(naturalezas) || naturalezas.length === 0) {
+        throw new Error(`No se encontraron naturalezas válidas: ${JSON.stringify(naturalezas)}`);
+      }
+
+      const protestas = protestaResponse.items;
+      const totalProtestas = protestaResponse.total;
       
       const protestasEsteMes = protestas.filter(p => 
         dayjs(p.fecha_evento).isSame(dayjs(), 'month')
@@ -31,20 +57,50 @@ const ProtestaStats: React.FC = () => {
       protestas.forEach(p => {
         naturalezaCount[p.naturaleza_id] = (naturalezaCount[p.naturaleza_id] || 0) + 1;
       });
-      const naturalezaMasComun = Object.entries(naturalezaCount).reduce((a, b) => a[1] > b[1] ? a : b, ['', 0])[0];
+      
+      const naturalezaMasComunId = Object.entries(naturalezaCount).reduce((a, b) => a[1] > b[1] ? a : b, ['', 0])[0];
+      const naturalezaMasComun = naturalezas.find(n => n.id === naturalezaMasComunId)?.nombre || 'Desconocida';
+
+      console.log('Estadísticas calculadas:', {
+        total_protestas: totalProtestas,
+        protestas_este_mes: protestasEsteMes,
+        naturaleza_mas_comun: naturalezaMasComun,
+      });
 
       setStats({
         total_protestas: totalProtestas,
         protestas_este_mes: protestasEsteMes,
         naturaleza_mas_comun: naturalezaMasComun,
       });
+      setErrorDetails(null);
     } catch (error) {
       console.error('Error al cargar las estadísticas', error);
+      setStats({
+        total_protestas: 0,
+        protestas_este_mes: 0,
+        naturaleza_mas_comun: 'Error al cargar',
+      });
+      setErrorDetails(error instanceof Error ? error.message : 'Error desconocido');
     }
   };
 
   if (loading) return <p>Cargando estadísticas...</p>;
-  if (error) return <p>Error al cargar las estadísticas: {error}</p>;
+  
+  if (error || errorDetails) {
+    return (
+      <Alert
+        message="Error al cargar las estadísticas"
+        description={
+          <div>
+            <p>{error || errorDetails}</p>
+            <p>Detalles técnicos: {errorDetails}</p>
+          </div>
+        }
+        type="error"
+        showIcon
+      />
+    );
+  }
 
   return (
     <Row gutter={16}>
@@ -69,7 +125,7 @@ const ProtestaStats: React.FC = () => {
       <Col span={8}>
         <Card>
           <Statistic
-            title="ID Naturaleza más común"
+            title="Naturaleza más común"
             value={stats.naturaleza_mas_comun}
             prefix={<TeamOutlined />}
           />
