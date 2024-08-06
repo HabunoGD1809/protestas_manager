@@ -27,7 +27,7 @@ interface AuthProviderProps {
   children: ReactNode;
 }
 
-const INACTIVITY_TIMEOUT = 5 * 60 * 1000; // 5 minutos
+const INACTIVITY_TIMEOUT = 1 * 60 * 1000; // 5 minutos
 const TOKEN_REFRESH_INTERVAL = 14 * 60 * 1000; // 14 minutos
 
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
@@ -42,6 +42,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     onKeepActive: () => {},
     onLogout: () => {},
   });
+
+  const COUNTDOWN_DURATION = 60; // Duración del contador en segundos
 
   const handleLogout = useCallback(() => {
     console.log('Cerrando sesión del usuario');
@@ -246,6 +248,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         open={dialogState.open}
         onKeepActive={dialogState.onKeepActive}
         onLogout={dialogState.onLogout}
+        countdownDuration={COUNTDOWN_DURATION}
       />
     </AuthContext.Provider>
   );

@@ -2,7 +2,7 @@ import axios, { AxiosInstance, InternalAxiosRequestConfig } from 'axios';
 import { getStoredToken, setStoredToken, removeStoredToken } from '../utils/tokenUtils';
 import { Protesta, Cabecilla, Naturaleza, Provincia, PaginatedResponse, CrearProtesta, CrearCabecilla, CrearNaturaleza, ResumenPrincipal, User, Token, UserListResponse } from '../types';
 
-const BASE_URL = 'http://localhost:8000'; 
+const BASE_URL = 'http://10.5.5.18:9001'; 
 
 export const api: AxiosInstance = axios.create({
   baseURL: BASE_URL,
