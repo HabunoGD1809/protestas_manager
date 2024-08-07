@@ -6,7 +6,6 @@ import PrivateRoute from './components/Common/PrivateRoute';
 import AdminRoute from './components/Common/AdminRoute';
 import HomePage from './pages/HomePage';
 import LoginPage from './pages/LoginPage';
-// import RegisterPage from './pages/RegisterPage';
 import ProtestaListPage from './pages/ProtestaListPage';
 import ProtestaFormPage from './pages/ProtestaFormPage';
 import ProtestaDetailPage from './pages/ProtestaDetailPage';
@@ -19,6 +18,7 @@ import CabecillaList from './components/Cabecilla/CabecillaList';
 import CabecillaForm from './components/Cabecilla/CabecillaForm';
 import NaturalezaList from './components/Naturaleza/NaturalezaList';
 import NaturalezaForm from './components/Naturaleza/NaturalezaForm';
+import AdminDashboardPage from './pages/AdminDashboardPage';
 
 const App: React.FC = () => {
   const navigate = useNavigate();
@@ -42,7 +42,6 @@ const App: React.FC = () => {
         <Routes>
           <Route path="/" element={<HomePage />} />
           <Route path="/login" element={<LoginPage />} />
-          {/* <Route path="/register" element={<RegisterPage />} /> */}
           <Route path="/protestas" element={<PrivateRoute><ProtestaListPage /></PrivateRoute>} />
           <Route path="/protestas/crear" element={<PrivateRoute><ProtestaFormPage /></PrivateRoute>} />
           <Route path="/protestas/editar/:id" element={<PrivateRoute><ProtestaFormPage /></PrivateRoute>} />
@@ -62,6 +61,9 @@ const App: React.FC = () => {
           <Route path="/naturalezas/edit/:id" element={<PrivateRoute><NaturalezaForm /></PrivateRoute>} />
           <Route path="/naturalezas/new" element={<PrivateRoute><NaturalezaFormPage /></PrivateRoute>} />
           <Route path="/naturalezas/edit/:id" element={<PrivateRoute><NaturalezaFormPage /></PrivateRoute>} />
+          
+          {/* Nueva ruta para el dashboard de administrador */}
+          <Route path="/admin/dashboard" element={<AdminRoute><AdminDashboardPage /></AdminRoute>} />
         </Routes>
       </Layout>
     </AuthProvider>

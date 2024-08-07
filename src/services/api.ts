@@ -1,6 +1,7 @@
 import axios, { AxiosInstance, InternalAxiosRequestConfig } from 'axios';
 import { getStoredToken, setStoredToken, removeStoredToken } from '../utils/tokenUtils';
 import { Protesta, Naturaleza, Provincia, PaginatedResponse, CrearProtesta, Cabecilla, CrearNaturaleza, ResumenPrincipal, User, Token, UserListResponse } from '../types';
+import { cacheService } from './cacheService';
 
 const BASE_URL = 'http://127.0.0.1:8000'; 
 
@@ -136,6 +137,13 @@ export const obtenerUsuarioActual = async () => {
 
 export const protestaService = {
   getAll: async (page: number = 1, pageSize: number = 10, filters?: Record<string, string>) => {
+    const cacheKey = `protestas_${JSON.stringify(filters)}`;
+    const cachedData = cacheService.getPaginated<Protesta>(cacheKey, page, pageSize);
+    
+    if (cachedData) {
+      return cachedData;
+    }
+
     const response = await api.get<PaginatedResponse<Protesta>>('/protestas', { 
       params: { 
         page, 
@@ -143,16 +151,60 @@ export const protestaService = {
         ...filters 
       } 
     });
+    cacheService.setPaginated(cacheKey, response.data, page, pageSize);
     return response.data;
   },
-  getById: (id: string) => api.get<Protesta>(`/protestas/${id}`).then(res => res.data),
-  create: (protesta: CrearProtesta) => api.post<Protesta>('/protestas', protesta).then(res => res.data),
-  update: (id: string, protesta: CrearProtesta) => api.put<Protesta>(`/protestas/${id}`, protesta).then(res => res.data),
-  delete: (id: string) => api.delete(`/protestas/${id}`).then(res => res.data),
+  getById: async (id: string) => {
+    const cacheKey = `protesta_${id}`;
+    const cachedData = cacheService.get<Protesta>(cacheKey);
+    
+    if (cachedData) {
+      return cachedData;
+    }
+
+    const response = await api.get<Protesta>(`/protestas/${id}`);
+    cacheService.set(cacheKey, response.data);
+    return response.data;
+  },
+  create: async (protesta: CrearProtesta) => {
+    const response = await api.post<Protesta>('/protestas', protesta);
+    cacheService.remove('protestas');
+    return response.data;
+  },
+  update: async (id: string, protesta: CrearProtesta) => {
+    const response = await api.put<Protesta>(`/protestas/${id}`, protesta);
+    cacheService.remove('protestas');
+    cacheService.remove(`protesta_${id}`);
+    return response.data;
+  },
+  delete: async (id: string) => {
+    const response = await api.delete(`/protestas/${id}`);
+    cacheService.remove('protestas');
+    cacheService.remove(`protesta_${id}`);
+    return response.data;
+  },
 };
 
 export const cabecillaService = {
+  
+  getAllWithoutPagination: async () => {
+    try {
+      const response = await api.get<Cabecilla[]>('/cabecillas/all');
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching all cabecillas:', error);
+      throw error;
+    }
+  },
+
   getAll: async (page: number = 1, pageSize: number = 10, filters?: Record<string, string>) => {
+    const cacheKey = `cabecillas_${JSON.stringify(filters)}`;
+    const cachedData = cacheService.getPaginated<Cabecilla>(cacheKey, page, pageSize);
+    
+    if (cachedData) {
+      return cachedData;
+    }
+
     const response = await api.get<PaginatedResponse<Cabecilla>>('/cabecillas', { 
       params: { 
         page, 
@@ -160,27 +212,70 @@ export const cabecillaService = {
         ...filters 
       } 
     });
+    cacheService.setPaginated(cacheKey, response.data, page, pageSize);
     return response.data;
   },
-  getById: (id: string) => api.get<Cabecilla>(`/cabecillas/${id}`).then(res => res.data),
-  create: (cabecilla: FormData) => api.post<Cabecilla>('/cabecillas', cabecilla, {
-    headers: { 'Content-Type': 'multipart/form-data' },
-  }).then(res => res.data),
-  update: (id: string, cabecilla: FormData) => api.put<Cabecilla>(`/cabecillas/${id}`, cabecilla, {
-    headers: { 'Content-Type': 'multipart/form-data' },
-  }).then(res => res.data),
-  delete: (id: string) => api.delete(`/cabecillas/${id}`).then(res => res.data),
-  updateFoto: (id: string, foto: File) => {
+  getById: async (id: string) => {
+    const cacheKey = `cabecilla_${id}`;
+    const cachedData = cacheService.get<Cabecilla>(cacheKey);
+    
+    if (cachedData) {
+      return cachedData;
+    }
+
+    const response = await api.get<Cabecilla>(`/cabecillas/${id}`);
+    const cabecilla = response.data;
+    if (cabecilla.foto) {
+      cabecilla.fotoUrl = `${BASE_URL}${cabecilla.foto}`;
+    }
+    cacheService.set(cacheKey, cabecilla);
+    return cabecilla;
+  },
+  create: async (cabecilla: FormData) => {
+    const response = await api.post<Cabecilla>('/cabecillas', cabecilla, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    const newCabecilla = response.data;
+    if (newCabecilla.foto) {
+      newCabecilla.fotoUrl = `${BASE_URL}${newCabecilla.foto}`;
+    }
+    cacheService.remove('cabecillas');
+    return newCabecilla;
+  },
+  update: async (id: string, cabecilla: FormData) => {
+    const response = await api.put<Cabecilla>(`/cabecillas/${id}`, cabecilla, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    cacheService.remove('cabecillas');
+    cacheService.remove(`cabecilla_${id}`);
+    return response.data;
+  },
+  delete: async (id: string) => {
+    const response = await api.delete(`/cabecillas/${id}`);
+    cacheService.remove('cabecillas');
+    cacheService.remove(`cabecilla_${id}`);
+    return response.data;
+  },
+  updateFoto: async (id: string, foto: File) => {
     const formData = new FormData();
     formData.append('foto', foto);
-    return api.post<Cabecilla>(`/cabecillas/${id}/foto`, formData, {
+    const response = await api.post<Cabecilla>(`/cabecillas/${id}/foto`, formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
-    }).then(res => res.data);
+    });
+    cacheService.remove(`cabecilla_${id}`);
+    return response.data;
   },
 };
 
 export const naturalezaService = {
   getAll: async (page: number = 1, pageSize: number = 10, filters?: Record<string, string>) => {
+    const cacheKey = `naturalezas_${JSON.stringify(filters)}`;
+    const cachedData = cacheService.getPaginated<Naturaleza>(cacheKey, page, pageSize);
+    
+    if (cachedData) {
+      return cachedData;
+    }
+
     const response = await api.get<PaginatedResponse<Naturaleza>>('/naturalezas', { 
       params: { 
         page, 
@@ -188,23 +283,79 @@ export const naturalezaService = {
         ...filters 
       } 
     });
+    cacheService.setPaginated(cacheKey, response.data, page, pageSize);
     return response.data;
   },
-  getById: (id: string) => api.get<Naturaleza>(`/naturalezas/${id}`).then(res => res.data),
-  create: (naturaleza: CrearNaturaleza) => api.post<Naturaleza>('/naturalezas', naturaleza).then(res => res.data),
-  update: (id: string, naturaleza: CrearNaturaleza) => api.put<Naturaleza>(`/naturalezas/${id}`, naturaleza).then(res => res.data),
-  delete: (id: string) => api.delete(`/naturalezas/${id}`).then(res => res.data),
+  getById: async (id: string) => {
+    const cacheKey = `naturaleza_${id}`;
+    const cachedData = cacheService.get<Naturaleza>(cacheKey);
+    
+    if (cachedData) {
+      return cachedData;
+    }
+
+    const response = await api.get<Naturaleza>(`/naturalezas/${id}`);
+    cacheService.set(cacheKey, response.data);
+    return response.data;
+  },
+  create: async (naturaleza: CrearNaturaleza) => {
+    const response = await api.post<Naturaleza>('/naturalezas', naturaleza);
+    cacheService.remove('naturalezas');
+    return response.data;
+  },
+  update: async (id: string, naturaleza: CrearNaturaleza) => {
+    const response = await api.put<Naturaleza>(`/naturalezas/${id}`, naturaleza);
+    cacheService.remove('naturalezas');
+    cacheService.remove(`naturaleza_${id}`);
+    return response.data;
+  },
+  delete: async (id: string) => {
+    const response = await api.delete(`/naturalezas/${id}`);
+    cacheService.remove('naturalezas');
+    cacheService.remove(`naturaleza_${id}`);
+    return response.data;
+  },
 };
 
 export const provinciaService = {
-  getAll: () => api.get<Provincia[]>('/provincias').then(res => res.data),
-  getById: (id: string) => api.get<Provincia>(`/provincias/${id}`).then(res => res.data),
+  getAll: async () => {
+    const cacheKey = 'provincias';
+    const cachedData = cacheService.get<Provincia[]>(cacheKey);
+    
+    if (cachedData) {
+      return cachedData;
+    }
+
+    const response = await api.get<Provincia[]>('/provincias');
+    cacheService.set(cacheKey, response.data);
+    return response.data;
+  },
+  getById: async (id: string) => {
+    const cacheKey = `provincia_${id}`;
+    const cachedData = cacheService.get<Provincia>(cacheKey);
+    
+    if (cachedData) {
+      return cachedData;
+    }
+
+    const response = await api.get<Provincia>(`/provincias/${id}`);
+    cacheService.set(cacheKey, response.data);
+    return response.data;
+  },
 };
 
 export const resumenService = {
   getPaginaPrincipal: async () => {
+    const cacheKey = 'resumen_principal';
+    const cachedData = cacheService.get<ResumenPrincipal>(cacheKey);
+    
+    if (cachedData) {
+      return cachedData;
+    }
+
     try {
       const response = await api.get<ResumenPrincipal>('/pagina-principal');
+      cacheService.set(cacheKey, response.data);
       console.log('Respuesta de la API:', response.data); 
       return response.data;
     } catch (error) {
@@ -216,16 +367,48 @@ export const resumenService = {
 
 export const userService = {
   getAll: async (page: number = 1, pageSize: number = 10) => {
+    const cacheKey = `usuarios_${page}_${pageSize}`;
+    const cachedData = cacheService.get<UserListResponse>(cacheKey);
+    
+    if (cachedData) {
+      return cachedData;
+    }
+
     const response = await api.get<UserListResponse>('/usuarios', { 
       params: { page, page_size: pageSize } 
     });
+    cacheService.set(cacheKey, response.data);
     return response.data;
   },
-  getById: (id: string) => api.get<User>(`/usuarios/${id}`).then(res => res.data),
-  updateRole: (id: string, role: 'admin' | 'usuario') => 
-    api.put<User>(`/usuarios/${id}/rol`, { nuevo_rol: role }).then(res => res.data),
-  create: (userData: FormData) => api.post<User>('/admin/usuarios', userData, {
-    headers: { 'Content-Type': 'multipart/form-data' },
-  }).then(res => res.data),
-  delete: (id: string) => api.delete(`/admin/usuarios/${id}`).then(res => res.data),
+  getById: async (id: string) => {
+    const cacheKey = `usuario_${id}`;
+    const cachedData = cacheService.get<User>(cacheKey);
+    
+    if (cachedData) {
+      return cachedData;
+    }
+
+    const response = await api.get<User>(`/usuarios/${id}`);
+    cacheService.set(cacheKey, response.data);
+    return response.data;
+  },
+  updateRole: async (id: string, role: 'admin' | 'usuario') => {
+    const response = await api.put<User>(`/usuarios/${id}/rol`, { nuevo_rol: role });
+    cacheService.remove('usuarios');
+    cacheService.remove(`usuario_${id}`);
+    return response.data;
+  },
+  create: async (userData: FormData) => {
+    const response = await api.post<User>('/admin/usuarios', userData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    cacheService.remove('usuarios');
+    return response.data;
+  },
+  delete: async (id: string) => {
+    const response = await api.delete(`/admin/usuarios/${id}`);
+    cacheService.remove('usuarios');
+    cacheService.remove(`usuario_${id}`);
+    return response.data;
+  },
 };

@@ -7,6 +7,7 @@ import LeaderIcon from '@mui/icons-material/Person';
 import NatureIcon from '@mui/icons-material/Nature';
 import AccountCircleIcon from '@mui/icons-material/AccountCircle';
 import PeopleIcon from '@mui/icons-material/People';
+import DashboardIcon from '@mui/icons-material/Dashboard';
 import { useAuth } from '../../hooks/useAuth';
 
 const Header: React.FC = () => {
@@ -38,7 +39,10 @@ const Header: React.FC = () => {
     { text: 'Protestas', path: '/protestas', icon: <ProtestIcon /> },
     { text: 'Cabecillas', path: '/cabecillas', icon: <LeaderIcon /> },
     { text: 'Naturalezas', path: '/naturalezas', icon: <NatureIcon /> },
-    ...(isAdmin() ? [{ text: 'Usuarios', path: '/usuarios', icon: <PeopleIcon /> }] : []),
+    ...(isAdmin() ? [
+      { text: 'Usuarios', path: '/usuarios', icon: <PeopleIcon /> },
+      { text: 'Dashboard Admin', path: '/admin/dashboard', icon: <DashboardIcon /> }
+    ] : []),
   ] : [];
 
   return (
@@ -174,12 +178,26 @@ const Header: React.FC = () => {
               </>
             ) : (
               <>
-                <Button color="inherit" component={RouterLink} to="/login" sx={{ mr: 1 }}>
-                  Iniciar sesión
-                </Button>
-                {/* <Button color="secondary" variant="contained" component={RouterLink} to="/register">
-                  Registrarse
-                </Button> */}
+              <Button
+                color="primary"
+                variant="contained"
+                component={RouterLink}
+                to="/login"
+                sx={{
+                  mr: 1,
+                  backgroundColor: 'primary.main',
+                  color: 'white',
+                  borderRadius: 2,
+                  padding: '8px 16px',
+                  boxShadow: 3,
+                  '&:hover': {
+                    backgroundColor: 'primary.dark',
+                    boxShadow: 6,
+                  },
+                }}
+              >
+                Iniciar sesión
+              </Button>
               </>
             )}
           </Box>
