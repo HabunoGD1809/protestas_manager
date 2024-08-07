@@ -2,7 +2,7 @@ import axios, { AxiosInstance, InternalAxiosRequestConfig } from 'axios';
 import { getStoredToken, setStoredToken, removeStoredToken } from '../utils/tokenUtils';
 import { Protesta, Naturaleza, Provincia, PaginatedResponse, CrearProtesta, Cabecilla, CrearNaturaleza, ResumenPrincipal, User, Token, UserListResponse } from '../types';
 
-const BASE_URL = 'http://10.5.5.18:9001'; 
+const BASE_URL = 'http://127.0.0.1:8000'; 
 
 export const api: AxiosInstance = axios.create({
   baseURL: BASE_URL,
@@ -20,7 +20,6 @@ api.interceptors.request.use((config: InternalAxiosRequestConfig) => {
 });
 
 let isRefreshing = false;
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 let failedQueue: any[] = [];
 
 const processQueue = (error: unknown, token: string | null = null) => {
@@ -110,10 +109,8 @@ export const register = async (userData: FormData): Promise<User> => {
 
 export const refreshToken = async (refreshToken: string) => {
   console.log('Iniciando solicitud de renovación de token');
-  // console.log('Token de actualización enviado:', refreshToken);
   try {
     const response = await axios.post<Token>(`${BASE_URL}/token/renovar`, { token_actualizacion: refreshToken });
-    // console.log('Respuesta del servidor (renovación de token):', response.data);
     const { token_acceso, token_actualizacion } = response.data;
     setStoredToken(token_acceso, token_actualizacion);
     return response.data;
@@ -166,8 +163,12 @@ export const cabecillaService = {
     return response.data;
   },
   getById: (id: string) => api.get<Cabecilla>(`/cabecillas/${id}`).then(res => res.data),
-  create: (cabecilla: Cabecilla) => api.post<Cabecilla>('/cabecillas', cabecilla).then(res => res.data),
-  update: (id: string, cabecilla: Cabecilla) => api.put<Cabecilla>(`/cabecillas/${id}`, cabecilla).then(res => res.data),
+  create: (cabecilla: FormData) => api.post<Cabecilla>('/cabecillas', cabecilla, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  }).then(res => res.data),
+  update: (id: string, cabecilla: FormData) => api.put<Cabecilla>(`/cabecillas/${id}`, cabecilla, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  }).then(res => res.data),
   delete: (id: string) => api.delete(`/cabecillas/${id}`).then(res => res.data),
   updateFoto: (id: string, foto: File) => {
     const formData = new FormData();
@@ -223,4 +224,8 @@ export const userService = {
   getById: (id: string) => api.get<User>(`/usuarios/${id}`).then(res => res.data),
   updateRole: (id: string, role: 'admin' | 'usuario') => 
     api.put<User>(`/usuarios/${id}/rol`, { nuevo_rol: role }).then(res => res.data),
+  create: (userData: FormData) => api.post<User>('/admin/usuarios', userData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  }).then(res => res.data),
+  delete: (id: string) => api.delete(`/admin/usuarios/${id}`).then(res => res.data),
 };

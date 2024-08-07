@@ -63,14 +63,14 @@ const HomePage: React.FC = () => {
         <Card>
           <CardContent>
             <Typography variant="body1" paragraph>
-              Por favor, inicie sesión o regístrese para usar la aplicación.
+              Por favor, inicie sesión para usar la aplicación.
             </Typography>
             <Box sx={{ '& > :not(style)': { m: 1 } }}>
               <Button component={RouterLink} to="/login" variant="contained" color="primary">
                 Iniciar sesión              </Button>
-              <Button component={RouterLink} to="/register" variant="contained" color="secondary">
+              {/* <Button component={RouterLink} to="/register" variant="contained" color="secondary">
                 Registrarse
-              </Button>
+              </Button> */}
             </Box>
           </CardContent>
         </Card>

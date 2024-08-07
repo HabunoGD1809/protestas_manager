@@ -47,8 +47,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   });
 
   const handleLogout = useCallback((reason?: 'inactivity' | 'manual') => {
-    console.log('Cerrando sesión del usuario');
-    apiLogout();
+    console.log('Cerrando sesión del usuario'); apiLogout();
     setUser(null);
     setIsAuthenticated(false);
     removeStoredToken();
@@ -69,16 +68,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     console.log('Iniciando proceso de renovación de token');
     
     const refreshTokenValue = getStoredToken('refreshToken');
-    // console.log('Token de actualización almacenado:', refreshTokenValue);
     
     if (refreshTokenValue) {
       try {
         console.log('Intentando renovar token');
         const newTokens = await refreshToken(refreshTokenValue);
-        // console.log('Respuesta de renovación de token:', newTokens);
         
         setStoredToken(newTokens.token_acceso, newTokens.token_actualizacion);
-        // console.log('Nuevos tokens almacenados');
         
         setIsRefreshing(false);
         return true;
@@ -120,8 +116,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         handleLogout('inactivity');
       },
     });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [refreshUserToken, handleLogout,]);
+  }, [refreshUserToken, handleLogout]);
 
   const startInactivityTimer = useCallback(() => {
     if (inactivityTimerRef.current) {
@@ -194,7 +189,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     try {
       console.log('Intentando iniciar sesión');
       const { token_acceso, token_actualizacion } = await apiLogin(email, password);
-      // console.log('Tokens recibidos:', { token_acceso, token_actualizacion });
       setStoredToken(token_acceso, token_actualizacion);
       console.log('Tokens almacenados');
 
@@ -203,11 +197,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setIsAuthenticated(true);
       setStoredUser(userData);
       console.log('Inicio de sesión exitoso');
-      
-      // Verificar que los tokens se hayan almacenado correctamente
-      // const storedAccessToken = getStoredToken('accessToken');
-      // const storedRefreshToken = getStoredToken('refreshToken');
-      // console.log('Tokens almacenados después del login:', { storedAccessToken, storedRefreshToken });
     } catch (error) {
       console.error('Error durante el inicio de sesión:', error);
       throw error;
@@ -235,9 +224,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
-  const isAdmin = () => {
+  const isAdmin = useCallback(() => {
     return user?.rol === 'admin';
-  };
+  }, [user]);
 
   return (
     <AuthContext.Provider
@@ -260,4 +249,3 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     </AuthContext.Provider>
   );
 };
-

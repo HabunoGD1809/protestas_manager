@@ -1,8 +1,6 @@
 import React from 'react';
-import { Select, message } from 'antd';
-import { useApi } from '../../hooks/useApi';
-
-const { Option } = Select;
+import { Select, MenuItem, FormControl, InputLabel, SelectChangeEvent } from '@mui/material';
+import { userService } from '../../services/api';
 
 interface ChangeUserRoleProps {
   userId: string;
@@ -11,28 +9,29 @@ interface ChangeUserRoleProps {
 }
 
 const ChangeUserRole: React.FC<ChangeUserRoleProps> = ({ userId, currentRole, onRoleChange }) => {
-  const { request } = useApi();
-
-  const handleRoleChange = async (newRole: 'admin' | 'usuario') => {
+  const handleRoleChange = async (event: SelectChangeEvent<'admin' | 'usuario'>) => {
+    const newRole = event.target.value as 'admin' | 'usuario';
     try {
-      await request('put', `/usuarios/${userId}/rol`, { nuevo_rol: newRole });
-      message.success('Rol de usuario actualizado con éxito');
+      await userService.updateRole(userId, newRole);
       onRoleChange(newRole);
     } catch (error) {
       console.error('Error al cambiar el rol del usuario:', error);
-      message.error('Error al cambiar el rol del usuario');
     }
   };
 
   return (
-    <Select
-      defaultValue={currentRole}
-      style={{ width: 120 }}
-      onChange={handleRoleChange}
-    >
-      <Option value="usuario">Usuario</Option>
-      <Option value="admin">Admin</Option>
-    </Select>
+    <FormControl fullWidth>
+      <InputLabel id={`role-select-label-${userId}`}>Rol</InputLabel>
+      <Select
+        labelId={`role-select-label-${userId}`}
+        value={currentRole}
+        label="Rol"
+        onChange={handleRoleChange}
+      >
+        <MenuItem value="usuario">Usuario</MenuItem>
+        <MenuItem value="admin">Admin</MenuItem>
+      </Select>
+    </FormControl>
   );
 };
 

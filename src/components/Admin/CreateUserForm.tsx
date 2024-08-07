@@ -1,0 +1,149 @@
+import React, { useState } from 'react';
+import { TextField, Button, Typography, Box, Avatar, FormControl, InputLabel, Select, MenuItem, SelectChangeEvent } from '@mui/material';
+
+interface CreateUserFormProps {
+  onSubmit: (userData: FormData) => void;
+  onCancel: () => void;
+}
+
+const CreateUserForm: React.FC<CreateUserFormProps> = ({ onSubmit, onCancel }) => {
+  const [formData, setFormData] = useState({
+    nombre: '',
+    apellidos: '',
+    email: '',
+    password: '',
+    repetir_password: '',
+    rol: 'usuario' as 'usuario' | 'admin',
+  });
+  const [foto, setFoto] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [error, setError] = useState('');
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleRoleChange = (e: SelectChangeEvent<'usuario' | 'admin'>) => {
+    setFormData(prev => ({ ...prev, rol: e.target.value as 'usuario' | 'admin' }));
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      setFoto(file);
+      setPreviewUrl(URL.createObjectURL(file));
+    }
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (formData.password !== formData.repetir_password) {
+      setError('Las contraseñas no coinciden.');
+      return;
+    }
+    const formDataToSend = new FormData();
+    Object.keys(formData).forEach(key => {
+      if (key !== 'repetir_password') {
+        formDataToSend.append(key, formData[key as keyof typeof formData]);
+      }
+    });
+    if (foto) {
+      formDataToSend.append('foto', foto);
+    }
+    onSubmit(formDataToSend);
+  };
+
+  return (
+    <Box component="form" onSubmit={handleSubmit} sx={{ mt: 1 }}>
+      <Box sx={{ display: 'flex', justifyContent: 'center', mb: 2 }}>
+        <Avatar src={previewUrl || undefined} sx={{ width: 100, height: 100 }} />
+      </Box>
+      <Button variant="contained" component="label" fullWidth sx={{ mb: 2 }}>
+        Subir Foto
+        <input type="file" hidden onChange={handleFileChange} accept="image/*" />
+      </Button>
+      <TextField
+        margin="normal"
+        required
+        fullWidth
+        id="nombre"
+        label="Nombre"
+        name="nombre"
+        autoFocus
+        value={formData.nombre}
+        onChange={handleChange}
+      />
+      <TextField
+        margin="normal"
+        required
+        fullWidth
+        id="apellidos"
+        label="Apellidos"
+        name="apellidos"
+        value={formData.apellidos}
+        onChange={handleChange}
+      />
+      <TextField
+        margin="normal"
+        required
+        fullWidth
+        id="email"
+        label="Correo Electrónico"
+        name="email"
+        autoComplete="email"
+        value={formData.email}
+        onChange={handleChange}
+      />
+      <TextField
+        margin="normal"
+        required
+        fullWidth
+        name="password"
+        label="Contraseña"
+        type="password"
+        id="password"
+        autoComplete="new-password"
+        value={formData.password}
+        onChange={handleChange}
+      />
+      <TextField
+        margin="normal"
+        required
+        fullWidth
+        name="repetir_password"
+        label="Repetir Contraseña"
+        type="password"
+        id="repetir_password"
+        autoComplete="new-password"
+        value={formData.repetir_password}
+        onChange={handleChange}
+      />
+      <FormControl fullWidth margin="normal">
+        <InputLabel id="rol-label">Rol</InputLabel>
+        <Select
+          labelId="rol-label"
+          id="rol"
+          name="rol"
+          value={formData.rol}
+          label="Rol"
+          onChange={handleRoleChange}
+        >
+          <MenuItem value="usuario">Usuario</MenuItem>
+          <MenuItem value="admin">Admin</MenuItem>
+        </Select>
+      </FormControl>
+      {error && (
+        <Typography color="error" align="center">
+          {error}
+        </Typography>
+      )}
+      <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1, mt: 2 }}>
+        <Button onClick={onCancel}>Cancelar</Button>
+        <Button type="submit" variant="contained" color="primary">Crear Usuario</Button>
+      </Box>
+    </Box>
+  );
+};
+
+export default CreateUserForm;

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Link as RouterLink } from 'react-router-dom';
-import { Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Button, IconButton, Box, Typography } from '@mui/material';
+import { Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Button, IconButton, Box, Typography, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle } from '@mui/material';
 import { useApi } from '../../hooks/useApi';
 import { Naturaleza } from '../../types';
 import Pagination from '../Common/Pagination';
@@ -10,12 +10,17 @@ import LoadingSpinner from '../Common/LoadingSpinner';
 import ErrorMessage from '../Common/ErrorMessage';
 import * as Icons from '@mui/icons-material';
 import EditIcon from '@mui/icons-material/Edit';
+import DeleteIcon from '@mui/icons-material/Delete';
+import { useAuth } from '../../hooks/useAuth';
 
 const NaturalezaList: React.FC = () => {
   const [naturalezas, setNaturalezas] = useState<Naturaleza[]>([]);
   const [pagination, setPagination] = useState({ current: 1, pageSize: 10, total: 0 });
   const [filters, setFilters] = useState<Record<string, string>>({});
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [naturalezaToDelete, setNaturalezaToDelete] = useState<Naturaleza | null>(null);
   const { loading, error } = useApi();
+  const { isAdmin } = useAuth();
 
   const fetchNaturalezas = async (page: number, pageSize: number) => {
     try {
@@ -45,12 +50,24 @@ const NaturalezaList: React.FC = () => {
     fetchNaturalezas(1, pagination.pageSize);
   };
 
+  const handleDeleteNaturaleza = async () => {
+    if (naturalezaToDelete) {
+      try {
+        await naturalezaService.delete(naturalezaToDelete.id);
+        setNaturalezas(prevNaturalezas => prevNaturalezas.filter(n => n.id !== naturalezaToDelete.id));
+        setDeleteDialogOpen(false);
+        setNaturalezaToDelete(null);
+      } catch (error) {
+        console.error('Error deleting naturaleza:', error);
+      }
+    }
+  };
+
   const columns = [
     { title: 'Nombre', dataIndex: 'nombre', key: 'nombre' },
     { 
       title: 'Color', 
-      dataIndex: 'color', 
-      key: 'color',
+      dataIndex: 'color', key: 'color',
       render: (naturaleza: Naturaleza) => (
         <div style={{ backgroundColor: naturaleza.color, width: 20, height: 20, borderRadius: '50%' }}></div>
       )
@@ -68,17 +85,32 @@ const NaturalezaList: React.FC = () => {
       title: 'Acciones',
       key: 'actions',
       render: (naturaleza: Naturaleza) => (
-        naturaleza.id ? (
+        <Box>
           <Button 
             component={RouterLink} 
             to={`/naturalezas/edit/${naturaleza.id}`} 
             variant="outlined" 
             size="small"
             startIcon={<EditIcon />}
+            sx={{ mr: 1 }}
           >
             Editar
           </Button>
-        ) : null
+          {isAdmin() && (
+            <Button 
+              variant="outlined" 
+              color="secondary" 
+              size="small"
+              startIcon={<DeleteIcon />}
+              onClick={() => {
+                setNaturalezaToDelete(naturaleza);
+                setDeleteDialogOpen(true);
+              }}
+            >
+              Eliminar
+            </Button>
+          )}
+        </Box>
       ),
     },
   ];
@@ -133,6 +165,25 @@ const NaturalezaList: React.FC = () => {
         pageSize={pagination.pageSize}
         onChange={handlePaginationChange}
       />
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog
+        open={deleteDialogOpen}
+        onClose={() => setDeleteDialogOpen(false)}
+      >
+        <DialogTitle>Confirmar eliminación</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            ¿Estás seguro de que quieres eliminar esta naturaleza?
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDeleteDialogOpen(false)}>Cancelar</Button>
+          <Button onClick={handleDeleteNaturaleza} color="secondary">
+            Eliminar
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };

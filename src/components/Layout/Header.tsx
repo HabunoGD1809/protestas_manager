@@ -177,9 +177,9 @@ const Header: React.FC = () => {
                 <Button color="inherit" component={RouterLink} to="/login" sx={{ mr: 1 }}>
                   Iniciar sesión
                 </Button>
-                <Button color="secondary" variant="contained" component={RouterLink} to="/register">
+                {/* <Button color="secondary" variant="contained" component={RouterLink} to="/register">
                   Registrarse
-                </Button>
+                </Button> */}
               </>
             )}
           </Box>

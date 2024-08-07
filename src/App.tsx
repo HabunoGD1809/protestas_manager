@@ -6,7 +6,7 @@ import PrivateRoute from './components/Common/PrivateRoute';
 import AdminRoute from './components/Common/AdminRoute';
 import HomePage from './pages/HomePage';
 import LoginPage from './pages/LoginPage';
-import RegisterPage from './pages/RegisterPage';
+// import RegisterPage from './pages/RegisterPage';
 import ProtestaListPage from './pages/ProtestaListPage';
 import ProtestaFormPage from './pages/ProtestaFormPage';
 import ProtestaDetailPage from './pages/ProtestaDetailPage';
@@ -42,7 +42,7 @@ const App: React.FC = () => {
         <Routes>
           <Route path="/" element={<HomePage />} />
           <Route path="/login" element={<LoginPage />} />
-          <Route path="/register" element={<RegisterPage />} />
+          {/* <Route path="/register" element={<RegisterPage />} /> */}
           <Route path="/protestas" element={<PrivateRoute><ProtestaListPage /></PrivateRoute>} />
           <Route path="/protestas/crear" element={<PrivateRoute><ProtestaFormPage /></PrivateRoute>} />
           <Route path="/protestas/editar/:id" element={<PrivateRoute><ProtestaFormPage /></PrivateRoute>} />
