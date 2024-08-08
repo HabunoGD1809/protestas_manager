@@ -1,16 +1,16 @@
-// import React from 'react';
-// import { Typography, Box } from '@mui/material';
-// import Register from '../components/Auth/Register';
+import React from 'react';
+import { Typography, Box } from '@mui/material';
+import Register from '../components/Auth/Register';
 
-// const RegisterPage: React.FC = () => {
-//   return (
-//     <Box>
-//       <Typography variant="h4" gutterBottom>
-//         Registrarse
-//       </Typography>
-//       <Register />
-//     </Box>
-//   );
-// };
+const RegisterPage: React.FC = () => {
+  return (
+    <Box>
+      <Typography variant="h4" gutterBottom>
+        Registrarse
+      </Typography>
+      <Register />
+    </Box>
+  );
+};
 
-// export default RegisterPage;
+export default RegisterPage;

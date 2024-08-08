@@ -20,6 +20,8 @@ import NaturalezaList from './components/Naturaleza/NaturalezaList';
 import NaturalezaForm from './components/Naturaleza/NaturalezaForm';
 import AdminDashboardPage from './pages/AdminDashboardPage';
 
+import RegisterPage from './pages/RegisterPage';
+
 const App: React.FC = () => {
   const navigate = useNavigate();
 
@@ -64,6 +66,9 @@ const App: React.FC = () => {
           
           {/* Nueva ruta para el dashboard de administrador */}
           <Route path="/admin/dashboard" element={<AdminRoute><AdminDashboardPage /></AdminRoute>} />
+
+          <Route path="/register" element={<RegisterPage />} />
+          
         </Routes>
       </Layout>
     </AuthProvider>
