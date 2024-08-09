@@ -255,8 +255,16 @@ export const cabecillaService = {
         },
       }
     );
-    cacheService.setPaginated(cacheKey, response.data, page, pageSize);
-    return response.data;
+    const cabecillasConUrl = response.data.items.map(cabecilla => ({
+      ...cabecilla,
+      fotoUrl: cabecilla.foto ? `${BASE_URL}/static/${cabecilla.foto}` : undefined
+    }));
+    const paginatedResponse = {
+      ...response.data,
+      items: cabecillasConUrl
+    };
+    cacheService.setPaginated(cacheKey, paginatedResponse, page, pageSize);
+    return paginatedResponse;
   },
   getById: async (id: string) => {
     const cacheKey = `cabecilla_${id}`;
@@ -269,7 +277,7 @@ export const cabecillaService = {
     const response = await api.get<Cabecilla>(`/cabecillas/${id}`);
     const cabecilla = response.data;
     if (cabecilla.foto) {
-      cabecilla.fotoUrl = `${BASE_URL}${cabecilla.foto}`;
+      cabecilla.fotoUrl = `${BASE_URL}/static/${cabecilla.foto}`;
     }
     cacheService.set(cacheKey, cabecilla);
     return cabecilla;
@@ -280,7 +288,7 @@ export const cabecillaService = {
     });
     const newCabecilla = response.data;
     if (newCabecilla.foto) {
-      newCabecilla.fotoUrl = `${BASE_URL}${newCabecilla.foto}`;
+      newCabecilla.fotoUrl = `${BASE_URL}/static/${newCabecilla.foto}`;
     }
     cacheService.remove("cabecillas");
     return newCabecilla;
@@ -289,9 +297,13 @@ export const cabecillaService = {
     const response = await api.put<Cabecilla>(`/cabecillas/${id}`, cabecilla, {
       headers: { "Content-Type": "multipart/form-data" },
     });
+    const updatedCabecilla = response.data;
+    if (updatedCabecilla.foto) {
+      updatedCabecilla.fotoUrl = `${BASE_URL}/static/${updatedCabecilla.foto}`;
+    }
     cacheService.remove("cabecillas");
     cacheService.remove(`cabecilla_${id}`);
-    return response.data;
+    return updatedCabecilla;
   },
   delete: async (id: string) => {
     const response = await api.delete(`/cabecillas/${id}`);
@@ -309,8 +321,12 @@ export const cabecillaService = {
         headers: { "Content-Type": "multipart/form-data" },
       }
     );
+    const updatedCabecilla = response.data;
+    if (updatedCabecilla.foto) {
+      updatedCabecilla.fotoUrl = `${BASE_URL}/static/${updatedCabecilla.foto}`;
+    }
     cacheService.remove(`cabecilla_${id}`);
-    return response.data;
+    return updatedCabecilla;
   },
 };
 
