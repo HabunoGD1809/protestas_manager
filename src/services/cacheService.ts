@@ -5,7 +5,7 @@ interface CacheItem<T> {
   timestamp: number;
 }
 
-const CACHE_DURATION = 5 * 60 * 1000; // 5 minutos en milisegundos
+const CACHE_DURATION = 0.1 * 60 * 1000; // 5 minutos en milisegundos
 
 class CacheService {
   private memoryCache: { [key: string]: CacheItem<any> } = {};

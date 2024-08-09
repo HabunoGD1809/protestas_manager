@@ -44,7 +44,7 @@ const AdminDashboardPage: React.FC = () => {
             <PersonIcon fontSize="large" color="primary" />
             <Typography variant="h6">{userCount}</Typography>
             <Typography variant="subtitle1">Usuarios</Typography>
-            <Button component={RouterLink} to="/admin/usuarios" startIcon={<ListIcon />}>
+            <Button component={RouterLink} to="/usuarios" startIcon={<ListIcon />}>
               Ver Usuarios
             </Button>
           </Paper>
