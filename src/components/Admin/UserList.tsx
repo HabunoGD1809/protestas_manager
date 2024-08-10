@@ -101,8 +101,11 @@ const UserList: React.FC = () => {
       setUsers(prevUsers => [...prevUsers, newUser]);
       setCreateDialogOpen(false);
     } catch (error) {
-      console.error('Error creating user:', error);
-      setError('Error al crear el usuario. Por favor, intente de nuevo.');
+      if (error instanceof Error) {
+        setError(error.message);
+      } else {
+        setError('Error al crear el usuario. Por favor, intente de nuevo.');
+      }
     }
   }, []);
 

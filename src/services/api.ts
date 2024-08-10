@@ -219,114 +219,34 @@ export const protestaService = {
 };
 
 export const cabecillaService = {
-  getAllWithoutPagination: async () => {
-    try {
-      const response = await api.get<Cabecilla[]>("/cabecillas/all");
-      return response.data;
-    } catch (error) {
-      console.error("Error fetching all cabecillas:", error);
-      throw error;
-    }
-  },
-
-  getAll: async (
-    page: number = 1,
-    pageSize: number = 10,
-    filters?: Record<string, string>
-  ) => {
-    const cacheKey = `cabecillas_${JSON.stringify(filters)}`;
-    const cachedData = cacheService.getPaginated<Cabecilla>(
-      cacheKey,
-      page,
-      pageSize
-    );
-
-    if (cachedData) {
-      return cachedData;
-    }
-
-    const response = await api.get<PaginatedResponse<Cabecilla>>(
-      "/cabecillas",
-      {
-        params: {
-          page,
-          page_size: pageSize,
-          ...filters,
-        },
-      }
-    );
-    const cabecillasConUrl = response.data.items.map(cabecilla => ({
-      ...cabecilla,
-      fotoUrl: cabecilla.foto ? `${BASE_URL}/static/${cabecilla.foto}` : undefined
-    }));
-    const paginatedResponse = {
-      ...response.data,
-      items: cabecillasConUrl
-    };
-    cacheService.setPaginated(cacheKey, paginatedResponse, page, pageSize);
-    return paginatedResponse;
-  },
-  getById: async (id: string) => {
-    const cacheKey = `cabecilla_${id}`;
-    const cachedData = cacheService.get<Cabecilla>(cacheKey);
-
-    if (cachedData) {
-      return cachedData;
-    }
-
-    const response = await api.get<Cabecilla>(`/cabecillas/${id}`);
-    const cabecilla = response.data;
-    if (cabecilla.foto) {
-      cabecilla.fotoUrl = `${BASE_URL}/static/${cabecilla.foto}`;
-    }
-    cacheService.set(cacheKey, cabecilla);
-    return cabecilla;
-  },
-  create: async (cabecilla: FormData) => {
-    const response = await api.post<Cabecilla>("/cabecillas", cabecilla, {
-      headers: { "Content-Type": "multipart/form-data" },
+  getAll: async (page: number = 1, pageSize: number = 10, filters?: Record<string, string>) => {
+    const response = await api.get<PaginatedResponse<Cabecilla>>('/cabecillas', { 
+      params: { 
+        page, 
+        page_size: pageSize, 
+        ...filters 
+      } 
     });
-    const newCabecilla = response.data;
-    if (newCabecilla.foto) {
-      newCabecilla.fotoUrl = `${BASE_URL}/static/${newCabecilla.foto}`;
-    }
-    cacheService.remove("cabecillas");
-    return newCabecilla;
-  },
-  update: async (id: string, cabecilla: FormData) => {
-    const response = await api.put<Cabecilla>(`/cabecillas/${id}`, cabecilla, {
-      headers: { "Content-Type": "multipart/form-data" },
-    });
-    const updatedCabecilla = response.data;
-    if (updatedCabecilla.foto) {
-      updatedCabecilla.fotoUrl = `${BASE_URL}/static/${updatedCabecilla.foto}`;
-    }
-    cacheService.remove("cabecillas");
-    cacheService.remove(`cabecilla_${id}`);
-    return updatedCabecilla;
-  },
-  delete: async (id: string) => {
-    const response = await api.delete(`/cabecillas/${id}`);
-    cacheService.remove("cabecillas");
-    cacheService.remove(`cabecilla_${id}`);
     return response.data;
   },
-  updateFoto: async (id: string, foto: File) => {
+  getAllNoPagination: async () => {
+    const response = await api.get<Cabecilla[]>('/cabecillas/all');
+    return response.data;
+  },
+  getById: (id: string) => api.get<Cabecilla>(`/cabecillas/${id}`).then(res => res.data),
+  create: (cabecilla: FormData) => api.post<Cabecilla>('/cabecillas', cabecilla, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  }).then(res => res.data),
+  update: (id: string, cabecilla: FormData) => api.put<Cabecilla>(`/cabecillas/${id}`, cabecilla, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  }).then(res => res.data),
+  delete: (id: string) => api.delete(`/cabecillas/${id}`).then(res => res.data),
+  updateFoto: (id: string, foto: File) => {
     const formData = new FormData();
-    formData.append("foto", foto);
-    const response = await api.post<Cabecilla>(
-      `/cabecillas/${id}/foto`,
-      formData,
-      {
-        headers: { "Content-Type": "multipart/form-data" },
-      }
-    );
-    const updatedCabecilla = response.data;
-    if (updatedCabecilla.foto) {
-      updatedCabecilla.fotoUrl = `${BASE_URL}/static/${updatedCabecilla.foto}`;
-    }
-    cacheService.remove(`cabecilla_${id}`);
-    return updatedCabecilla;
+    formData.append('foto', foto);
+    return api.post<Cabecilla>(`/cabecillas/${id}/foto`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    }).then(res => res.data);
   },
 };
 
@@ -478,12 +398,24 @@ export const userService = {
     return response.data;
   },
   create: async (userData: FormData) => {
+  try {
     const response = await api.post<User>("/admin/usuarios", userData, {
       headers: { "Content-Type": "multipart/form-data" },
     });
     cacheService.remove("usuarios");
     return response.data;
-  },
+  } catch (error) {
+    if (axios.isAxiosError(error) && error.response) {
+      const errorDetail = error.response.data.detail;
+      if (Array.isArray(errorDetail)) {
+        throw new Error(errorDetail.map(err => err.msg).join(', '));
+      } else {
+        throw new Error(errorDetail || "Error creating user");
+      }
+    }
+    throw new Error("An unexpected error occurred");
+  }
+},
   delete: async (id: string) => {
     const response = await api.delete(`/admin/usuarios/${id}`);
     cacheService.remove("usuarios");

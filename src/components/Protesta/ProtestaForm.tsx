@@ -2,7 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { Form, Input, DatePicker, Select, Button, Spin, message } from 'antd';
 import { Protesta, CrearProtesta, Naturaleza, Provincia, Cabecilla } from '../../types';
 import { useApi } from '../../hooks/useApi';
+import { cabecillaService, naturalezaService, provinciaService } from '../../services/api';
 import moment from 'moment';
+import { SearchOutlined } from '@ant-design/icons';
 
 const { Option } = Select;
 
@@ -22,7 +24,7 @@ interface ProtestaFormValues {
 
 const ProtestaForm: React.FC<ProtestaFormProps> = ({ initialData, onSubmit }) => {
   const [form] = Form.useForm<ProtestaFormValues>();
-  const { request, loading } = useApi();
+  const { loading } = useApi();
   const [naturalezas, setNaturalezas] = useState<Naturaleza[]>([]);
   const [provincias, setProvincias] = useState<Provincia[]>([]);
   const [cabecillas, setCabecillas] = useState<Cabecilla[]>([]);
@@ -33,14 +35,14 @@ const ProtestaForm: React.FC<ProtestaFormProps> = ({ initialData, onSubmit }) =>
       setIsLoading(true);
       try {
         const [naturalezasResponse, provinciasResponse, cabecillasResponse] = await Promise.all([
-          request<{ items: Naturaleza[] }>('get', '/naturalezas'),
-          request<Provincia[]>('get', '/provincias'),
-          request<{ items: Cabecilla[] }>('get', '/cabecillas')
+          naturalezaService.getAll(),
+          provinciaService.getAll(),
+          cabecillaService.getAllNoPagination()
         ]);
 
         setNaturalezas(naturalezasResponse.items || []);
-        setProvincias(Array.isArray(provinciasResponse) ? provinciasResponse : []);
-        setCabecillas(cabecillasResponse.items || []);
+        setProvincias(provinciasResponse);
+        setCabecillas(cabecillasResponse);
 
         if (initialData) {
           form.setFieldsValue({
@@ -58,7 +60,7 @@ const ProtestaForm: React.FC<ProtestaFormProps> = ({ initialData, onSubmit }) =>
     };
 
     fetchData();
-  }, [initialData, form, request]);
+  }, [initialData, form]);
 
   const handleSubmit = (values: ProtestaFormValues) => {
     const protestaData: CrearProtesta = {
@@ -103,9 +105,23 @@ const ProtestaForm: React.FC<ProtestaFormProps> = ({ initialData, onSubmit }) =>
         <DatePicker />
       </Form.Item>
       <Form.Item name="cabecillas" label="Cabecillas" rules={[{ required: true }]}>
-        <Select mode="multiple">
+        <Select
+          mode="multiple"
+          showSearch
+          optionFilterProp="children"
+          filterOption={(input, option) => {
+            const cabecillaFullName = option?.label?.toString().toLowerCase() || '';
+            return cabecillaFullName.includes(input.toLowerCase());
+          }}
+          suffixIcon={<SearchOutlined />}
+          placeholder="Buscar y seleccionar cabecillas"
+        >
           {cabecillas.map((cabecilla) => (
-            <Option key={cabecilla.id} value={cabecilla.id}>
+            <Option
+              key={cabecilla.id}
+              value={cabecilla.id}
+              label={`${cabecilla.nombre} ${cabecilla.apellido}`}
+            >
               {`${cabecilla.nombre} ${cabecilla.apellido}`}
             </Option>
           ))}

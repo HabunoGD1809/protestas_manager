@@ -36,7 +36,7 @@ const CreateUserForm: React.FC<CreateUserFormProps> = ({ onSubmit, onCancel }) =
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (formData.password !== formData.repetir_password) {
       setError('Las contraseñas no coinciden.');
@@ -44,14 +44,20 @@ const CreateUserForm: React.FC<CreateUserFormProps> = ({ onSubmit, onCancel }) =
     }
     const formDataToSend = new FormData();
     Object.keys(formData).forEach(key => {
-      if (key !== 'repetir_password') {
-        formDataToSend.append(key, formData[key as keyof typeof formData]);
-      }
+      formDataToSend.append(key, formData[key as keyof typeof formData]);
     });
     if (foto) {
       formDataToSend.append('foto', foto);
     }
-    onSubmit(formDataToSend);
+    try {
+      await onSubmit(formDataToSend);
+    } catch (error) {
+      if (error instanceof Error) {
+        setError(error.message);
+      } else {
+        setError('Error al crear el usuario. Por favor, intente de nuevo.');
+      }
+    }
   };
 
   return (
