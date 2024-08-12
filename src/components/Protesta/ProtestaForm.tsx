@@ -81,9 +81,18 @@ const ProtestaForm: React.FC<ProtestaFormProps> = ({ initialData, onSubmit }) =>
         <Input />
       </Form.Item>
       <Form.Item name="naturaleza_id" label="Naturaleza" rules={[{ required: true }]}>
-        <Select>
+        <Select
+          showSearch
+          optionFilterProp="children"
+          filterOption={(input, option) => {
+            const naturalezaName = option?.label?.toString().toLowerCase() || '';
+            return naturalezaName.includes(input.toLowerCase());
+          }}
+          suffixIcon={<SearchOutlined />}
+          placeholder="Buscar y seleccionar naturaleza"
+        >
           {naturalezas.map((naturaleza) => (
-            <Option key={naturaleza.id} value={naturaleza.id}>
+            <Option key={naturaleza.id} value={naturaleza.id} label={naturaleza.nombre}>
               {naturaleza.nombre}
             </Option>
           ))}

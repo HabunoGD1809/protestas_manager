@@ -62,9 +62,9 @@ const ProtestaDetail: React.FC = () => {
   };
 
   const handleDelete = () => {
-    if (id) {
+    if (id && protesta) {
       Modal.confirm({
-        title: '¿Estás seguro de que quieres eliminar esta protesta?',
+        title: `¿Estás seguro de que quieres eliminar la protesta "${protesta.nombre}"?`,
         icon: <ExclamationCircleOutlined />,
         content: 'Esta acción no se puede deshacer.',
         okText: 'Sí',
@@ -73,11 +73,15 @@ const ProtestaDetail: React.FC = () => {
         onOk: async () => {
           try {
             await request('delete', `/protestas/${id}`);
-            message.success('Protesta eliminada con éxito');
+            message.success(`Protesta "${protesta.nombre}" eliminada con éxito`);
             navigate('/protestas');
           } catch (error) {
             console.error('Error al eliminar la protesta:', error);
-            message.error('Error al eliminar la protesta');
+            if (error instanceof Error) {
+              message.error(`Error al eliminar la protesta: ${error.message}`);
+            } else {
+              message.error('Error al eliminar la protesta');
+            }
           }
         },
       });

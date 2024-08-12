@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { TextField, Button, Box, Avatar, CircularProgress } from '@mui/material';
 import { message } from 'antd';
@@ -39,9 +39,6 @@ const CabecillaForm: React.FC = () => {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
 
-  const cedulaRef = useRef<HTMLInputElement>(null);
-  const telefonoRef = useRef<HTMLInputElement>(null);
-
   useEffect(() => {
     if (id) {
       const fetchCabecilla = async () => {
@@ -56,8 +53,7 @@ const CabecillaForm: React.FC = () => {
             direccion: data.direccion || '',
           });
           if (data.foto) {
-            const fullImageUrl = getFullImageUrl(data.foto);
-            setPreviewUrl(fullImageUrl || null);
+            setPreviewUrl(getFullImageUrl(data.foto) || null);
           }
         } catch (err) {
           console.error('Error fetching cabecilla:', err);
@@ -78,24 +74,20 @@ const CabecillaForm: React.FC = () => {
       newErrors.nombre = 'El nombre es requerido';
       isValid = false;
     }
-
     if (!formData.apellido.trim()) {
       newErrors.apellido = 'El apellido es requerido';
       isValid = false;
     }
-
     const cedulaRegex = /^\d{3}-\d{7}-\d{1}$/;
     if (!cedulaRegex.test(formData.cedula)) {
       newErrors.cedula = 'La cédula debe tener el formato xxx-xxxxxxx-x';
       isValid = false;
     }
-
     const telefonoRegex = /^\d{3}-\d{3}-\d{4}$/;
     if (formData.telefono && !telefonoRegex.test(formData.telefono)) {
       newErrors.telefono = 'El teléfono debe tener el formato xxx-xxx-xxxx';
       isValid = false;
     }
-
     if (!formData.direccion.trim()) {
       newErrors.direccion = 'La dirección es requerida';
       isValid = false;
@@ -107,10 +99,9 @@ const CabecillaForm: React.FC = () => {
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setFormData({ ...formData, [name]: value });
-
+    setFormData(prevData => ({ ...prevData, [name]: value }));
     if (errors[name as keyof FormErrors]) {
-      setErrors({ ...errors, [name]: undefined });
+      setErrors(prevErrors => ({ ...prevErrors, [name]: undefined }));
     }
   };
 
@@ -124,58 +115,59 @@ const CabecillaForm: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!validateForm()) {
-      return;
-    }
+    if (!validateForm()) return;
+
     setIsLoading(true);
     try {
       const formDataToSend = new FormData();
       Object.entries(formData).forEach(([key, value]) => {
         formDataToSend.append(key, value);
       });
-
       if (foto) {
         formDataToSend.append('foto', foto);
       }
 
-      let result;
-      if (id) {
-        result = await request<Cabecilla>('put', `/cabecillas/${id}`, formDataToSend);
-        message.success('Cabecilla actualizado exitosamente');
-      } else {
-        result = await request<Cabecilla>('post', '/cabecillas', formDataToSend);
-        message.success('Cabecilla creado exitosamente');
-      }
+      const result = id
+        ? await request<Cabecilla>('put', `/cabecillas/${id}`, formDataToSend)
+        : await request<Cabecilla>('post', '/cabecillas', formDataToSend);
 
       if (result && result.foto) {
-        const fullImageUrl = getFullImageUrl(result.foto);
-        setPreviewUrl(fullImageUrl || null);
+        setPreviewUrl(getFullImageUrl(result.foto) || null);
       }
 
+      message.success(id ? 'Cabecilla actualizado exitosamente' : 'Cabecilla creado exitosamente');
       navigate('/cabecillas');
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error saving cabecilla:', err);
-      message.error('Error al guardar el cabecilla');
+      if (err.response && err.response.status === 400) {
+        const detail = err.response.data?.detail;
+        if (detail?.includes('Ya existe un cabecilla con la cédula')) {
+          setErrors(prevErrors => ({ ...prevErrors, cedula: 'Esta cédula ya está registrada en la base de datos' }));
+          message.error('Esta cédula ya está registrada en la base de datos');
+        } else {
+          message.error(detail || 'Error al guardar el cabecilla. Por favor, verifique los datos e intente nuevamente.');
+        }
+      } else {
+        message.error('Error al guardar el cabecilla. Por favor, intente nuevamente más tarde.');
+      }
     } finally {
       setIsLoading(false);
     }
   };
 
   const applyMask = (value: string, pattern: string): string => {
-  let i = 0;
-  return pattern.replace(/9/g, () => value[i++] || '');
-};
+    let i = 0;
+    return pattern.replace(/9/g, () => value[i++] || '');
+  };
 
   const handleCedulaChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value.replace(/\D/g, '');
-    const maskedValue = applyMask(value, '999-9999999-9');
-    setFormData({ ...formData, cedula: maskedValue });
+    setFormData(prevData => ({ ...prevData, cedula: applyMask(value, '999-9999999-9') }));
   };
 
   const handleTelefonoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value.replace(/\D/g, '');
-    const maskedValue = applyMask(value, '999-999-9999');
-    setFormData({ ...formData, telefono: maskedValue });
+    setFormData(prevData => ({ ...prevData, telefono: applyMask(value, '999-999-9999') }));
   };
 
   if (isLoading) {
@@ -229,7 +221,6 @@ const CabecillaForm: React.FC = () => {
         name="cedula"
         value={formData.cedula}
         onChange={handleCedulaChange}
-        inputRef={cedulaRef}
         error={!!errors.cedula}
         helperText={errors.cedula || 'Formato: xxx-xxxxxxx-x'}
         inputProps={{ maxLength: 13 }}
@@ -243,7 +234,6 @@ const CabecillaForm: React.FC = () => {
         name="telefono"
         value={formData.telefono}
         onChange={handleTelefonoChange}
-        inputRef={telefonoRef}
         error={!!errors.telefono}
         helperText={errors.telefono || 'Formato: xxx-xxx-xxxx'}
         inputProps={{ maxLength: 12 }}

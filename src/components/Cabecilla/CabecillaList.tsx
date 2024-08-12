@@ -50,19 +50,20 @@ const CabecillaList: React.FC = () => {
   };
 
   const handleDeleteCabecilla = async () => {
-    if (cabecillaToDelete) {
-      try {
-        await cabecillaService.delete(cabecillaToDelete.id);
-        setCabecillas(prevCabecillas => prevCabecillas.filter(c => c.id !== cabecillaToDelete.id));
-        setDeleteDialogOpen(false);
-        setCabecillaToDelete(null);
-        message.success('Cabecilla eliminado exitosamente');
-      } catch (error) {
-        console.error('Error deleting cabecilla:', error);
-        message.error('Error al eliminar el cabecilla');
-      }
+  if (cabecillaToDelete) {
+    try {
+      await cabecillaService.delete(cabecillaToDelete.id);
+      setCabecillas(prevCabecillas => prevCabecillas.filter(c => c.id !== cabecillaToDelete.id));
+      setDeleteDialogOpen(false);
+      setCabecillaToDelete(null);
+      message.success(`Cabecilla ${cabecillaToDelete.nombre} ${cabecillaToDelete.apellido} eliminado exitosamente`);
+    } catch (error) {
+      console.error('Error deleting cabecilla:', error);
+      message.error('Error al eliminar el cabecilla');
     }
-  };
+  }
+};
+
 
   const columns = [
     {

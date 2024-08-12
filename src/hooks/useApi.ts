@@ -39,7 +39,7 @@ export const useApi = () => {
       if (err instanceof AxiosError) {
         const errorMessage = err.response?.data?.detail || err.message || 'Error en la solicitud';
         setError(typeof errorMessage === 'string' ? errorMessage : JSON.stringify(errorMessage));
-        console.error('Error de API:', errorMessage, err.response?.data);
+        // console.error('Error de API:', errorMessage, err.response?.data); //no borrar 
       } else if (err instanceof Error) {
         setError(err.message);
         console.error('Error:', err.message);

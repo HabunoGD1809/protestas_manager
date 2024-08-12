@@ -19,11 +19,11 @@ import {
   Alert
 } from '@mui/material';
 import { User } from '../../types';
-// import { useApi } from '../../hooks/useApi';
 import ChangeUserRole from './ChangeUserRole';
 import Pagination from '../Common/Pagination';
 import { userService, getFullImageUrl } from '../../services/api';
 import CreateUserForm from './CreateUserForm';
+import { message } from 'antd';
 
 const UserList: React.FC = () => {
   const [users, setUsers] = useState<User[]>([]);
@@ -40,6 +40,7 @@ const UserList: React.FC = () => {
     setUsers(prevUsers => prevUsers.map(user => 
       user.id === userId ? { ...user, rol: newRole } : user
     ));
+    message.success(`Rol de usuario actualizado a ${newRole}`);
   }, []);
 
   const fetchUsers = useCallback(async (page: number, pageSize: number) => {
@@ -73,8 +74,9 @@ const UserList: React.FC = () => {
         throw new Error('Respuesta de API inválida');
       }
     } catch (err) {
-      console.error('Error fetching users:', err);
+      console.error('Error al obtener usuarios:', err);
       setError('Error al cargar los usuarios. Por favor, intente de nuevo más tarde.');
+      message.error('No se pudieron cargar los usuarios. Por favor, intente de nuevo.');
       setUsers([]);
     } finally {
       setIsLoading(false);
@@ -90,32 +92,50 @@ const UserList: React.FC = () => {
   }, []);
 
   const handleDeleteUser = useCallback(async () => {
-    if (userToDelete) {
-      try {
-        await userService.delete(userToDelete.id);
-        setUsers(prevUsers => prevUsers.filter(user => user.id !== userToDelete.id));
+  if (userToDelete) {
+    try {
+      const currentUser = await userService.getCurrentUser();
+      if (currentUser.id === userToDelete.id) {
+        message.error('No puedes eliminar tu propia cuenta.');
         setDeleteDialogOpen(false);
         setUserToDelete(null);
-      } catch (error) {
-        console.error('Error deleting user:', error);
-        setError('Error al eliminar el usuario. Por favor, intente de nuevo.');
+        return;
       }
+
+      await userService.delete(userToDelete.id);
+      setUsers(prevUsers => prevUsers.filter(user => user.id !== userToDelete.id));
+      setDeleteDialogOpen(false);
+      setUserToDelete(null);
+      message.success(`Usuario ${userToDelete.nombre} ${userToDelete.apellidos} eliminado exitosamente`);
+    } catch (error) {
+      console.error('Error al eliminar usuario:', error);
+      setError('Error al eliminar el usuario. Por favor, intente de nuevo.');
+      message.error('No se pudo eliminar el usuario. Por favor, intente de nuevo.');
     }
-  }, [userToDelete]);
+  }
+}, [userToDelete]);
+
 
   const handleCreateUser = useCallback(async (userData: FormData) => {
-    try {
-      const newUser = await userService.create(userData);
-      setUsers(prevUsers => [...prevUsers, newUser]);
-      setCreateDialogOpen(false);
-    } catch (error) {
-      if (error instanceof Error) {
-        setError(error.message);
+  try {
+    const newUser = await userService.create(userData);
+    setUsers(prevUsers => [...prevUsers, newUser]);
+    setCreateDialogOpen(false);
+    message.success('Usuario creado exitosamente');
+  } catch (error) {
+    if (error instanceof Error) {
+      if (error.message.includes("Ya existe un usuario con el email")) {
+        message.error('Ya existe un usuario con el email proporcionado. Por favor, elija otro.');
       } else {
-        setError('Error al crear el usuario. Por favor, intente de nuevo.');
+        setError(error.message);
+        message.error('No se pudo crear el usuario. Por favor, intente de nuevo.');
       }
+    } else {
+      setError('Error al crear el usuario. Por favor, intente de nuevo.');
+      message.error('No se pudo crear el usuario. Por favor, intente de nuevo.');
     }
-  }, []);
+  }
+}, []);
 
   if (isLoading) {
     return (
@@ -199,7 +219,6 @@ const UserList: React.FC = () => {
         />
       </Box>
 
-      {/* Delete Confirmation Dialog */}
       <Dialog
         open={deleteDialogOpen}
         onClose={() => setDeleteDialogOpen(false)}
@@ -218,7 +237,6 @@ const UserList: React.FC = () => {
         </DialogActions>
       </Dialog>
 
-      {/* Create User Dialog */}
       <Dialog
         open={createDialogOpen}
         onClose={() => setCreateDialogOpen(false)}

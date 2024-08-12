@@ -290,6 +290,12 @@ export const cabecillaService = {
       foto: getFullImageUrl(response.data.foto)
     };
   },
+  getSuggestions: async (field: string, value: string) => {
+    const response = await api.get<string[]>(`/cabecillas/suggestions`, {
+      params: { field, value }
+    });
+    return response.data;
+  },
 };
 
 export const naturalezaService = {
@@ -440,29 +446,31 @@ export const userService = {
     return response.data;
   },
   create: async (userData: FormData) => {
-  try {
-    const response = await api.post<User>("/admin/usuarios", userData, {
-      headers: { "Content-Type": "multipart/form-data" },
-    });
-    cacheService.remove("usuarios");
-    return response.data;
-  } catch (error) {
-    if (axios.isAxiosError(error) && error.response) {
-      const errorDetail = error.response.data.detail;
-      if (Array.isArray(errorDetail)) {
-        throw new Error(errorDetail.map(err => err.msg).join(', '));
-      } else {
-        throw new Error(errorDetail || "Error creating user");
+    try {
+      const response = await api.post<User>("/admin/usuarios", userData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+      cacheService.remove("usuarios");
+      return response.data;
+    } catch (error) {
+      if (axios.isAxiosError(error) && error.response) {
+        const errorDetail = error.response.data.detail;
+        if (Array.isArray(errorDetail)) {
+          throw new Error(errorDetail.map(err => err.msg).join(', '));
+        } else {
+          throw new Error(errorDetail || "Error creating user");
+        }
       }
+      throw new Error("An unexpected error occurred");
     }
-    throw new Error("An unexpected error occurred");
-  }
-},
+  },
   delete: async (id: string) => {
     const response = await api.delete(`/admin/usuarios/${id}`);
     cacheService.remove("usuarios");
     cacheService.remove(`usuario_${id}`);
     return response.data;
   },
+  getCurrentUser: async () => {
+    return obtenerUsuarioActual();
+  }
 };
-  
