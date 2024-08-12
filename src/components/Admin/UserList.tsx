@@ -22,7 +22,7 @@ import { User } from '../../types';
 // import { useApi } from '../../hooks/useApi';
 import ChangeUserRole from './ChangeUserRole';
 import Pagination from '../Common/Pagination';
-import { userService } from '../../services/api';
+import { userService, getFullImageUrl } from '../../services/api';
 import CreateUserForm from './CreateUserForm';
 
 const UserList: React.FC = () => {
@@ -49,13 +49,21 @@ const UserList: React.FC = () => {
       const response = await userService.getAll(page, pageSize);
       console.log('API Response:', response);
       if (Array.isArray(response)) {
-        setUsers(response);
+        const usersWithFullImageUrls = response.map(user => ({
+          ...user,
+          foto: getFullImageUrl(user.foto)
+        }));
+        setUsers(usersWithFullImageUrls);
         setPagination(prev => ({
           ...prev,
           total: response.length,
         }));
       } else if (response && Array.isArray(response.items)) {
-        setUsers(response.items);
+        const usersWithFullImageUrls = response.items.map(user => ({
+          ...user,
+          foto: getFullImageUrl(user.foto)
+        }));
+        setUsers(usersWithFullImageUrls);
         setPagination({
           current: response.page,
           pageSize: response.page_size,

@@ -107,6 +107,16 @@ api.interceptors.response.use(
   }
 );
 
+export const getFullImageUrl = (path: string | undefined) => {
+  if (path) {
+    if (path.startsWith('http://') || path.startsWith('https://')) {
+      return path;
+    }
+    return `${BASE_URL}${path}`;
+  }
+  return undefined;
+};
+
 export const login = async (email: string, password: string) => {
   const formData = new URLSearchParams();
   formData.append("username", email);
@@ -157,7 +167,10 @@ export const logout = () => {
 
 export const obtenerUsuarioActual = async () => {
   const response = await api.get<User>("/usuarios/me");
-  return response.data;
+  return {
+    ...response.data,
+    foto: getFullImageUrl(response.data.foto)
+  };
 };
 
 export const protestaService = {
@@ -216,13 +229,6 @@ export const protestaService = {
     cacheService.remove(`protesta_${id}`);
     return response.data;
   },
-};
-
-const getFullImageUrl = (path: string | undefined) => {
-  if (path) {
-    return `${BASE_URL}${path}`;
-  }
-  return undefined;
 };
 
 export const cabecillaService = {

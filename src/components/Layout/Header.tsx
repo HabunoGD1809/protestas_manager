@@ -148,7 +148,13 @@ const Header: React.FC = () => {
               <>
                 <Tooltip title="Abrir opciones">
                   <IconButton onClick={handleOpenUserMenu} sx={{ p: 0 }}>
-                    <Avatar alt={`${user.nombre} ${user.apellidos}`} src={user.foto} />
+                    <Avatar
+                      alt={`${user.nombre} ${user.apellidos}`}
+                      src={user.foto || undefined}
+                      sx={{ width: 40, height: 40 }}
+                    >
+                      {!user.foto && `${user.nombre[0]}${user.apellidos[0]}`}
+                    </Avatar>
                   </IconButton>
                 </Tooltip>
                 <Menu
