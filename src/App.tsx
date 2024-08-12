@@ -19,6 +19,7 @@ import CabecillaForm from './components/Cabecilla/CabecillaForm';
 import NaturalezaList from './components/Naturaleza/NaturalezaList';
 import NaturalezaForm from './components/Naturaleza/NaturalezaForm';
 import AdminDashboardPage from './pages/AdminDashboardPage';
+import UserProfilePage from './pages/UserProfilePage'; 
 
 import RegisterPage from './pages/RegisterPage';
 
@@ -44,6 +45,7 @@ const App: React.FC = () => {
         <Routes>
           <Route path="/" element={<HomePage />} />
           <Route path="/login" element={<LoginPage />} />
+          <Route path="/perfil" element={<PrivateRoute><UserProfilePage /></PrivateRoute>} /> 
           <Route path="/protestas" element={<PrivateRoute><ProtestaListPage /></PrivateRoute>} />
           <Route path="/protestas/crear" element={<PrivateRoute><ProtestaFormPage /></PrivateRoute>} />
           <Route path="/protestas/editar/:id" element={<PrivateRoute><ProtestaFormPage /></PrivateRoute>} />
