@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { TextField, Button, Box, Avatar,} from '@mui/material';
+import { TextField, Button, Box, Avatar } from '@mui/material';
 import { useApi } from '../../hooks/useApi';
 import { Cabecilla } from '../../types';
 
@@ -90,8 +90,7 @@ const CabecillaForm: React.FC = () => {
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData({ ...formData, [name]: value });
-    
-    // Limpiar error cuando el usuario empieza a corregir
+
     if (errors[name as keyof FormErrors]) {
       setErrors({ ...errors, [name]: undefined });
     }
@@ -115,26 +114,36 @@ const CabecillaForm: React.FC = () => {
       Object.entries(formData).forEach(([key, value]) => {
         formDataToSend.append(key, value);
       });
+
       if (foto) {
         formDataToSend.append('foto', foto);
       }
 
+      let result;
       if (id) {
-        await request('put', `/cabecillas/${id}`, formDataToSend);
+        result = await request<Cabecilla>('put', `/cabecillas/${id}`, formDataToSend);
       } else {
-        await request('post', '/cabecillas', formDataToSend);
+        result = await request<Cabecilla>('post', '/cabecillas', formDataToSend);
       }
+
+      if (result && result.foto) {
+        setPreviewUrl(result.foto);
+      }
+
       navigate('/cabecillas');
     } catch (err) {
       console.error('Error saving cabecilla:', err);
-      // Aquí podrías manejar errores de la API y mostrarlos al usuario
     }
+  };
+
+  const getImageUrl = (url: string | null) => {
+    return url ? `${url}?t=${new Date().getTime()}` : undefined;
   };
 
   return (
     <Box component="form" onSubmit={handleSubmit} sx={{ mt: 1 }}>
       <Box sx={{ display: 'flex', justifyContent: 'center', mb: 2 }}>
-        <Avatar src={previewUrl || undefined} sx={{ width: 100, height: 100 }} />
+        <Avatar src={getImageUrl(previewUrl)} sx={{ width: 100, height: 100 }} />
       </Box>
       <Button variant="contained" component="label" fullWidth sx={{ mb: 2 }}>
         Subir Foto

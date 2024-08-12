@@ -218,6 +218,13 @@ export const protestaService = {
   },
 };
 
+const getFullImageUrl = (path: string | undefined) => {
+  if (path) {
+    return `${BASE_URL}${path}`;
+  }
+  return undefined;
+};
+
 export const cabecillaService = {
   getAll: async (page: number = 1, pageSize: number = 10, filters?: Record<string, string>) => {
     const response = await api.get<PaginatedResponse<Cabecilla>>('/cabecillas', { 
@@ -227,26 +234,55 @@ export const cabecillaService = {
         ...filters 
       } 
     });
+    response.data.items = response.data.items.map(cabecilla => ({
+      ...cabecilla,
+      foto: getFullImageUrl(cabecilla.foto)
+    }));
     return response.data;
   },
   getAllNoPagination: async () => {
     const response = await api.get<Cabecilla[]>('/cabecillas/all');
-    return response.data;
+    return response.data.map(cabecilla => ({
+      ...cabecilla,
+      foto: getFullImageUrl(cabecilla.foto)
+    }));
   },
-  getById: (id: string) => api.get<Cabecilla>(`/cabecillas/${id}`).then(res => res.data),
-  create: (cabecilla: FormData) => api.post<Cabecilla>('/cabecillas', cabecilla, {
+  getById: async (id: string) => {
+    const response = await api.get<Cabecilla>(`/cabecillas/${id}`);
+    return {
+      ...response.data,
+      foto: getFullImageUrl(response.data.foto)
+    };
+  },
+  create: async (cabecilla: FormData) => {
+    const response = await api.post<Cabecilla>('/cabecillas', cabecilla, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return {
+      ...response.data,
+      foto: getFullImageUrl(response.data.foto)
+    };
+  },
+  update: async (id: string, cabecilla: FormData) => {
+  const response = await api.put<Cabecilla>(`/cabecillas/${id}`, cabecilla, {
     headers: { 'Content-Type': 'multipart/form-data' },
-  }).then(res => res.data),
-  update: (id: string, cabecilla: FormData) => api.put<Cabecilla>(`/cabecillas/${id}`, cabecilla, {
-    headers: { 'Content-Type': 'multipart/form-data' },
-  }).then(res => res.data),
+  });
+  return {
+    ...response.data,
+    foto: getFullImageUrl(response.data.foto)
+  };
+},
   delete: (id: string) => api.delete(`/cabecillas/${id}`).then(res => res.data),
-  updateFoto: (id: string, foto: File) => {
+  updateFoto: async (id: string, foto: File) => {
     const formData = new FormData();
     formData.append('foto', foto);
-    return api.post<Cabecilla>(`/cabecillas/${id}/foto`, formData, {
+    const response = await api.post<Cabecilla>(`/cabecillas/${id}/foto`, formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
-    }).then(res => res.data);
+    });
+    return {
+      ...response.data,
+      foto: getFullImageUrl(response.data.foto)
+    };
   },
 };
 

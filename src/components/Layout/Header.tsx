@@ -178,26 +178,26 @@ const Header: React.FC = () => {
               </>
             ) : (
               <>
-              <Button
-                color="primary"
-                variant="contained"
-                component={RouterLink}
-                to="/login"
-                sx={{
-                  mr: 1,
-                  backgroundColor: 'primary.main',
-                  color: 'white',
-                  borderRadius: 2,
-                  padding: '8px 16px',
-                  boxShadow: 3,
-                  '&:hover': {
-                    backgroundColor: 'primary.dark',
-                    boxShadow: 6,
-                  },
-                }}
-              >
-                Iniciar sesión
-              </Button>
+                <Button
+                  color="primary"
+                  variant="contained"
+                  component={RouterLink}
+                  to="/login"
+                  sx={{
+                    mr: 1,
+                    backgroundColor: 'primary.main',
+                    color: 'white',
+                    borderRadius: 2,
+                    padding: '8px 16px',
+                    boxShadow: 3,
+                    '&:hover': {
+                      backgroundColor: 'primary.dark',
+                      boxShadow: 6,
+                    },
+                  }}
+                >
+                  Iniciar sesión
+                </Button>
               </>
             )}
           </Box>

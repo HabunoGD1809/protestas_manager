@@ -35,7 +35,6 @@ export interface Provincia {
 export interface Cabecilla {
   id: string;
   foto?: string;
-  fotoUrl?: string;  // Nueva propiedad para la URL completa de la foto
   nombre: string;
   apellido: string;
   cedula: string;
