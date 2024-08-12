@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { TextField, Button, Box, Avatar, CircularProgress } from '@mui/material';
 import { message } from 'antd';
@@ -19,6 +19,7 @@ interface FormErrors {
   apellido?: string;
   cedula?: string;
   telefono?: string;
+  direccion?: string;
 }
 
 const CabecillaForm: React.FC = () => {
@@ -37,6 +38,9 @@ const CabecillaForm: React.FC = () => {
   const { request } = useApi();
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
+
+  const cedulaRef = useRef<HTMLInputElement>(null);
+  const telefonoRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (id) {
@@ -89,6 +93,11 @@ const CabecillaForm: React.FC = () => {
     const telefonoRegex = /^\d{3}-\d{3}-\d{4}$/;
     if (formData.telefono && !telefonoRegex.test(formData.telefono)) {
       newErrors.telefono = 'El teléfono debe tener el formato xxx-xxx-xxxx';
+      isValid = false;
+    }
+
+    if (!formData.direccion.trim()) {
+      newErrors.direccion = 'La dirección es requerida';
       isValid = false;
     }
 
@@ -152,6 +161,23 @@ const CabecillaForm: React.FC = () => {
     }
   };
 
+  const applyMask = (value: string, pattern: string): string => {
+  let i = 0;
+  return pattern.replace(/9/g, () => value[i++] || '');
+};
+
+  const handleCedulaChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value.replace(/\D/g, '');
+    const maskedValue = applyMask(value, '999-9999999-9');
+    setFormData({ ...formData, cedula: maskedValue });
+  };
+
+  const handleTelefonoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value.replace(/\D/g, '');
+    const maskedValue = applyMask(value, '999-999-9999');
+    setFormData({ ...formData, telefono: maskedValue });
+  };
+
   if (isLoading) {
     return <CircularProgress />;
   }
@@ -202,29 +228,37 @@ const CabecillaForm: React.FC = () => {
         label="Cédula"
         name="cedula"
         value={formData.cedula}
-        onChange={handleChange}
+        onChange={handleCedulaChange}
+        inputRef={cedulaRef}
         error={!!errors.cedula}
         helperText={errors.cedula || 'Formato: xxx-xxxxxxx-x'}
+        inputProps={{ maxLength: 13 }}
       />
       <TextField
         margin="normal"
+        required
         fullWidth
         id="telefono"
         label="Teléfono"
         name="telefono"
         value={formData.telefono}
-        onChange={handleChange}
+        onChange={handleTelefonoChange}
+        inputRef={telefonoRef}
         error={!!errors.telefono}
         helperText={errors.telefono || 'Formato: xxx-xxx-xxxx'}
+        inputProps={{ maxLength: 12 }}
       />
       <TextField
         margin="normal"
+        required
         fullWidth
         id="direccion"
         label="Dirección"
         name="direccion"
         value={formData.direccion}
         onChange={handleChange}
+        error={!!errors.direccion}
+        helperText={errors.direccion}
       />
       <Button type="submit" fullWidth variant="contained" sx={{ mt: 3, mb: 2 }} disabled={isLoading}>
         {id ? 'Actualizar' : 'Crear'} Cabecilla

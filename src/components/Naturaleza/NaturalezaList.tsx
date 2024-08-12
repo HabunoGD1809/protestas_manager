@@ -26,7 +26,7 @@ const NaturalezaList: React.FC = () => {
   const fetchNaturalezas = async (page: number, pageSize: number) => {
     try {
       const data = await naturalezaService.getAll(page, pageSize, filters);
-      console.log('Datos recibidos:', data);
+      // console.log('Datos recibidos:', data); //no borrar 
       setNaturalezas(data.items || []);
       setPagination({
         current: data.page,

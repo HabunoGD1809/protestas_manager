@@ -37,7 +37,6 @@ const NaturalezaForm: React.FC = () => {
             color: data.color,
             icono: data.icono
           });
-          // message.success('Datos de la naturaleza cargados exitosamente');
         } catch (err) {
           console.error('Error al obtener naturaleza:', err);
           message.error('Error al cargar los datos de la naturaleza');
@@ -54,6 +53,12 @@ const NaturalezaForm: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!formData.nombre || !formData.color || !formData.icono) {
+      message.error('Todos los campos son obligatorios');
+      return;
+    }
+    
     try {
       if (id) {
         await request<Naturaleza>('put', `/naturalezas/${id}`, formData);

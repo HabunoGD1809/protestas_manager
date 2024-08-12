@@ -47,7 +47,7 @@ const UserList: React.FC = () => {
     setError(null);
     try {
       const response = await userService.getAll(page, pageSize);
-      console.log('API Response:', response);
+      // console.log('API Response:', response); //no borrar
       if (Array.isArray(response)) {
         const usersWithFullImageUrls = response.map(user => ({
           ...user,

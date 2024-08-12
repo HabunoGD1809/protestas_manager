@@ -49,12 +49,6 @@ export interface PaginatedResponse<T> {
   page_size: number;
   pages: number;
 }
-
-export interface ResumenPrincipal {
-  total_protestas: number;
-  protestas_recientes: Protesta[];
-}
-
 export interface CrearProtesta {
   nombre: string;
   naturaleza_id: string;
@@ -90,4 +84,38 @@ export interface UserListResponse {
   page: number;
   page_size: number;
   pages: number;
+}
+
+// cambios en resumen principal
+// Existing interfaces...
+export interface ResumenPrincipal {
+  totales: {
+    protestas: number;
+    usuarios: number;
+    naturalezas: number;
+    cabecillas: number;
+  };
+  protestas_recientes: ProtestasRecientes[];
+  protestas_por_naturaleza: Record<string, number>;
+  protestas_por_provincia: Record<string, number>;
+  protestas_ultimos_30_dias: Record<string, string>;
+  top_cabecillas: TopCabecilla[];
+  usuarios_activos: UsuarioActivo[];
+}
+
+export interface ProtestasRecientes {
+  id: string;
+  nombre: string;
+  fecha_evento: string;
+  fecha_creacion: string;
+}
+
+export interface TopCabecilla {
+  nombre: string;
+  total_protestas: number;
+}
+
+export interface UsuarioActivo {
+  nombre: string;
+  protestas_creadas: number;
 }

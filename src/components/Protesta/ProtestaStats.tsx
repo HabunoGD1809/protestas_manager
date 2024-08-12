@@ -26,8 +26,8 @@ const ProtestaStats: React.FC = () => {
         request<Naturaleza[] | PaginatedResponse<Naturaleza>>('get', '/naturalezas')
       ]);
 
-      console.log('Protesta Response:', protestaResponse);
-      console.log('Naturaleza Response:', naturalezaResponse);
+      // console.log('Protesta Response:', protestaResponse); //no borrar
+      // console.log('Naturaleza Response:', naturalezaResponse); //borrar
 
       if (!protestaResponse || !protestaResponse.items) {
         throw new Error('La respuesta de protestas es inválida');
@@ -61,11 +61,11 @@ const ProtestaStats: React.FC = () => {
       const naturalezaMasComunId = Object.entries(naturalezaCount).reduce((a, b) => a[1] > b[1] ? a : b, ['', 0])[0];
       const naturalezaMasComun = naturalezas.find(n => n.id === naturalezaMasComunId)?.nombre || 'Desconocida';
 
-      console.log('Estadísticas calculadas:', {
-        total_protestas: totalProtestas,
-        protestas_este_mes: protestasEsteMes,
-        naturaleza_mas_comun: naturalezaMasComun,
-      });
+      // console.log('Estadísticas calculadas:', {
+      //   total_protestas: totalProtestas,
+      //   protestas_este_mes: protestasEsteMes,
+      //   naturaleza_mas_comun: naturalezaMasComun,
+      // }); //no borrar
 
       setStats({
         total_protestas: totalProtestas,

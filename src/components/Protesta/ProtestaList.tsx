@@ -31,9 +31,9 @@ const ProtestaList: React.FC = () => {
 
   const fetchProtestas = useCallback(async (page: number, pageSize: number) => {
     try {
-      console.log('Fetching protestas with filters:', filters);
+      // console.log('Fetching protestas with filters:', filters); //no borrar
       const data = await protestaService.getAll(page, pageSize, filters);
-      console.log('Protestas data received:', data);
+      // console.log('Protestas data received:', data); // no borrar
       setProtestas(data.items);
       setPagination({
         current: data.page,
