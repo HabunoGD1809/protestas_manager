@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { TextField, Button, Box, Avatar, CircularProgress } from '@mui/material';
+import { message } from 'antd';
 import { useApi } from '../../hooks/useApi';
 import { Cabecilla } from '../../types';
 import { getFullImageUrl } from '../../services/api';
@@ -32,7 +33,7 @@ const CabecillaForm: React.FC = () => {
   const [foto, setFoto] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null | undefined>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error] = useState<string | null>(null);
   const { request } = useApi();
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
@@ -56,7 +57,7 @@ const CabecillaForm: React.FC = () => {
           }
         } catch (err) {
           console.error('Error fetching cabecilla:', err);
-          setError('Error al cargar los datos del cabecilla');
+          message.error('Error al cargar los datos del cabecilla');
         } finally {
           setIsLoading(false);
         }
@@ -131,8 +132,10 @@ const CabecillaForm: React.FC = () => {
       let result;
       if (id) {
         result = await request<Cabecilla>('put', `/cabecillas/${id}`, formDataToSend);
+        message.success('Cabecilla actualizado exitosamente');
       } else {
         result = await request<Cabecilla>('post', '/cabecillas', formDataToSend);
+        message.success('Cabecilla creado exitosamente');
       }
 
       if (result && result.foto) {
@@ -143,7 +146,7 @@ const CabecillaForm: React.FC = () => {
       navigate('/cabecillas');
     } catch (err) {
       console.error('Error saving cabecilla:', err);
-      setError('Error al guardar el cabecilla');
+      message.error('Error al guardar el cabecilla');
     } finally {
       setIsLoading(false);
     }

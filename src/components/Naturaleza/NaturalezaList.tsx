@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link as RouterLink } from 'react-router-dom';
 import { Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Button, IconButton, Box, Typography, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle } from '@mui/material';
+import { message } from 'antd';
 import { useApi } from '../../hooks/useApi';
 import { Naturaleza } from '../../types';
 import Pagination from '../Common/Pagination';
@@ -32,8 +33,10 @@ const NaturalezaList: React.FC = () => {
         pageSize: data.page_size,
         total: data.total
       });
+      // message.success('Lista de naturalezas cargada exitosamente');
     } catch (err) {
       console.error('Error fetching naturalezas:', err);
+      message.error('Error al cargar la lista de naturalezas');
     }
   };
 
@@ -57,24 +60,26 @@ const NaturalezaList: React.FC = () => {
         setNaturalezas(prevNaturalezas => prevNaturalezas.filter(n => n.id !== naturalezaToDelete.id));
         setDeleteDialogOpen(false);
         setNaturalezaToDelete(null);
+        message.success('Naturaleza eliminada exitosamente');
       } catch (error) {
         console.error('Error deleting naturaleza:', error);
+        message.error('Error al eliminar la naturaleza');
       }
     }
   };
 
   const columns = [
     { title: 'Nombre', dataIndex: 'nombre', key: 'nombre' },
-    { 
-      title: 'Color', 
+    {
+      title: 'Color',
       dataIndex: 'color', key: 'color',
       render: (naturaleza: Naturaleza) => (
         <div style={{ backgroundColor: naturaleza.color, width: 20, height: 20, borderRadius: '50%' }}></div>
       )
     },
-    { 
-      title: 'Icono', 
-      dataIndex: 'icono', 
+    {
+      title: 'Icono',
+      dataIndex: 'icono',
       key: 'icono',
       render: (naturaleza: Naturaleza) => {
         const IconComponent = Icons[naturaleza.icono as keyof typeof Icons];
@@ -86,10 +91,10 @@ const NaturalezaList: React.FC = () => {
       key: 'actions',
       render: (naturaleza: Naturaleza) => (
         <Box>
-          <Button 
-            component={RouterLink} 
-            to={`/naturalezas/edit/${naturaleza.id}`} 
-            variant="outlined" 
+          <Button
+            component={RouterLink}
+            to={`/naturalezas/edit/${naturaleza.id}`}
+            variant="outlined"
             size="small"
             startIcon={<EditIcon />}
             sx={{ mr: 1 }}
@@ -97,9 +102,9 @@ const NaturalezaList: React.FC = () => {
             Editar
           </Button>
           {isAdmin() && (
-            <Button 
-              variant="outlined" 
-              color="secondary" 
+            <Button
+              variant="outlined"
+              color="secondary"
               size="small"
               startIcon={<DeleteIcon />}
               onClick={() => {
@@ -122,11 +127,11 @@ const NaturalezaList: React.FC = () => {
     <Box>
       <Typography variant="h4" gutterBottom>Lista de Naturalezas</Typography>
       <NaturalezaFilter onFilter={handleFilter} />
-      <Button 
-        component={RouterLink} 
-        to="/naturalezas/new" 
-        variant="contained" 
-        color="primary" 
+      <Button
+        component={RouterLink}
+        to="/naturalezas/new"
+        variant="contained"
+        color="primary"
         sx={{ mb: 2, mt: 2 }}
       >
         Crear nueva Naturaleza
@@ -146,7 +151,7 @@ const NaturalezaList: React.FC = () => {
                 <TableRow key={naturaleza.id}>
                   {columns.map((column) => (
                     <TableCell key={`${naturaleza.id}-${column.key}`}>
-                      {column.render 
+                      {column.render
                         ? column.render(naturaleza)
                         : naturaleza[column.dataIndex as keyof Naturaleza]}
                     </TableCell>

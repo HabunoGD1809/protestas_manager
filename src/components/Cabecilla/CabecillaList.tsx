@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link as RouterLink } from 'react-router-dom';
 import { Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Button, Avatar, Box, Typography, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle } from '@mui/material';
+import { message } from 'antd';
 import { useApi } from '../../hooks/useApi';
 import { Cabecilla } from '../../types';
 import Pagination from '../Common/Pagination';
@@ -31,6 +32,7 @@ const CabecillaList: React.FC = () => {
       });
     } catch (err) {
       console.error('Error fetching cabecillas:', err);
+      message.error('Error al cargar la lista de cabecillas');
     }
   };
 
@@ -54,8 +56,10 @@ const CabecillaList: React.FC = () => {
         setCabecillas(prevCabecillas => prevCabecillas.filter(c => c.id !== cabecillaToDelete.id));
         setDeleteDialogOpen(false);
         setCabecillaToDelete(null);
+        message.success('Cabecilla eliminado exitosamente');
       } catch (error) {
         console.error('Error deleting cabecilla:', error);
+        message.error('Error al eliminar el cabecilla');
       }
     }
   };

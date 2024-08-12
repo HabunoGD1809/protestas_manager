@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { TextField, Button, Box, Typography, Popover } from '@mui/material';
 import { ChromePicker, ColorResult } from 'react-color';
+import { message } from 'antd';
 import { useApi } from '../../hooks/useApi';
 import { Naturaleza } from '../../types';
 import IconSelector from '../../utils/IconSelector';
@@ -36,8 +37,10 @@ const NaturalezaForm: React.FC = () => {
             color: data.color,
             icono: data.icono
           });
+          // message.success('Datos de la naturaleza cargados exitosamente');
         } catch (err) {
           console.error('Error al obtener naturaleza:', err);
+          message.error('Error al cargar los datos de la naturaleza');
         }
       };
       fetchNaturaleza();
@@ -54,12 +57,15 @@ const NaturalezaForm: React.FC = () => {
     try {
       if (id) {
         await request<Naturaleza>('put', `/naturalezas/${id}`, formData);
+        message.success('Naturaleza actualizada exitosamente');
       } else {
         await request<Naturaleza>('post', '/naturalezas', formData);
+        message.success('Naturaleza creada exitosamente');
       }
       navigate('/naturalezas');
     } catch (err) {
       console.error('Error al guardar naturaleza:', err);
+      message.error('Error al guardar la naturaleza');
     }
   };
 
@@ -126,7 +132,7 @@ const NaturalezaForm: React.FC = () => {
         </Popover>
       </Box>
       <Box sx={{ display: 'flex', alignItems: 'center', mt: 2, mb: 2 }}>
-        <Button 
+        <Button
           variant="outlined"
           onClick={() => setIsIconSelectorOpen(true)}
           startIcon={SelectedIcon && <SelectedIcon />}
