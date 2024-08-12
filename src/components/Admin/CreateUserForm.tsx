@@ -1,23 +1,33 @@
 import React, { useState } from 'react';
 import { TextField, Button, Typography, Box, Avatar, FormControl, InputLabel, Select, MenuItem, SelectChangeEvent } from '@mui/material';
+import { getFullImageUrl } from '../../services/api';
 
 interface CreateUserFormProps {
   onSubmit: (userData: FormData) => void;
   onCancel: () => void;
+  initialData?: {
+    nombre: string;
+    apellidos: string;
+    email: string;
+    rol: 'usuario' | 'admin';
+    foto?: string;
+  };
 }
 
-const CreateUserForm: React.FC<CreateUserFormProps> = ({ onSubmit, onCancel }) => {
+const CreateUserForm: React.FC<CreateUserFormProps> = ({ onSubmit, onCancel, initialData }) => {
   const [formData, setFormData] = useState({
-    nombre: '',
-    apellidos: '',
-    email: '',
+    nombre: initialData?.nombre || '',
+    apellidos: initialData?.apellidos || '',
+    email: initialData?.email || '',
     password: '',
     repetir_password: '',
-    rol: 'usuario' as 'usuario' | 'admin',
+    rol: initialData?.rol || 'usuario',
   });
   const [foto, setFoto] = useState<File | null>(null);
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-  const [error, setError] = useState('');
+  const [previewUrl, setPreviewUrl] = useState<string | null>(
+    initialData?.foto ? getFullImageUrl(initialData.foto) || null : null
+  );
+  const [error, setError] = useState<string>('');
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -33,6 +43,9 @@ const CreateUserForm: React.FC<CreateUserFormProps> = ({ onSubmit, onCancel }) =
       const file = e.target.files[0];
       setFoto(file);
       setPreviewUrl(URL.createObjectURL(file));
+    } else {
+      setFoto(null);
+      setPreviewUrl(null);
     }
   };
 
@@ -40,6 +53,10 @@ const CreateUserForm: React.FC<CreateUserFormProps> = ({ onSubmit, onCancel }) =
     e.preventDefault();
     if (formData.password !== formData.repetir_password) {
       setError('Las contraseñas no coinciden.');
+      return;
+    }
+    if (!formData.nombre || !formData.apellidos || !formData.email || !formData.password || !formData.repetir_password) {
+      setError('Por favor, complete todos los campos.');
       return;
     }
     const formDataToSend = new FormData();
@@ -66,7 +83,7 @@ const CreateUserForm: React.FC<CreateUserFormProps> = ({ onSubmit, onCancel }) =
         <Avatar src={previewUrl || undefined} sx={{ width: 100, height: 100 }} />
       </Box>
       <Button variant="contained" component="label" fullWidth sx={{ mb: 2 }}>
-        Subir Foto
+        {initialData ? 'Cambiar Foto' : 'Subir Foto'}
         <input type="file" hidden onChange={handleFileChange} accept="image/*" />
       </Button>
       <TextField
@@ -146,7 +163,9 @@ const CreateUserForm: React.FC<CreateUserFormProps> = ({ onSubmit, onCancel }) =
       )}
       <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1, mt: 2 }}>
         <Button onClick={onCancel}>Cancelar</Button>
-        <Button type="submit" variant="contained" color="primary">Crear Usuario</Button>
+        <Button type="submit" variant="contained" color="primary">
+          {initialData ? 'Actualizar' : 'Crear'} Usuario
+        </Button>
       </Box>
     </Box>
   );

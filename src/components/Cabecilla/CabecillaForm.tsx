@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { TextField, Button, Box, Avatar } from '@mui/material';
+import { TextField, Button, Box, Avatar, CircularProgress } from '@mui/material';
 import { useApi } from '../../hooks/useApi';
 import { Cabecilla } from '../../types';
+import { getFullImageUrl } from '../../services/api';
 
 interface CabecillaFormData {
   nombre: string;
@@ -29,7 +30,9 @@ const CabecillaForm: React.FC = () => {
   });
   const [errors, setErrors] = useState<FormErrors>({});
   const [foto, setFoto] = useState<File | null>(null);
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null | undefined>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const { request } = useApi();
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
@@ -37,6 +40,7 @@ const CabecillaForm: React.FC = () => {
   useEffect(() => {
     if (id) {
       const fetchCabecilla = async () => {
+        setIsLoading(true);
         try {
           const data = await request<Cabecilla>('get', `/cabecillas/${id}`);
           setFormData({
@@ -47,10 +51,14 @@ const CabecillaForm: React.FC = () => {
             direccion: data.direccion || '',
           });
           if (data.foto) {
-            setPreviewUrl(data.foto);
+            const fullImageUrl = getFullImageUrl(data.foto);
+            setPreviewUrl(fullImageUrl || null);
           }
         } catch (err) {
           console.error('Error fetching cabecilla:', err);
+          setError('Error al cargar los datos del cabecilla');
+        } finally {
+          setIsLoading(false);
         }
       };
       fetchCabecilla();
@@ -109,6 +117,7 @@ const CabecillaForm: React.FC = () => {
     if (!validateForm()) {
       return;
     }
+    setIsLoading(true);
     try {
       const formDataToSend = new FormData();
       Object.entries(formData).forEach(([key, value]) => {
@@ -127,26 +136,35 @@ const CabecillaForm: React.FC = () => {
       }
 
       if (result && result.foto) {
-        setPreviewUrl(result.foto);
+        const fullImageUrl = getFullImageUrl(result.foto);
+        setPreviewUrl(fullImageUrl || null);
       }
 
       navigate('/cabecillas');
     } catch (err) {
       console.error('Error saving cabecilla:', err);
+      setError('Error al guardar el cabecilla');
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const getImageUrl = (url: string | null) => {
-    return url ? `${url}?t=${new Date().getTime()}` : undefined;
-  };
+  if (isLoading) {
+    return <CircularProgress />;
+  }
 
   return (
     <Box component="form" onSubmit={handleSubmit} sx={{ mt: 1 }}>
+      {error && (
+        <Box sx={{ color: 'error.main', mb: 2 }}>
+          {error}
+        </Box>
+      )}
       <Box sx={{ display: 'flex', justifyContent: 'center', mb: 2 }}>
-        <Avatar src={getImageUrl(previewUrl)} sx={{ width: 100, height: 100 }} />
+        <Avatar src={previewUrl || undefined} sx={{ width: 100, height: 100 }} />
       </Box>
       <Button variant="contained" component="label" fullWidth sx={{ mb: 2 }}>
-        Subir Foto
+        {previewUrl ? 'Cambiar Foto' : 'Subir Foto'}
         <input type="file" hidden onChange={handleFileChange} accept="image/*" />
       </Button>
       <TextField
@@ -205,7 +223,7 @@ const CabecillaForm: React.FC = () => {
         value={formData.direccion}
         onChange={handleChange}
       />
-      <Button type="submit" fullWidth variant="contained" sx={{ mt: 3, mb: 2 }}>
+      <Button type="submit" fullWidth variant="contained" sx={{ mt: 3, mb: 2 }} disabled={isLoading}>
         {id ? 'Actualizar' : 'Crear'} Cabecilla
       </Button>
     </Box>

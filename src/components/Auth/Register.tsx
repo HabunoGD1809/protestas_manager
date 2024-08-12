@@ -80,7 +80,7 @@ const Register: React.FC = () => {
         <Avatar src={previewUrl || undefined} sx={{ width: 100, height: 100 }} />
       </Box>
       <Button variant="contained" component="label" fullWidth sx={{ mb: 2 }}>
-        Upload Photo
+        Subir Foto
         <input type="file" hidden onChange={handleFileChange} accept="image/*" />
       </Button>
       <TextField
@@ -88,7 +88,7 @@ const Register: React.FC = () => {
         required
         fullWidth
         id="nombre"
-        label="First Name"
+        label="Nombre"
         name="nombre"
         autoFocus
         value={formData.nombre}
@@ -99,7 +99,7 @@ const Register: React.FC = () => {
         required
         fullWidth
         id="apellidos"
-        label="Last Name"
+        label="Apellidos"
         name="apellidos"
         value={formData.apellidos}
         onChange={handleChange}
@@ -109,7 +109,7 @@ const Register: React.FC = () => {
         required
         fullWidth
         id="email"
-        label="Email Address"
+        label="Correo Electrónico"
         name="email"
         autoComplete="email"
         value={formData.email}
@@ -120,7 +120,7 @@ const Register: React.FC = () => {
         required
         fullWidth
         name="password"
-        label="Password"
+        label="Contraseña"
         type="password"
         id="password"
         autoComplete="new-password"
@@ -132,7 +132,7 @@ const Register: React.FC = () => {
         required
         fullWidth
         name="repetir_password"
-        label="Repeat Password"
+        label="Repetir Contraseña"
         type="password"
         id="repetir_password"
         autoComplete="new-password"

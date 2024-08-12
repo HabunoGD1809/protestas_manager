@@ -9,6 +9,7 @@ import CabecillaFilter from './CabecillaFilter';
 import LoadingSpinner from '../Common/LoadingSpinner';
 import ErrorMessage from '../Common/ErrorMessage';
 import { useAuth } from '../../hooks/useAuth';
+import { getFullImageUrl } from '../../services/api';
 
 const CabecillaList: React.FC = () => {
   const [cabecillas, setCabecillas] = useState<Cabecilla[]>([]);
@@ -64,7 +65,7 @@ const CabecillaList: React.FC = () => {
       title: 'Foto',
       key: 'foto',
       render: (cabecilla: Cabecilla) => (
-        <Avatar src={cabecilla.foto || undefined} alt={`${cabecilla.nombre} ${cabecilla.apellido}`} />
+        <Avatar src={getFullImageUrl(cabecilla.foto) || undefined} alt={`${cabecilla.nombre} ${cabecilla.apellido}`} />
       ),
     },
     { title: 'Nombre', dataIndex: 'nombre', key: 'nombre' },
@@ -79,9 +80,9 @@ const CabecillaList: React.FC = () => {
             Editar
           </Button>
           {isAdmin() && (
-            <Button 
-              variant="outlined" 
-              color="secondary" 
+            <Button
+              variant="outlined"
+              color="secondary"
               size="small"
               onClick={() => {
                 setCabecillaToDelete(cabecilla);
@@ -103,11 +104,11 @@ const CabecillaList: React.FC = () => {
     <Box>
       <Typography variant="h4" gutterBottom>Lista de Cabecillas</Typography>
       <CabecillaFilter onFilter={handleFilter} />
-      <Button 
-        component={RouterLink} 
-        to="/cabecillas/new" 
-        variant="contained" 
-        color="primary" 
+      <Button
+        component={RouterLink}
+        to="/cabecillas/new"
+        variant="contained"
+        color="primary"
         sx={{ mb: 2, mt: 2 }}
       >
         Crear nuevo Cabecilla

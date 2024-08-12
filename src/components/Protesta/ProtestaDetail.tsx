@@ -3,9 +3,9 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { Protesta, Naturaleza, Provincia } from '../../types';
 import { useApi } from '../../hooks/useApi';
 import { useAuth } from '../../hooks/useAuth';
-import { Card, Descriptions, Button, Space, message, Tag, Modal } from 'antd';
+import { Card, Descriptions, Button, Space, message, Tag, Modal, Avatar } from 'antd';
 import { EditOutlined, DeleteOutlined, ArrowLeftOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
-import CustomAvatar from '../Common/CustomAvatar';
+import { getFullImageUrl } from '../../services/api';
 
 const ProtestaDetail: React.FC = () => {
   const [protesta, setProtesta] = useState<Protesta | null>(null);
@@ -15,8 +15,7 @@ const ProtestaDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
 
-    const { isAdmin } = useAuth();
-
+  const { isAdmin } = useAuth();
 
   const fetchProtesta = useCallback(async (protestaId: string) => {
     if (protestaId === 'crear') {
@@ -101,16 +100,16 @@ const ProtestaDetail: React.FC = () => {
       }
       extra={
         <Space>
-          <Button 
-            icon={<EditOutlined />} 
+          <Button
+            icon={<EditOutlined />}
             onClick={() => navigate(`/protestas/editar/${id}`)}
           >
             Editar
           </Button>
           {isAdmin() && (
-            <Button 
-              icon={<DeleteOutlined />} 
-              danger 
+            <Button
+              icon={<DeleteOutlined />}
+              danger
               onClick={handleDelete}
             >
               Eliminar
@@ -138,7 +137,7 @@ const ProtestaDetail: React.FC = () => {
         {protesta.cabecillas && protesta.cabecillas.map(c => (
           <Descriptions.Item key={c.id}>
             <Space>
-              <CustomAvatar src={c.foto} alt={`${c.nombre} ${c.apellido}`} />
+              <Avatar src={getFullImageUrl(c.foto)} alt={`${c.nombre} ${c.apellido}`} />
               {`${c.nombre} ${c.apellido}`}
             </Space>
           </Descriptions.Item>
