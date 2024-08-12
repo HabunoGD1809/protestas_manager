@@ -8,7 +8,7 @@ const Login: React.FC = () => {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [inactivityMessage, setInactivityMessage] = useState('');
-  const { login } = useAuth();
+  const { login, checkUserExists } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -35,9 +35,21 @@ const Login: React.FC = () => {
     }
 
     try {
+      console.log('Verificando existencia del usuario...');
+      const userExists = await checkUserExists(email);
+      console.log('Resultado de verificación:', userExists);
+
+      if (!userExists) {
+        setError('El usuario no está registrado en la base de datos.');
+        return;
+      }
+
+      console.log('Usuario verificado, intentando iniciar sesión...');
       await login(email, password);
+      console.log('Inicio de sesión exitoso');
       navigate('/');
     } catch (err) {
+      console.error('Error durante el proceso de inicio de sesión:', err);
       if (err instanceof Error) {
         setError(`Error de autenticación: ${err.message}`);
       } else {
@@ -85,7 +97,7 @@ const Login: React.FC = () => {
           'aria-label': 'Contraseña',
         }}
       />
-      {error && !error.includes('email') && (
+      {error && (
         <Typography color="error" align="center" role="alert">
           {error}
         </Typography>

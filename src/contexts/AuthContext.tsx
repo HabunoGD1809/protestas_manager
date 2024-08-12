@@ -2,7 +2,7 @@ import React, { createContext, useState, useEffect, useCallback, useRef, ReactNo
 import { useNavigate } from 'react-router-dom';
 import { User } from '../types';
 import { getStoredUser, setStoredUser, removeStoredUser, getStoredToken, setStoredToken, removeStoredToken } from '../utils/tokenUtils';
-import { login as apiLogin, register as apiRegister, logout as apiLogout, refreshToken, obtenerUsuarioActual } from '../services/api';
+import { login as apiLogin, register as apiRegister, logout as apiLogout, refreshToken, obtenerUsuarioActual, checkUserExists } from '../services/api';
 import InactivityDialog from '../components/Common/InactivityDialog';
 import axios from 'axios';
 
@@ -13,6 +13,7 @@ export interface AuthContextType {
   logout: () => void;
   isAdmin: () => boolean;
   refreshUserToken: () => Promise<boolean>;
+  checkUserExists: (email: string) => Promise<boolean>;
 }
 
 export const AuthContext = createContext<AuthContextType>({
@@ -22,6 +23,7 @@ export const AuthContext = createContext<AuthContextType>({
   logout: () => {},
   isAdmin: () => false,
   refreshUserToken: async () => false,
+  checkUserExists: async () => false,
 });
 
 interface AuthProviderProps {
@@ -187,6 +189,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const handleLogin = async (email: string, password: string) => {
     try {
+      console.log('Verificando si el usuario existe');
+      const userExists = await checkUserExists(email);
+      if (!userExists) {
+        throw new Error('El usuario no está registrado en la base de datos.');
+      }
+
       console.log('Intentando iniciar sesión');
       const { token_acceso, token_actualizacion } = await apiLogin(email, password);
       setStoredToken(token_acceso, token_actualizacion);
@@ -237,6 +245,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         logout: () => handleLogout('manual'), 
         isAdmin,
         refreshUserToken,
+        checkUserExists,
       }}
     >
       {children}

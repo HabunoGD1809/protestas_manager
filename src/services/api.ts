@@ -474,3 +474,16 @@ export const userService = {
     return obtenerUsuarioActual();
   }
 };
+
+export const checkUserExists = async (email: string): Promise<boolean> => {
+  try {
+    const response = await api.get<{ exists: boolean }>('/check-user', {
+      params: { email }
+    });
+    return response.data.exists;
+  } catch (error) {
+    console.error('Error checking user existence:', error);
+    // En caso de error, asumimos que el usuario no existe
+    return false;
+  }
+};

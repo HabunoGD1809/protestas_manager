@@ -26,24 +26,15 @@ const ProtestaStats: React.FC = () => {
         request<Naturaleza[] | PaginatedResponse<Naturaleza>>('get', '/naturalezas')
       ]);
 
-      // console.log('Protesta Response:', protestaResponse); //no borrar
-      // console.log('Naturaleza Response:', naturalezaResponse); //borrar
-
       if (!protestaResponse || !protestaResponse.items) {
         throw new Error('La respuesta de protestas es inválida');
       }
 
-      let naturalezas: Naturaleza[];
+      let naturalezas: Naturaleza[] = [];
       if (Array.isArray(naturalezaResponse)) {
         naturalezas = naturalezaResponse;
       } else if (naturalezaResponse && 'items' in naturalezaResponse) {
         naturalezas = naturalezaResponse.items;
-      } else {
-        throw new Error(`La respuesta de naturalezas es inválida: ${JSON.stringify(naturalezaResponse)}`);
-      }
-
-      if (!Array.isArray(naturalezas) || naturalezas.length === 0) {
-        throw new Error(`No se encontraron naturalezas válidas: ${JSON.stringify(naturalezas)}`);
       }
 
       const protestas = protestaResponse.items;
@@ -53,19 +44,16 @@ const ProtestaStats: React.FC = () => {
         dayjs(p.fecha_evento).isSame(dayjs(), 'month')
       ).length;
 
-      const naturalezaCount: { [key: string]: number } = {};
-      protestas.forEach(p => {
-        naturalezaCount[p.naturaleza_id] = (naturalezaCount[p.naturaleza_id] || 0) + 1;
-      });
-      
-      const naturalezaMasComunId = Object.entries(naturalezaCount).reduce((a, b) => a[1] > b[1] ? a : b, ['', 0])[0];
-      const naturalezaMasComun = naturalezas.find(n => n.id === naturalezaMasComunId)?.nombre || 'Desconocida';
-
-      // console.log('Estadísticas calculadas:', {
-      //   total_protestas: totalProtestas,
-      //   protestas_este_mes: protestasEsteMes,
-      //   naturaleza_mas_comun: naturalezaMasComun,
-      // }); //no borrar
+      let naturalezaMasComun = 'No hay datos';
+      if (naturalezas.length > 0 && protestas.length > 0) {
+        const naturalezaCount: { [key: string]: number } = {};
+        protestas.forEach(p => {
+          naturalezaCount[p.naturaleza_id] = (naturalezaCount[p.naturaleza_id] || 0) + 1;
+        });
+        
+        const naturalezaMasComunId = Object.entries(naturalezaCount).reduce((a, b) => a[1] > b[1] ? a : b, ['', 0])[0];
+        naturalezaMasComun = naturalezas.find(n => n.id === naturalezaMasComunId)?.nombre || 'Desconocida';
+      }
 
       setStats({
         total_protestas: totalProtestas,
@@ -78,7 +66,7 @@ const ProtestaStats: React.FC = () => {
       setStats({
         total_protestas: 0,
         protestas_este_mes: 0,
-        naturaleza_mas_comun: 'Error al cargar',
+        naturaleza_mas_comun: 'No hay datos',
       });
       setErrorDetails(error instanceof Error ? error.message : 'Error desconocido');
     }
@@ -92,8 +80,8 @@ const ProtestaStats: React.FC = () => {
         message="Error al cargar las estadísticas"
         description={
           <div>
-            <p>{error || errorDetails}</p>
-            <p>Detalles técnicos: {errorDetails}</p>
+            <p>{error || 'Ocurrió un error al cargar los datos.'}</p>
+            {errorDetails && <p>Detalles técnicos: {errorDetails}</p>}
           </div>
         }
         type="error"
