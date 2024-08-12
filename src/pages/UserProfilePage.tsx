@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { User } from '../types';
 import { obtenerUsuarioActual } from '../services/api';
-import { Box, Avatar, Heading, Text, Center, Spinner, Alert, AlertIcon, VStack } from '@chakra-ui/react';
+import { Box, Avatar, Typography, Container, CircularProgress, Alert } from '@mui/material';
 
 const UserProfilePage: React.FC = () => {
    const [user, setUser] = useState<User | null>(null);
@@ -23,32 +23,27 @@ const UserProfilePage: React.FC = () => {
       fetchUserProfile();
    }, []);
 
-   if (loading) return <Center h="100vh"><Spinner size="xl" color="blue.500" /></Center>;
-   if (error) return <Center h="100vh"><Alert status="error" variant="subtle"><AlertIcon />{error}</Alert></Center>;
-   if (!user) return <Center h="100vh"><Text>No se encontró información del usuario</Text></Center>;
+   if (loading) return <Container><CircularProgress /></Container>;
+   if (error) return <Container><Alert severity="error">{error}</Alert></Container>;
+   if (!user) return <Container><Typography>No se encontró información del usuario</Typography></Container>;
 
    return (
-      <Center h="100vh" bg="gray.50">
-         <Box maxW="sm" w="full" bg="white" boxShadow="lg" rounded="md" p={6}>
-            <VStack spacing={4}>
-               <Box
-                  borderRadius="full"
-                  border="4px solid"
-                  borderColor="blue.500"
-                  p={1}
-               >
-                  <Avatar
-                     src={user.foto}
-                     size="md"
-                     name={`${user.nombre} ${user.apellidos}`}
-                  />
-               </Box>
-               <Heading size="md" textAlign="center">{user.nombre} {user.apellidos}</Heading>
-               <Text fontSize="sm" color="gray.500">{user.email}</Text>
-               <Text fontSize="sm" fontWeight="bold" color="blue.600">Rol: {user.rol}</Text>
-            </VStack>
+      <Container style={{ height: '100vh', display: 'flex', justifyContent: 'center', alignItems: 'center', backgroundColor: '#f5f5f5' }}>
+         <Box maxWidth="sm" width="100%" bgcolor="white" boxShadow={3} borderRadius={2} padding={2}>
+            <Box display="flex" justifyContent="center" marginBottom={2}>
+               <Avatar
+                  src={user.foto}
+                  alt={`${user.nombre} ${user.apellidos}`}
+                  style={{ width: 100, height: 100, border: '4px solid #1976d2' }}
+               />
+            </Box>
+            <Typography variant="h5" align="center">{user.nombre} {user.apellidos}</Typography>
+            <Typography variant="body1" color="textSecondary"><strong>Nombre:</strong> {user.nombre}</Typography>
+            <Typography variant="body1" color="textSecondary"><strong>Apellido:</strong> {user.apellidos}</Typography>
+            <Typography variant="body1" color="textSecondary"><strong>Email:</strong> {user.email}</Typography>
+            <Typography variant="body1" color="primary"><strong>Rol:</strong> {user.rol}</Typography>
          </Box>
-      </Center>
+      </Container>
    );
 };
 
