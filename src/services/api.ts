@@ -11,13 +11,12 @@ import {
   PaginatedResponse,
   CrearProtesta,
   Cabecilla,
-  CrearCabecilla,
   CrearNaturaleza,
   ResumenPrincipal,
   User,
   Token,
 } from "../types";
-import {FilterValues} from "../components/Protesta/ProtestaList";
+import { FilterValues } from "../components/Protesta/ProtestaList";
 import { NaturalezaFilters } from "../components/Naturaleza/NaturalezaFilter";
 import { cacheService } from "./cacheService";
 
@@ -30,6 +29,7 @@ export const api: AxiosInstance = axios.create({
   },
 });
 
+// Request interceptor
 api.interceptors.request.use((config: InternalAxiosRequestConfig) => {
   const token = getStoredToken();
   if (token) {
@@ -38,24 +38,21 @@ api.interceptors.request.use((config: InternalAxiosRequestConfig) => {
   return config;
 });
 
+// Response interceptor
 let isRefreshing = false;
-
-interface QueueItem {
-  resolve: (value: AxiosResponse) => void;
-  reject: (error: AxiosError) => void;
-}
-
-let failedQueue: QueueItem[] = [];
+let failedQueue: Array<{
+  resolve: (value: unknown) => void;
+  reject: (error: unknown) => void;
+}> = [];
 
 const processQueue = (error: AxiosError | null, token: string | null = null) => {
   failedQueue.forEach((prom) => {
     if (error) {
       prom.reject(error);
     } else {
-      prom.resolve(token as unknown as AxiosResponse);
+      prom.resolve(token);
     }
   });
-
   failedQueue = [];
 };
 
@@ -74,16 +71,14 @@ api.interceptors.response.use(
     const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
     if (error.response?.status === 401 && !originalRequest._retry) {
       if (isRefreshing) {
-        return new Promise<AxiosResponse>((resolve, reject) => {
+        return new Promise((resolve, reject) => {
           failedQueue.push({ resolve, reject });
         })
           .then((token) => {
             originalRequest.headers["Authorization"] = "Bearer " + token;
             return api(originalRequest);
           })
-          .catch((err) => {
-            return Promise.reject(err);
-          });
+          .catch((err) => Promise.reject(err));
       }
 
       originalRequest._retry = true;
@@ -94,18 +89,15 @@ api.interceptors.response.use(
         if (!refreshTokenValue) {
           throw new Error("No hay token de actualización disponible");
         }
-        const newTokens = await refreshToken(refreshTokenValue);
+        const newTokens = await authService.refreshToken(refreshTokenValue);
         setStoredToken(newTokens.token_acceso, newTokens.token_actualizacion);
-        api.defaults.headers.common["Authorization"] =
-          "Bearer " + newTokens.token_acceso;
+        api.defaults.headers.common["Authorization"] = "Bearer " + newTokens.token_acceso;
         processQueue(null, newTokens.token_acceso);
         return api(originalRequest);
       } catch (refreshError) {
         processQueue(refreshError as AxiosError, null);
         removeStoredToken();
-        window.dispatchEvent(
-          new CustomEvent("auth-error", { detail: "Sesión expirada" })
-        );
+        window.dispatchEvent(new CustomEvent("auth-error", { detail: "Sesión expirada" }));
         return Promise.reject(refreshError);
       } finally {
         isRefreshing = false;
@@ -117,303 +109,238 @@ api.interceptors.response.use(
 
 export const getFullImageUrl = (path: string | undefined) => {
   if (path) {
-    if (path.startsWith('http://') || path.startsWith('https://')) {
-      return path;
-    }
-    return `${BASE_URL}${path}`;
+    return path.startsWith('http://') || path.startsWith('https://') ? path : `${BASE_URL}${path}`;
   }
   return undefined;
 };
 
-export const login = async (email: string, password: string) => {
-  const formData = new URLSearchParams();
-  formData.append("username", email);
-  formData.append("password", password);
+// Generic service class
+class BaseService<T, CreateT = T> {
+  protected endpoint: string;
 
-  const response = await api.post<Token>("/token", formData.toString(), {
-    headers: {
-      "Content-Type": "application/x-www-form-urlencoded",
-    },
-  });
-  return response.data;
-};
-
-export const register = async (userData: FormData): Promise<User> => {
-  const response = await api.post<User>("/registro", userData, {
-    headers: {
-      "Content-Type": "multipart/form-data",
-    },
-  });
-  return response.data;
-};
-
-export const refreshToken = async (refreshToken: string) => {
-  console.log("Iniciando solicitud de renovación de token");
-  try {
-    const response = await axios.post<Token>(`${BASE_URL}/token/renovar`, {
-      token_actualizacion: refreshToken,
-    });
-    const { token_acceso, token_actualizacion } = response.data;
-    setStoredToken(token_acceso, token_actualizacion);
-    return response.data;
-  } catch (error) {
-    console.error("Error en refreshToken:", error);
-    if (axios.isAxiosError(error)) {
-      console.error("Detalles del error:", error.response?.data);
-    }
-    removeStoredToken();
-    window.dispatchEvent(
-      new CustomEvent("auth-error", { detail: "Error al renovar el token" })
-    );
-    throw error;
+  constructor(endpoint: string) {
+    this.endpoint = endpoint;
   }
-};
 
-export const logout = () => {
-  removeStoredToken();
-};
+  async getAll(page: number = 1, pageSize: number = 10, filters?: Record<string, unknown>): Promise<PaginatedResponse<T>> {
+    const cacheKey = `${this.endpoint}_${JSON.stringify(filters)}`;
+    const cachedData = cacheService.getPaginated<T>(cacheKey, page, pageSize);
 
-export const obtenerUsuarioActual = async () => {
-  const response = await api.get<User>("/usuarios/me");
-  return {
-    ...response.data,
-    foto: getFullImageUrl(response.data.foto)
-  };
-};
+    if (cachedData) return cachedData;
 
-export const protestaService = {
-  getAll: async (
-    page: number = 1,
-    pageSize: number = 10,
-    filters?: FilterValues
-  ): Promise<PaginatedResponse<Protesta>> => {
-    const cleanFilters = filters ? Object.fromEntries(
-      Object.entries(filters).filter(([value]) => value !== undefined && value !== '')
-    ) : {};
-
-    const cacheKey = `protestas_${JSON.stringify(cleanFilters)}`;
-    const cachedData = cacheService.getPaginated<Protesta>(
-      cacheKey,
-      page,
-      pageSize
-    );
-
-    if (cachedData) {
-      return cachedData;
-    }
-
-    const response = await api.get<PaginatedResponse<Protesta>>("/protestas", {
-      params: {
-        page,
-        page_size: pageSize,
-        ...cleanFilters,
-      },
+    const response = await api.get<PaginatedResponse<T>>(this.endpoint, {
+      params: { page, page_size: pageSize, ...filters },
     });
     cacheService.setPaginated(cacheKey, response.data, page, pageSize);
     return response.data;
-  },
-  getById: async (id: string) => {
-    const cacheKey = `protesta_${id}`;
-    const cachedData = cacheService.get<Protesta>(cacheKey);
+  }
 
-    if (cachedData) {
-      return cachedData;
-    }
+  async getById(id: string): Promise<T> {
+    const cacheKey = `${this.endpoint}_${id}`;
+    const cachedData = cacheService.get<T>(cacheKey);
 
-    const response = await api.get<Protesta>(`/protestas/${id}`);
+    if (cachedData) return cachedData;
+
+    const response = await api.get<T>(`${this.endpoint}/${id}`);
     cacheService.set(cacheKey, response.data);
     return response.data;
-  },
-  create: async (protesta: CrearProtesta) => {
-    const response = await api.post<Protesta>("/protestas", protesta);
-    cacheService.remove("protestas");
+  }
+
+  async create(data: CreateT): Promise<T> {
+    const response = await api.post<T>(this.endpoint, data);
+    cacheService.remove(this.endpoint);
+    return response.data;
+  }
+
+  async update(id: string, data: Partial<CreateT>): Promise<T> {
+    const response = await api.put<T>(`${this.endpoint}/${id}`, data);
+    cacheService.remove(this.endpoint);
+    cacheService.remove(`${this.endpoint}_${id}`);
+    return response.data;
+  }
+
+  async delete(id: string): Promise<void> {
+    await api.delete(`${this.endpoint}/${id}`);
+    cacheService.remove(this.endpoint);
+    cacheService.remove(`${this.endpoint}_${id}`);
+  }
+}
+
+// Auth service
+export const authService = {
+  login: async (email: string, password: string): Promise<Token> => {
+    const formData = new URLSearchParams();
+    formData.append("username", email);
+    formData.append("password", password);
+
+    const response = await api.post<Token>("/token", formData.toString(), {
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    });
     return response.data;
   },
-  update: async (id: string, protesta: CrearProtesta) => {
-    const response = await api.put<Protesta>(`/protestas/${id}`, protesta);
-    cacheService.remove("protestas");
-    cacheService.remove(`protesta_${id}`);
+
+  register: async (userData: FormData): Promise<User> => {
+    const response = await api.post<User>("/registro", userData, {
+      headers: { "Content-Type": "multipart/form-data" },
+    });
     return response.data;
   },
-  delete: async (id: string) => {
-    const response = await api.delete(`/protestas/${id}`);
-    cacheService.remove("protestas");
-    cacheService.remove(`protesta_${id}`);
-    return response.data;
+
+  refreshToken: async (refreshToken: string): Promise<Token> => {
+    try {
+      const response = await api.post<Token>(`${BASE_URL}/token/renovar`, {
+        token_actualizacion: refreshToken,
+      });
+      const { token_acceso, token_actualizacion } = response.data;
+      setStoredToken(token_acceso, token_actualizacion);
+      return response.data;
+    } catch (error) {
+      console.error("Error en refreshToken:", error);
+      removeStoredToken();
+      window.dispatchEvent(new CustomEvent("auth-error", { detail: "Error al renovar el token" }));
+      throw error;
+    }
+  },
+
+  logout: () => {
+    removeStoredToken();
+  },
+
+  obtenerUsuarioActual: async (): Promise<User> => {
+    const response = await api.get<User>("/usuarios/me");
+    return {
+      ...response.data,
+      foto: getFullImageUrl(response.data.foto)
+    };
   },
 };
 
-export const cabecillaService = {
-  getAll: async (page: number = 1, pageSize: number = 10, filters?: Record<string, string>) => {
-    const response = await api.get<PaginatedResponse<Cabecilla>>('/cabecillas', { 
-      params: { 
-        page, 
-        page_size: pageSize, 
-        ...filters 
-      } 
-    });
-    response.data.items = response.data.items.map(cabecilla => ({
-      ...cabecilla,
-      foto: getFullImageUrl(cabecilla.foto)
-    }));
-    return response.data;
-  },
-  getAllNoPagination: async () => {
-    const response = await api.get<Cabecilla[]>('/cabecillas/all');
-    return response.data.map(cabecilla => ({
-      ...cabecilla,
-      foto: getFullImageUrl(cabecilla.foto)
-    }));
-  },
-  getById: async (id: string) => {
-    const response = await api.get<Cabecilla>(`/cabecillas/${id}`);
-    return {
-      ...response.data,
-      foto: getFullImageUrl(response.data.foto)
-    };
-  },
-  create: async (cabecilla: FormData) => {
-    const response = await api.post<CrearCabecilla>('/cabecillas', cabecilla, {
+// Protesta service
+class ProtestaService extends BaseService<Protesta, CrearProtesta> {
+  constructor() {
+    super("/protestas");
+  }
+
+  async getAll(page: number = 1, pageSize: number = 10, filters?: FilterValues): Promise<PaginatedResponse<Protesta>> {
+    const cleanFilters = filters ? Object.fromEntries(
+      Object.entries(filters).filter(([, value]) => value !== undefined && value !== '')
+    ) : {};
+    return super.getAll(page, pageSize, cleanFilters);
+  }
+}
+
+export const protestaService = new ProtestaService();
+
+// Cabecilla service
+class CabecillaService extends BaseService<Cabecilla, FormData> {
+  constructor() {
+    super("/cabecillas");
+  }
+
+  async getAll(page: number = 1, pageSize: number = 10, filters?: Record<string, string>): Promise<PaginatedResponse<Cabecilla>> {
+    const response = await super.getAll(page, pageSize, filters);
+    response.items = response.items.map(this.addFullImageUrl);
+    return response;
+  }
+
+  async getAllNoPagination(): Promise<Cabecilla[]> {
+    const response = await api.get<Cabecilla[]>(`${this.endpoint}/all`);
+    return response.data.map(this.addFullImageUrl);
+  }
+
+  async getById(id: string): Promise<Cabecilla> {
+    const cabecilla = await super.getById(id);
+    return this.addFullImageUrl(cabecilla);
+  }
+
+  async create(cabecilla: FormData): Promise<Cabecilla> {
+    const response = await api.post<Cabecilla>(this.endpoint, cabecilla, {
       headers: { 'Content-Type': 'multipart/form-data' },
     });
-    return {
-      ...response.data,
-      foto: getFullImageUrl(response.data.foto)
-    };
-  },
-  update: async (id: string, cabecilla: FormData) => {
-  const response = await api.put<CrearCabecilla>(`/cabecillas/${id}`, cabecilla, {
-    headers: { 'Content-Type': 'multipart/form-data' },
-  });
-  return {
-    ...response.data,
-    foto: getFullImageUrl(response.data.foto)
-  };
-},
-  delete: (id: string) => api.delete(`/cabecillas/${id}`).then(res => res.data),
-  updateFoto: async (id: string, foto: File) => {
+    return this.addFullImageUrl(response.data);
+  }
+
+  async update(id: string, cabecilla: FormData): Promise<Cabecilla> {
+    const response = await api.put<Cabecilla>(`${this.endpoint}/${id}`, cabecilla, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return this.addFullImageUrl(response.data);
+  }
+
+  async updateFoto(id: string, foto: File): Promise<Cabecilla> {
     const formData = new FormData();
     formData.append('foto', foto);
-    const response = await api.post<Cabecilla>(`/cabecillas/${id}/foto`, formData, {
+    const response = await api.post<Cabecilla>(`${this.endpoint}/${id}/foto`, formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
     });
-    return {
-      ...response.data,
-      foto: getFullImageUrl(response.data.foto)
-    };
-  },
-  getSuggestions: async (field: string, value: string) => {
-    const response = await api.get<string[]>(`/cabecillas/suggestions`, {
+    return this.addFullImageUrl(response.data);
+  }
+
+  async getSuggestions(field: string, value: string): Promise<string[]> {
+    const response = await api.get<string[]>(`${this.endpoint}/suggestions`, {
       params: { field, value }
     });
     return response.data;
-  },
-};
+  }
 
-export const naturalezaService = {
-  getAll: async (
-    page: number = 1,
-    pageSize: number = 10,
-    filters?: NaturalezaFilters
-  ) => {
-    const cacheKey = `naturalezas_${JSON.stringify(filters)}`;
-    const cachedData = cacheService.getPaginated<Naturaleza>(
-      cacheKey,
-      page,
-      pageSize
-    );
+  private addFullImageUrl(cabecilla: Cabecilla): Cabecilla {
+    return {
+      ...cabecilla,
+      foto: getFullImageUrl(cabecilla.foto)
+    };
+  }
+}
 
-    if (cachedData) {
-      return cachedData;
-    }
+export const cabecillaService = new CabecillaService();
 
-    const response = await api.get<PaginatedResponse<Naturaleza>>(
-      "/naturalezas",
-      {
-        params: {
-          page,
-          page_size: pageSize,
-          ...filters,
-        },
-      }
-    );
-    cacheService.setPaginated(cacheKey, response.data, page, pageSize);
-    return response.data;
-  },
-  getById: async (id: string) => {
-    const cacheKey = `naturaleza_${id}`;
-    const cachedData = cacheService.get<Naturaleza>(cacheKey);
+// Naturaleza service
+class NaturalezaService extends BaseService<Naturaleza, CrearNaturaleza> {
+  constructor() {
+    super("/naturalezas");
+  }
 
-    if (cachedData) {
-      return cachedData;
-    }
+  async getAll(page: number = 1, pageSize: number = 10, filters?: NaturalezaFilters): Promise<PaginatedResponse<Naturaleza>> {
+    return super.getAll(page, pageSize, filters as Record<string, unknown>);
+  }
+}
 
-    const response = await api.get<Naturaleza>(`/naturalezas/${id}`);
-    cacheService.set(cacheKey, response.data);
-    return response.data;
-  },
-  create: async (naturaleza: CrearNaturaleza) => {
-    const response = await api.post<Naturaleza>("/naturalezas", naturaleza);
-    cacheService.remove("naturalezas");
-    return response.data;
-  },
-  update: async (id: string, naturaleza: CrearNaturaleza) => {
-    const response = await api.put<Naturaleza>(
-      `/naturalezas/${id}`,
-      naturaleza
-    );
-    cacheService.remove("naturalezas");
-    cacheService.remove(`naturaleza_${id}`);
-    return response.data;
-  },
-  delete: async (id: string) => {
-    const response = await api.delete(`/naturalezas/${id}`);
-    cacheService.remove("naturalezas");
-    cacheService.remove(`naturaleza_${id}`);
-    return response.data;
-  },
-};
+export const naturalezaService = new NaturalezaService();
 
-export const provinciaService = {
-  getAll: async () => {
-    const cacheKey = "provincias";
+// Provincia service
+class ProvinciaService extends BaseService<Provincia> {
+  constructor() {
+    super("/provincias");
+  }
+
+  async getAllNoPagination(): Promise<Provincia[]> {
+    const cacheKey = `${this.endpoint}_all`;
     const cachedData = cacheService.get<Provincia[]>(cacheKey);
 
-    if (cachedData) {
-      return cachedData;
-    }
+    if (cachedData) return cachedData;
 
-    const response = await api.get<Provincia[]>("/provincias");
+    const response = await api.get<Provincia[]>(`${this.endpoint}/all`);
     cacheService.set(cacheKey, response.data);
     return response.data;
-  },
-  getById: async (id: string) => {
-    const cacheKey = `provincia_${id}`;
-    const cachedData = cacheService.get<Provincia>(cacheKey);
+  }
 
-    if (cachedData) {
-      return cachedData;
-    }
+  async getAll(page: number = 1, pageSize: number = 10, filters?: Record<string, unknown>): Promise<PaginatedResponse<Provincia>> {
+    return super.getAll(page, pageSize, filters);
+  }
+}
 
-    const response = await api.get<Provincia>(`/provincias/${id}`);
-    cacheService.set(cacheKey, response.data);
-    return response.data;
-  },
-};
+export const provinciaService = new ProvinciaService();
 
+// Resumen service
 export const resumenService = {
-  getPaginaPrincipal: async () => {
+  getPaginaPrincipal: async (): Promise<ResumenPrincipal> => {
     const cacheKey = "resumen_principal";
     const cachedData = cacheService.get<ResumenPrincipal>(cacheKey);
 
-    if (cachedData) {
-      return cachedData;
-    }
+    if (cachedData) return cachedData;
 
     try {
       const response = await api.get<ResumenPrincipal>("/pagina-principal");
       cacheService.set(cacheKey, response.data);
-      console.log("Respuesta de la API:", response.data);
       return response.data;
     } catch (error) {
       console.error("Error al obtener el resumen principal:", error);
@@ -422,70 +349,47 @@ export const resumenService = {
   },
 };
 
-export const userService = {
-  getAll: async (page: number = 1, pageSize: number = 10) => {
-    const cacheKey = `usuarios_${page}_${pageSize}`;
-    const cachedData = cacheService.get<PaginatedResponse<User>>(cacheKey);
+// User service
+class UserService extends BaseService<User, FormData> {
+  constructor() {
+    super("/usuarios");
+  }
 
-    if (cachedData) {
-      return cachedData;
-    }
-
-    const response = await api.get<PaginatedResponse<User>>("/usuarios", {
-      params: { page, page_size: pageSize },
-    });
-    cacheService.set(cacheKey, response.data);
-    return response.data;
-  },
-  getById: async (id: string) => {
-    const cacheKey = `usuario_${id}`;
-    const cachedData = cacheService.get<User>(cacheKey);
-
-    if (cachedData) {
-      return cachedData;
-    }
-
-    const response = await api.get<User>(`/usuarios/${id}`);
-    cacheService.set(cacheKey, response.data);
-    return response.data;
-  },
-  updateRole: async (id: string, role: "admin" | "usuario") => {
-    const response = await api.put<User>(`/usuarios/${id}/rol`, null, {
-      params: { nuevo_rol: role },
-    });
-    cacheService.remove("usuarios");
-    cacheService.remove(`usuario_${id}`);
-    return response.data;
-  },
-  create: async (userData: FormData) => {
+  async create(userData: FormData): Promise<User> {
     try {
       const response = await api.post<User>("/admin/usuarios", userData, {
         headers: { "Content-Type": "multipart/form-data" },
       });
-      cacheService.remove("usuarios");
+      cacheService.remove(this.endpoint);
       return response.data;
     } catch (error) {
       if (axios.isAxiosError(error) && error.response) {
         const errorDetail = error.response.data.detail;
-        if (Array.isArray(errorDetail)) {
-          throw new Error(errorDetail.map(err => err.msg).join(', '));
-        } else {
-          throw new Error(errorDetail || "Error creating user");
-        }
+        throw new Error(Array.isArray(errorDetail) ? errorDetail.map(err => err.msg).join(', ') : errorDetail || "Error creating user");
       }
       throw new Error("An unexpected error occurred");
     }
-  },
-  delete: async (id: string) => {
-    const response = await api.delete(`/admin/usuarios/${id}`);
-    cacheService.remove("usuarios");
-    cacheService.remove(`usuario_${id}`);
-    return response.data;
-  },
-  getCurrentUser: async () => {
-    return obtenerUsuarioActual();
   }
-};
+
+  async updateRole(id: string, role: "admin" | "usuario"): Promise<User> {
+    const response = await api.put<User>(`${this.endpoint}/${id}/rol`, null, {
+      params: { nuevo_rol: role },
+    });
+    cacheService.remove(this.endpoint);
+    cacheService.remove(`${this.endpoint}_${id}`);
+    return response.data;
+  }
+
+  async delete(id: string): Promise<void> {
+    await api.delete(`/admin/usuarios/${id}`);
+    cacheService.remove(this.endpoint);
+    cacheService.remove(`${this.endpoint}_${id}`);
+  }
+
+  getCurrentUser = authService.obtenerUsuarioActual;
+}
+
+export const userService = new UserService();
 
 export const checkUserExists = async (email: string): Promise<boolean> => {
   try {

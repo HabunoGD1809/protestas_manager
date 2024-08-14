@@ -2,7 +2,7 @@ import React, { createContext, useState, useEffect, useCallback, useRef, ReactNo
 import { useNavigate } from 'react-router-dom';
 import { User } from '../types';
 import { getStoredUser, setStoredUser, removeStoredUser, getStoredToken, setStoredToken, removeStoredToken } from '../utils/tokenUtils';
-import { login as apiLogin, register as apiRegister, logout as apiLogout, refreshToken, obtenerUsuarioActual, checkUserExists } from '../services/api';
+import { authService, checkUserExists } from '../services/api';
 import InactivityDialog from '../components/Common/InactivityDialog';
 import axios from 'axios';
 
@@ -18,9 +18,9 @@ export interface AuthContextType {
 
 export const AuthContext = createContext<AuthContextType>({
   user: null,
-  login: async () => {},
+  login: async () => { },
   register: async () => ({} as User),
-  logout: () => {},
+  logout: () => { },
   isAdmin: () => false,
   refreshUserToken: async () => false,
   checkUserExists: async () => false,
@@ -44,19 +44,21 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const [dialogState, setDialogState] = useState({
     open: false,
-    onKeepActive: () => {},
-    onLogout: () => {},
+    onKeepActive: () => { },
+    onLogout: () => { },
   });
 
+
   const handleLogout = useCallback((reason?: 'inactivity' | 'manual') => {
-    console.log('Cerrando sesión del usuario'); apiLogout();
+    console.log('Cerrando sesión del usuario');
+    authService.logout();
     setUser(null);
     setIsAuthenticated(false);
     removeStoredToken();
     removeStoredUser();
     if (inactivityTimerRef.current) clearTimeout(inactivityTimerRef.current);
     if (refreshTimerRef.current) clearInterval(refreshTimerRef.current);
-    
+
     if (reason === 'inactivity') {
       navigate('/login?inactivity=true');
     } else {
@@ -68,16 +70,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     if (isRefreshing) return false;
     setIsRefreshing(true);
     console.log('Iniciando proceso de renovación de token');
-    
+
     const refreshTokenValue = getStoredToken('refreshToken');
-    
+
     if (refreshTokenValue) {
       try {
         console.log('Intentando renovar token');
-        const newTokens = await refreshToken(refreshTokenValue);
-        
+        const newTokens = await authService.refreshToken(refreshTokenValue);
+
         setStoredToken(newTokens.token_acceso, newTokens.token_actualizacion);
-        
+
         setIsRefreshing(false);
         return true;
       } catch (error) {
@@ -143,7 +145,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const token = getStoredToken();
       if (token) {
         try {
-          const userData = await obtenerUsuarioActual();
+          const userData = await authService.obtenerUsuarioActual();
           setUser(userData);
           setIsAuthenticated(true);
         } catch (error) {
@@ -196,11 +198,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       }
 
       console.log('Intentando iniciar sesión');
-      const { token_acceso, token_actualizacion } = await apiLogin(email, password);
+      const { token_acceso, token_actualizacion } = await authService.login(email, password);
       setStoredToken(token_acceso, token_actualizacion);
       console.log('Tokens almacenados');
 
-      const userData = await obtenerUsuarioActual();
+      const userData = await authService.obtenerUsuarioActual();
       setUser(userData);
       setIsAuthenticated(true);
       setStoredUser(userData);
@@ -214,7 +216,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const handleRegister = async (userData: FormData) => {
     try {
       console.log('Intentando registrar');
-      const user = await apiRegister(userData);
+      const user = await authService.register(userData);
       console.log('Respuesta del registro:', user);
 
       if (user) {
@@ -242,7 +244,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         user,
         login: handleLogin,
         register: handleRegister,
-        logout: () => handleLogout('manual'), 
+        logout: () => handleLogout('manual'),
         isAdmin,
         refreshUserToken,
         checkUserExists,

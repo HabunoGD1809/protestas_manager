@@ -16,11 +16,12 @@ if (!container) {
 const root = createRoot(container);
 
 root.render(
-  <Router>
-    <ThemeProvider theme={theme}>
-      <CssBaseline />
-      <App />
-    </ThemeProvider>
-  </Router>
+  // <React.StrictMode>
+    <Router>
+      <ThemeProvider theme={theme}>
+        <CssBaseline />
+        <App />
+      </ThemeProvider>
+    </Router>
+  // </React.StrictMode>
 );
-

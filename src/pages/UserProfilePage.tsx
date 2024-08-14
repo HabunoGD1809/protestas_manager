@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { User } from '../types';
-import { obtenerUsuarioActual } from '../services/api';
+import { authService } from '../services/api';
 import { Box, Avatar, Typography, Container, CircularProgress, Alert } from '@mui/material';
 
 const UserProfilePage: React.FC = () => {
@@ -11,7 +11,7 @@ const UserProfilePage: React.FC = () => {
    useEffect(() => {
       const fetchUserProfile = async () => {
          try {
-            const userData = await obtenerUsuarioActual();
+            const userData = await authService.obtenerUsuarioActual();
             setUser(userData);
             setLoading(false);
          } catch (err) {
