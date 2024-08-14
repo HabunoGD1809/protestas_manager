@@ -1,4 +1,4 @@
-import axios, { AxiosInstance, InternalAxiosRequestConfig } from "axios";
+import axios, { AxiosInstance, InternalAxiosRequestConfig, AxiosResponse, AxiosError } from "axios";
 import {
   getStoredToken,
   setStoredToken,
@@ -11,12 +11,14 @@ import {
   PaginatedResponse,
   CrearProtesta,
   Cabecilla,
+  CrearCabecilla,
   CrearNaturaleza,
   ResumenPrincipal,
   User,
   Token,
-  UserListResponse,
 } from "../types";
+import {FilterValues} from "../components/Protesta/ProtestaList";
+import { NaturalezaFilters } from "../components/Naturaleza/NaturalezaFilter";
 import { cacheService } from "./cacheService";
 
 const BASE_URL = "http://127.0.0.1:8000";
@@ -37,14 +39,20 @@ api.interceptors.request.use((config: InternalAxiosRequestConfig) => {
 });
 
 let isRefreshing = false;
-let failedQueue: any[] = [];
 
-const processQueue = (error: unknown, token: string | null = null) => {
+interface QueueItem {
+  resolve: (value: AxiosResponse) => void;
+  reject: (error: AxiosError) => void;
+}
+
+let failedQueue: QueueItem[] = [];
+
+const processQueue = (error: AxiosError | null, token: string | null = null) => {
   failedQueue.forEach((prom) => {
     if (error) {
       prom.reject(error);
     } else {
-      prom.resolve(token);
+      prom.resolve(token as unknown as AxiosResponse);
     }
   });
 
@@ -52,7 +60,7 @@ const processQueue = (error: unknown, token: string | null = null) => {
 };
 
 api.interceptors.response.use(
-  (response) => {
+  (response: AxiosResponse) => {
     const newToken = response.headers["new-token"];
     if (newToken) {
       const refreshToken = getStoredToken("refreshToken");
@@ -62,11 +70,11 @@ api.interceptors.response.use(
     }
     return response;
   },
-  async (error) => {
-    const originalRequest = error.config;
+  async (error: AxiosError) => {
+    const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
     if (error.response?.status === 401 && !originalRequest._retry) {
       if (isRefreshing) {
-        return new Promise((resolve, reject) => {
+        return new Promise<AxiosResponse>((resolve, reject) => {
           failedQueue.push({ resolve, reject });
         })
           .then((token) => {
@@ -93,7 +101,7 @@ api.interceptors.response.use(
         processQueue(null, newTokens.token_acceso);
         return api(originalRequest);
       } catch (refreshError) {
-        processQueue(refreshError, null);
+        processQueue(refreshError as AxiosError, null);
         removeStoredToken();
         window.dispatchEvent(
           new CustomEvent("auth-error", { detail: "Sesión expirada" })
@@ -177,9 +185,13 @@ export const protestaService = {
   getAll: async (
     page: number = 1,
     pageSize: number = 10,
-    filters?: Record<string, string>
-  ) => {
-    const cacheKey = `protestas_${JSON.stringify(filters)}`;
+    filters?: FilterValues
+  ): Promise<PaginatedResponse<Protesta>> => {
+    const cleanFilters = filters ? Object.fromEntries(
+      Object.entries(filters).filter(([value]) => value !== undefined && value !== '')
+    ) : {};
+
+    const cacheKey = `protestas_${JSON.stringify(cleanFilters)}`;
     const cachedData = cacheService.getPaginated<Protesta>(
       cacheKey,
       page,
@@ -194,7 +206,7 @@ export const protestaService = {
       params: {
         page,
         page_size: pageSize,
-        ...filters,
+        ...cleanFilters,
       },
     });
     cacheService.setPaginated(cacheKey, response.data, page, pageSize);
@@ -261,7 +273,7 @@ export const cabecillaService = {
     };
   },
   create: async (cabecilla: FormData) => {
-    const response = await api.post<Cabecilla>('/cabecillas', cabecilla, {
+    const response = await api.post<CrearCabecilla>('/cabecillas', cabecilla, {
       headers: { 'Content-Type': 'multipart/form-data' },
     });
     return {
@@ -270,7 +282,7 @@ export const cabecillaService = {
     };
   },
   update: async (id: string, cabecilla: FormData) => {
-  const response = await api.put<Cabecilla>(`/cabecillas/${id}`, cabecilla, {
+  const response = await api.put<CrearCabecilla>(`/cabecillas/${id}`, cabecilla, {
     headers: { 'Content-Type': 'multipart/form-data' },
   });
   return {
@@ -302,7 +314,7 @@ export const naturalezaService = {
   getAll: async (
     page: number = 1,
     pageSize: number = 10,
-    filters?: Record<string, string>
+    filters?: NaturalezaFilters
   ) => {
     const cacheKey = `naturalezas_${JSON.stringify(filters)}`;
     const cachedData = cacheService.getPaginated<Naturaleza>(
@@ -413,13 +425,13 @@ export const resumenService = {
 export const userService = {
   getAll: async (page: number = 1, pageSize: number = 10) => {
     const cacheKey = `usuarios_${page}_${pageSize}`;
-    const cachedData = cacheService.get<UserListResponse>(cacheKey);
+    const cachedData = cacheService.get<PaginatedResponse<User>>(cacheKey);
 
     if (cachedData) {
       return cachedData;
     }
 
-    const response = await api.get<UserListResponse>("/usuarios", {
+    const response = await api.get<PaginatedResponse<User>>("/usuarios", {
       params: { page, page_size: pageSize },
     });
     cacheService.set(cacheKey, response.data);
@@ -483,7 +495,6 @@ export const checkUserExists = async (email: string): Promise<boolean> => {
     return response.data.exists;
   } catch (error) {
     console.error('Error checking user existence:', error);
-    // En caso de error, asumimos que el usuario no existe
     return false;
   }
 };

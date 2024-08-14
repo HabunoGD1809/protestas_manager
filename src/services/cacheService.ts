@@ -8,7 +8,7 @@ interface CacheItem<T> {
 const CACHE_DURATION = 0.01 * 60 * 1000; // 5 minutos en milisegundos
 
 class CacheService {
-  private memoryCache: { [key: string]: CacheItem<any> } = {};
+  private memoryCache: { [key: string]: CacheItem<unknown> } = {};
 
   set<T>(key: string, data: T): void {
     const cacheItem: CacheItem<T> = { data, timestamp: Date.now() };
@@ -17,7 +17,7 @@ class CacheService {
   }
 
   get<T>(key: string): T | null {
-    const memoryItem = this.memoryCache[key];
+    const memoryItem = this.memoryCache[key] as CacheItem<T> | undefined;
     if (memoryItem && this.isValid(memoryItem.timestamp)) {
       return memoryItem.data;
     }
@@ -48,7 +48,6 @@ class CacheService {
     return Date.now() - timestamp < CACHE_DURATION;
   }
 
-  // Método para manejar respuestas paginadas
   setPaginated<T>(key: string, data: PaginatedResponse<T>, page: number, pageSize: number): void {
     const paginatedKey = `${key}_${page}_${pageSize}`;
     this.set(paginatedKey, data);

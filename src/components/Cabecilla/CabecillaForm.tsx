@@ -3,27 +3,22 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { TextField, Button, Box, Avatar, CircularProgress } from '@mui/material';
 import { message } from 'antd';
 import { useApi } from '../../hooks/useApi';
-import { Cabecilla } from '../../types';
+import { CrearCabecilla, Cabecilla } from '../../types';
 import { getFullImageUrl } from '../../services/api';
+import { AxiosError } from 'axios';
 
-interface CabecillaFormData {
-  nombre: string;
-  apellido: string;
-  cedula: string;
-  telefono: string;
-  direccion: string;
+interface ApiErrorData {
+  detail?: string;
 }
 
-interface FormErrors {
-  nombre?: string;
-  apellido?: string;
-  cedula?: string;
-  telefono?: string;
-  direccion?: string;
-}
+type ApiError = AxiosError<ApiErrorData>;
+
+type FormErrors = {
+  [K in keyof CrearCabecilla]?: string;
+};
 
 const CabecillaForm: React.FC = () => {
-  const [formData, setFormData] = useState<CabecillaFormData>({
+  const [formData, setFormData] = useState<CrearCabecilla>({
     nombre: '',
     apellido: '',
     cedula: '',
@@ -137,18 +132,23 @@ const CabecillaForm: React.FC = () => {
 
       message.success(id ? 'Cabecilla actualizado exitosamente' : 'Cabecilla creado exitosamente');
       navigate('/cabecillas');
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Error saving cabecilla:', err);
-      if (err.response && err.response.status === 400) {
-        const detail = err.response.data?.detail;
-        if (detail?.includes('Ya existe un cabecilla con la cédula')) {
-          setErrors(prevErrors => ({ ...prevErrors, cedula: 'Esta cédula ya está registrada en la base de datos' }));
-          message.error('Esta cédula ya está registrada en la base de datos');
+      if (err instanceof AxiosError) {
+        const apiError: ApiError = err;
+        if (apiError.response && apiError.response.status === 400) {
+          const detail = apiError.response.data?.detail;
+          if (detail?.includes('Ya existe un cabecilla con la cédula')) {
+            setErrors(prevErrors => ({ ...prevErrors, cedula: 'Esta cédula ya está registrada en la base de datos' }));
+            message.error('Esta cédula ya está registrada en la base de datos');
+          } else {
+            message.error(detail || 'Error al guardar el cabecilla. Por favor, verifique los datos e intente nuevamente.');
+          }
         } else {
-          message.error(detail || 'Error al guardar el cabecilla. Por favor, verifique los datos e intente nuevamente.');
+          message.error('Error al guardar el cabecilla. Por favor, intente nuevamente más tarde.');
         }
       } else {
-        message.error('Error al guardar el cabecilla. Por favor, intente nuevamente más tarde.');
+        message.error('Ocurrió un error inesperado.');
       }
     } finally {
       setIsLoading(false);

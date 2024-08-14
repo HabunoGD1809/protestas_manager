@@ -28,13 +28,45 @@ const UserProfilePage: React.FC = () => {
    if (!user) return <Container><Typography>No se encontró información del usuario</Typography></Container>;
 
    return (
-      <Container style={{ height: '100vh', display: 'flex', justifyContent: 'center', alignItems: 'center', backgroundColor: '#f5f5f5' }}>
-         <Box maxWidth="sm" width="100%" bgcolor="white" boxShadow={3} borderRadius={2} padding={2}>
-            <Box display="flex" justifyContent="center" marginBottom={2}>
+      <Container
+         style={{
+            height: '400px',
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            backgroundColor: '#f5f5f5',
+            overflow: 'hidden',
+            borderRadius: '8px', 
+         }}
+      >
+         <Box
+            maxWidth="sm"
+            width="100%"
+            bgcolor="white"
+            boxShadow={3}
+            borderRadius={1}
+            padding={2}
+            border={2} 
+            borderColor="#0C9FFF" 
+            style={{
+               display: 'flex',
+               flexDirection: 'column',
+               alignItems: 'center'
+            }}
+         >
+            <Box
+               display="flex"
+               justifyContent="center"
+               marginBottom={2}
+            >
                <Avatar
                   src={user.foto}
                   alt={`${user.nombre} ${user.apellidos}`}
-                  style={{ width: 100, height: 100, border: '4px solid #1976d2' }}
+                  style={{
+                     width: 100,
+                     height: 100,
+                     border: '4px solid #1976d2'
+                  }}
                />
             </Box>
             <Typography variant="h5" align="center">{user.nombre} {user.apellidos}</Typography>

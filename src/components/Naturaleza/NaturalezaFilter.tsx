@@ -1,14 +1,18 @@
 import React from 'react';
 import { Form, Input, Button } from 'antd';
 
+export interface NaturalezaFilters {
+  nombre?: string;
+}
+
 interface NaturalezaFilterProps {
-  onFilter: (values: any) => void;
+  onFilter: (values: NaturalezaFilters) => void;
 }
 
 const NaturalezaFilter: React.FC<NaturalezaFilterProps> = ({ onFilter }) => {
-  const [form] = Form.useForm();
+  const [form] = Form.useForm<NaturalezaFilters>();
 
-  const handleFilter = (values: any) => {
+  const handleFilter = (values: NaturalezaFilters) => {
     onFilter(values);
   };
 

@@ -1,39 +1,51 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Link as RouterLink } from 'react-router-dom';
-import { Protesta, Naturaleza, Provincia, Cabecilla } from '../../types';
+import { Protesta, Naturaleza, Provincia, Cabecilla, PaginatedResponse } from '../../types';
 import { useApi } from '../../hooks/useApi';
 import { useAuth } from '../../hooks/useAuth';
 import { Button, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Box, Typography, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, Tooltip } from '@mui/material';
 import { Edit as EditIcon, Delete as DeleteIcon, Add as AddIcon } from '@mui/icons-material';
 import ProtestaFilter from './ProtestaFilter';
 import Pagination from '../Common/Pagination';
-import { protestaService, naturalezaService, provinciaService } from '../../services/api';
+import { protestaService } from '../../services/api';
 import LoadingSpinner from '../Common/LoadingSpinner';
 import ErrorMessage from '../Common/ErrorMessage';
 
 type ColumnDefinition<T> = {
   title: string;
   key: string;
-  dataIndex?: keyof T;
-  render: (value: any, record: T) => React.ReactNode;
+  dataIndex: keyof T;
+  render: (value: T[keyof T], record: T) => React.ReactNode;
 };
+
+interface PaginationState {
+  current: number;
+  pageSize: number;
+  total: number;
+}
+
+export interface FilterValues {
+  nombre?: string;
+  naturaleza_id?: string;
+  provincia_id?: string;
+  fecha_desde?: string;
+  fecha_hasta?: string;
+}
 
 const ProtestaList: React.FC = () => {
   const [protestas, setProtestas] = useState<Protesta[]>([]);
   const [naturalezas, setNaturalezas] = useState<Naturaleza[]>([]);
   const [provincias, setProvincias] = useState<Provincia[]>([]);
-  const [pagination, setPagination] = useState({ current: 1, pageSize: 10, total: 0 });
-  const [filters, setFilters] = useState<Record<string, string>>({});
+  const [pagination, setPagination] = useState<PaginationState>({ current: 1, pageSize: 10, total: 0 });
+  const [filters, setFilters] = useState<FilterValues>({});
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [protestaToDelete, setProtestaToDelete] = useState<Protesta | null>(null);
-  const { loading, error } = useApi();
+  const { loading, error, request } = useApi();
   const { isAdmin } = useAuth();
 
   const fetchProtestas = useCallback(async (page: number, pageSize: number) => {
     try {
-      // console.log('Fetching protestas with filters:', filters); //no borrar
       const data = await protestaService.getAll(page, pageSize, filters);
-      // console.log('Protestas data received:', data); // no borrar
       setProtestas(data.items);
       setPagination({
         current: data.page,
@@ -52,7 +64,7 @@ const ProtestaList: React.FC = () => {
   useEffect(() => {
     const fetchNaturalezas = async () => {
       try {
-        const data = await naturalezaService.getAll();
+        const data = await request<PaginatedResponse<Naturaleza>>('get', '/naturalezas');
         setNaturalezas(data.items);
       } catch (error) {
         console.error('Error fetching naturalezas:', error);
@@ -61,7 +73,7 @@ const ProtestaList: React.FC = () => {
 
     const fetchProvincias = async () => {
       try {
-        const data = await provinciaService.getAll();
+        const data = await request<Provincia[]>('get', '/provincias');
         setProvincias(data);
       } catch (error) {
         console.error('Error fetching provincias:', error);
@@ -70,7 +82,7 @@ const ProtestaList: React.FC = () => {
 
     fetchNaturalezas();
     fetchProvincias();
-  }, []);
+  }, [request]);
 
   const handleDeleteProtesta = async () => {
     if (protestaToDelete) {
@@ -85,14 +97,14 @@ const ProtestaList: React.FC = () => {
     }
   };
 
-  const handleFilter = (newFilters: Record<string, string>) => {
-    console.log('New filters:', newFilters);
+  const handleFilter = (newFilters: FilterValues) => {
     setFilters(newFilters);
-    fetchProtestas(1, pagination.pageSize);
+    setPagination(prev => ({ ...prev, current: 1 })); 
+    fetchProtestas(1, pagination.pageSize); 
   };
 
-  const handlePaginationChange = (page: number, pageSize?: number) => {
-    fetchProtestas(page, pageSize || pagination.pageSize);
+  const handlePaginationChange = (page: number, pageSize: number) => {
+    fetchProtestas(page, pageSize);
   };
 
   const renderCabecillas = (cabecillas: Cabecilla[]): React.ReactNode => {
@@ -110,14 +122,14 @@ const ProtestaList: React.FC = () => {
       title: 'Nombre',
       dataIndex: 'nombre',
       key: 'nombre',
-      render: (value: string) => <span>{value}</span>,
+      render: (value) => <span>{value as string}</span>,
     },
     {
       title: 'Naturaleza',
       dataIndex: 'naturaleza_id',
       key: 'naturaleza_id',
-      render: (naturalezaId: string) => {
-        const naturaleza = naturalezas.find(n => n.id === naturalezaId);
+      render: (value) => {
+        const naturaleza = naturalezas.find(n => n.id === value);
         return <span>{naturaleza ? naturaleza.nombre : 'N/A'}</span>;
       },
     },
@@ -125,8 +137,8 @@ const ProtestaList: React.FC = () => {
       title: 'Provincia',
       dataIndex: 'provincia_id',
       key: 'provincia_id',
-      render: (provinciaId: string) => {
-        const provincia = provincias.find(p => p.id === provinciaId);
+      render: (value) => {
+        const provincia = provincias.find(p => p.id === value);
         return <span>{provincia ? provincia.nombre : 'N/A'}</span>;
       },
     },
@@ -134,22 +146,23 @@ const ProtestaList: React.FC = () => {
       title: 'Fecha del Evento',
       dataIndex: 'fecha_evento',
       key: 'fecha_evento',
-      render: (value: string) => <span>{value}</span>,
+      render: (value) => <span>{value as string}</span>,
     },
     {
       title: 'Cabecillas',
       dataIndex: 'cabecillas',
       key: 'cabecillas',
-      render: (cabecillas: Cabecilla[]) => renderCabecillas(cabecillas),
+      render: (value) => renderCabecillas(value as Cabecilla[]),
     },
     {
       title: 'Acciones',
       key: 'actions',
-      render: (_: any, protesta: Protesta) => (
+      dataIndex: 'id',
+      render: (_, record) => (
         <Box>
           <Button
             component={RouterLink}
-            to={`/protestas/${protesta.id}`}
+            to={`/protestas/${record.id}`}
             variant="outlined"
             size="small"
             startIcon={<EditIcon />}
@@ -164,7 +177,7 @@ const ProtestaList: React.FC = () => {
               size="small"
               startIcon={<DeleteIcon />}
               onClick={() => {
-                setProtestaToDelete(protesta);
+                setProtestaToDelete(record);
                 setDeleteDialogOpen(true);
               }}
             >
@@ -212,10 +225,7 @@ const ProtestaList: React.FC = () => {
                 <TableRow key={protesta.id}>
                   {columns.map((column) => (
                     <TableCell key={`${protesta.id}-${column.key}`}>
-                      {column.render(
-                        column.dataIndex ? protesta[column.dataIndex] : undefined, 
-                        protesta
-                      )}
+                      {column.render(protesta[column.dataIndex], protesta)}
                     </TableCell>
                   ))}
                 </TableRow>
@@ -233,7 +243,6 @@ const ProtestaList: React.FC = () => {
         onChange={handlePaginationChange}
       />
 
-      {/* Delete Confirmation Dialog */}
       <Dialog
         open={deleteDialogOpen}
         onClose={() => setDeleteDialogOpen(false)}

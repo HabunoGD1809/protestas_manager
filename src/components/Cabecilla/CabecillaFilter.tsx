@@ -1,14 +1,20 @@
 import React from 'react';
 import { Form, Input, Button } from 'antd';
 
-interface CabecillaFilterProps {
-  onFilter: (values: any) => void;
+export interface CabecillaFilterValues {
+  nombre?: string | undefined;
+  apellido?: string | undefined;
+  cedula?: string | undefined;
+}
+
+export interface CabecillaFilterProps {
+  onFilter: (values: CabecillaFilterValues) => void;
 }
 
 const CabecillaFilter: React.FC<CabecillaFilterProps> = ({ onFilter }) => {
-  const [form] = Form.useForm();
+  const [form] = Form.useForm<CabecillaFilterValues>();
 
-  const handleFilter = (values: any) => {
+  const handleFilter = (values: CabecillaFilterValues) => {
     onFilter(values);
   };
 

@@ -24,5 +24,4 @@ export const checkForUpdates = async () => {
   }
 };
 
-// Llama a checkForUpdates periódicamente
 setInterval(checkForUpdates, 5 * 60 * 1000); // Cada 5 minutos

@@ -4,18 +4,12 @@ import { TextField, Button, Box, Typography, Popover } from '@mui/material';
 import { ChromePicker, ColorResult } from 'react-color';
 import { message } from 'antd';
 import { useApi } from '../../hooks/useApi';
-import { Naturaleza } from '../../types';
+import { Naturaleza, CrearNaturaleza } from '../../types';
 import IconSelector from '../../utils/IconSelector';
 import * as Icons from '@mui/icons-material';
 
-interface NaturalezaFormData extends Record<string, unknown> {
-  nombre: string;
-  color: string;
-  icono: string;
-}
-
 const NaturalezaForm: React.FC = () => {
-  const [formData, setFormData] = useState<NaturalezaFormData>({
+  const [formData, setFormData] = useState<CrearNaturaleza>({
     nombre: '',
     color: '#111111',
     icono: '',
@@ -54,8 +48,8 @@ const NaturalezaForm: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formData.nombre || !formData.color || !formData.icono) {
-      message.error('Todos los campos son obligatorios');
+    if (!formData.nombre || !formData.color) {
+      message.error('El nombre y el color son obligatorios');
       return;
     }
     

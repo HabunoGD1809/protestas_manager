@@ -13,11 +13,13 @@ import * as Icons from '@mui/icons-material';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import { useAuth } from '../../hooks/useAuth';
+import { NaturalezaFilters } from "../Naturaleza/NaturalezaFilter";
+
 
 const NaturalezaList: React.FC = () => {
   const [naturalezas, setNaturalezas] = useState<Naturaleza[]>([]);
   const [pagination, setPagination] = useState({ current: 1, pageSize: 10, total: 0 });
-  const [filters, setFilters] = useState<Record<string, string>>({});
+  const [filters, setFilters] = useState<NaturalezaFilters>({});
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [naturalezaToDelete, setNaturalezaToDelete] = useState<Naturaleza | null>(null);
   const { loading, error } = useApi();
@@ -26,14 +28,13 @@ const NaturalezaList: React.FC = () => {
   const fetchNaturalezas = async (page: number, pageSize: number) => {
     try {
       const data = await naturalezaService.getAll(page, pageSize, filters);
-      // console.log('Datos recibidos:', data); //no borrar 
+            // console.log('Datos recibidos:', data); //no borrar 
       setNaturalezas(data.items || []);
       setPagination({
         current: data.page,
         pageSize: data.page_size,
         total: data.total
       });
-      // message.success('Lista de naturalezas cargada exitosamente');
     } catch (err) {
       console.error('Error fetching naturalezas:', err);
       message.error('Error al cargar la lista de naturalezas');
@@ -48,11 +49,11 @@ const NaturalezaList: React.FC = () => {
     fetchNaturalezas(page, pageSize || pagination.pageSize);
   };
 
-  const handleFilter = (newFilters: Record<string, string>) => {
+  const handleFilter = (newFilters: NaturalezaFilters) => {
     setFilters(newFilters);
     fetchNaturalezas(1, pagination.pageSize);
   };
-
+  
   const handleDeleteNaturaleza = async () => {
     if (naturalezaToDelete) {
       try {

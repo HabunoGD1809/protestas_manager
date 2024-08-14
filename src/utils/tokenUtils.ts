@@ -29,21 +29,19 @@ export const removeStoredUser = () => {
   localStorage.removeItem('user');
 };
 
-// Añade esta función en tokenUtils.ts
-
-export const debugTokens = () => {
-  const accessToken = localStorage.getItem('accessToken');
-  const refreshToken = localStorage.getItem('refreshToken');
-  console.log('Access Token:', accessToken);
-  console.log('Refresh Token:', refreshToken);
+// export const debugTokens = () => {
+//   const accessToken = localStorage.getItem('accessToken');
+//   const refreshToken = localStorage.getItem('refreshToken');
+//   console.log('Access Token:', accessToken);
+//   console.log('Refresh Token:', refreshToken);
   
-  if (refreshToken) {
-    const parts = refreshToken.split('.');
-    console.log('Refresh Token parts:', parts.length);
-    parts.forEach((part, index) => {
-      console.log(`Part ${index + 1}:`, part);
-    });
-  } else {
-    console.log('No refresh token found');
-  }
-};
+//   if (refreshToken) {
+//     const parts = refreshToken.split('.');
+//     console.log('Refresh Token parts:', parts.length);
+//     parts.forEach((part, index) => {
+//       console.log(`Part ${index + 1}:`, part);
+//     });
+//   } else {
+//     console.log('No refresh token found');
+//   }
+// };

@@ -18,7 +18,6 @@ const handleRoleChange = async (event: SelectChangeEvent<'admin' | 'usuario'>) =
   } catch (error) {
     if (axios.isAxiosError(error) && error.response) {
       console.error('Error al cambiar el rol del usuario:', error.response.data);
-      // Aquí puedes mostrar un mensaje de error al usuario
     } else {
       console.error('Error al cambiar el rol del usuario:', error);
     }

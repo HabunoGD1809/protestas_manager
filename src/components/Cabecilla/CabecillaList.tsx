@@ -6,7 +6,7 @@ import { useApi } from '../../hooks/useApi';
 import { Cabecilla } from '../../types';
 import Pagination from '../Common/Pagination';
 import { cabecillaService } from '../../services/api';
-import CabecillaFilter from './CabecillaFilter';
+import CabecillaFilter, { CabecillaFilterValues } from './CabecillaFilter';
 import LoadingSpinner from '../Common/LoadingSpinner';
 import ErrorMessage from '../Common/ErrorMessage';
 import { useAuth } from '../../hooks/useAuth';
@@ -15,7 +15,7 @@ import { getFullImageUrl } from '../../services/api';
 const CabecillaList: React.FC = () => {
   const [cabecillas, setCabecillas] = useState<Cabecilla[]>([]);
   const [pagination, setPagination] = useState({ current: 1, pageSize: 10, total: 0 });
-  const [filters, setFilters] = useState<Record<string, string>>({});
+  const [filters, setFilters] = useState<CabecillaFilterValues>({});
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [cabecillaToDelete, setCabecillaToDelete] = useState<Cabecilla | null>(null);
   const { loading, error } = useApi();
@@ -23,7 +23,14 @@ const CabecillaList: React.FC = () => {
 
   const fetchCabecillas = async (page: number, pageSize: number) => {
     try {
-      const data = await cabecillaService.getAll(page, pageSize, filters);
+      const filterRecord: Record<string, string> = Object.entries(filters).reduce((acc, [key, value]) => {
+        if (value !== undefined && value !== '') {
+          acc[key] = value.toString();
+        }
+        return acc;
+      }, {} as Record<string, string>);
+
+      const data = await cabecillaService.getAll(page, pageSize, filterRecord);
       setCabecillas(data.items);
       setPagination({
         current: data.page,
@@ -44,26 +51,25 @@ const CabecillaList: React.FC = () => {
     fetchCabecillas(page, pageSize || pagination.pageSize);
   };
 
-  const handleFilter = (newFilters: Record<string, string>) => {
+  const handleFilter = (newFilters: CabecillaFilterValues) => { 
     setFilters(newFilters);
     fetchCabecillas(1, pagination.pageSize);
   };
 
   const handleDeleteCabecilla = async () => {
-  if (cabecillaToDelete) {
-    try {
-      await cabecillaService.delete(cabecillaToDelete.id);
-      setCabecillas(prevCabecillas => prevCabecillas.filter(c => c.id !== cabecillaToDelete.id));
-      setDeleteDialogOpen(false);
-      setCabecillaToDelete(null);
-      message.success(`Cabecilla ${cabecillaToDelete.nombre} ${cabecillaToDelete.apellido} eliminado exitosamente`);
-    } catch (error) {
-      console.error('Error deleting cabecilla:', error);
-      message.error('Error al eliminar el cabecilla');
+    if (cabecillaToDelete) {
+      try {
+        await cabecillaService.delete(cabecillaToDelete.id);
+        setCabecillas(prevCabecillas => prevCabecillas.filter(c => c.id !== cabecillaToDelete.id));
+        setDeleteDialogOpen(false);
+        setCabecillaToDelete(null);
+        message.success(`Cabecilla ${cabecillaToDelete.nombre} ${cabecillaToDelete.apellido} eliminado exitosamente`);
+      } catch (error) {
+        console.error('Error deleting cabecilla:', error);
+        message.error('Error al eliminar el cabecilla');
+      }
     }
-  }
-};
-
+  };
 
   const columns = [
     {
