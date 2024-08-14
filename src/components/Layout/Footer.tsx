@@ -35,7 +35,7 @@ const Footer: React.FC = () => {
           }}
         >
           <Box display="flex" alignItems="center" flexDirection="column">
-            <WarningIcon sx={{ fontSize: 32, color: '#FFE900' }} />
+            <WarningIcon sx={{ fontSize: 32, color: '#FFC500' }} />
             <Typography variant="body2" sx={{ mt: 0.5, fontWeight: 'bold' }}>
               Uso Responsable
             </Typography>
@@ -49,7 +49,7 @@ const Footer: React.FC = () => {
           <Box display="flex" alignItems="center" flexDirection="column">
             <CodeIcon sx={{ fontSize: 32, color: '#FB8F00' }} />
             <Typography variant="body2" sx={{ mt: 0.5, fontWeight: 'bold' }}>
-              Código Abierto
+              Locked Code
             </Typography>
           </Box>
         </Box>

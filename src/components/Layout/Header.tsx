@@ -2,12 +2,13 @@ import React, { useState } from 'react';
 import { Link as RouterLink } from 'react-router-dom';
 import { AppBar, Toolbar, Typography, Button, Box, Avatar, Menu, MenuItem, IconButton, Tooltip, Container } from '@mui/material';
 import MenuIcon from '@mui/icons-material/Menu';
-import ProtestIcon from '@mui/icons-material/Gavel';
-import LeaderIcon from '@mui/icons-material/Person';
-import NatureIcon from '@mui/icons-material/Nature';
+import HomeIcon from '@mui/icons-material/Home';
+import FlagIcon from '@mui/icons-material/Flag';
+import GroupIcon from '@mui/icons-material/Group';
+import CategoryIcon from '@mui/icons-material/Category';
 import AccountCircleIcon from '@mui/icons-material/AccountCircle';
 import PeopleIcon from '@mui/icons-material/People';
-import DashboardIcon from '@mui/icons-material/Dashboard';
+import AnalyticsIcon from '@mui/icons-material/Analytics';
 import { useAuth } from '../../hooks/useAuth';
 
 const Header: React.FC = () => {
@@ -36,12 +37,13 @@ const Header: React.FC = () => {
   };
 
   const menuItems = user ? [
-    { text: 'Protestas', path: '/protestas', icon: <ProtestIcon /> },
-    { text: 'Cabecillas', path: '/cabecillas', icon: <LeaderIcon /> },
-    { text: 'Naturalezas', path: '/naturalezas', icon: <NatureIcon /> },
+    { text: 'Inicio', path: '/', icon: <HomeIcon /> },
+    { text: 'Protestas', path: '/protestas', icon: <FlagIcon /> },
+    { text: 'Cabecillas', path: '/cabecillas', icon: <GroupIcon /> },
+    { text: 'Naturalezas', path: '/naturalezas', icon: <CategoryIcon /> },
     ...(isAdmin() ? [
       { text: 'Usuarios', path: '/usuarios', icon: <PeopleIcon /> },
-      { text: 'Dashboard Admin', path: '/admin/dashboard', icon: <DashboardIcon /> }
+      { text: 'Dashboard Admin', path: '/admin/dashboard', icon: <AnalyticsIcon /> }
     ] : []),
   ] : [];
 
@@ -49,7 +51,6 @@ const Header: React.FC = () => {
     <AppBar position="static">
       <Container maxWidth="xl">
         <Toolbar disableGutters>
-          <ProtestIcon sx={{ display: { xs: 'none', md: 'flex' }, mr: 1 }} />
           <Typography
             variant="h6"
             noWrap
@@ -60,7 +61,6 @@ const Header: React.FC = () => {
               display: { xs: 'none', md: 'flex' },
               fontFamily: 'monospace',
               fontWeight: 700,
-              letterSpacing: '.3rem',
               color: 'inherit',
               textDecoration: 'none',
             }}
@@ -107,7 +107,6 @@ const Header: React.FC = () => {
               </Menu>
             </Box>
           )}
-          <ProtestIcon sx={{ display: { xs: 'flex', md: 'none' }, mr: 1 }} />
           <Typography
             variant="h5"
             noWrap
@@ -117,9 +116,8 @@ const Header: React.FC = () => {
               mr: 2,
               display: { xs: 'flex', md: 'none' },
               flexGrow: 1,
-              fontFamily: 'monospace',
-              fontWeight: 700,
-              letterSpacing: '.3rem',
+              fontWeight: 500,
+              letterSpacing: '.5rem',
               color: 'inherit',
               textDecoration: 'none',
             }}
@@ -127,17 +125,33 @@ const Header: React.FC = () => {
             PROTESTAS
           </Typography>
           {user && (
-            <Box sx={{ flexGrow: 1, display: { xs: 'none', md: 'flex' } }}>
+            <Box sx={{ flexGrow: 1, display: { xs: 'none', md: 'flex' }, justifyContent: 'center' }}>
               {menuItems.map((item) => (
                 <Button
                   key={item.text}
                   component={RouterLink}
                   to={item.path}
                   onClick={handleCloseNavMenu}
-                  sx={{ my: 2, color: 'white', display: 'flex', alignItems: 'center' }}
+                  sx={{
+                    my: 0.02,
+                    color: 'white',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    mx: 1,
+                    transition: 'all 0.3s',
+                    '&:hover': {
+                      backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                      transform: 'translateY(-2px)',
+                    },
+                    '&:active': {
+                      backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                      transform: 'translateY(1px)',
+                    },
+                  }}
                 >
                   {item.icon}
-                  <span style={{ marginLeft: '8px' }}>{item.text}</span>
+                  <Typography variant="caption" sx={{ mt: 0.5 }}>{item.text}</Typography>
                 </Button>
               ))}
             </Box>
