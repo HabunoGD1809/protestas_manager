@@ -23,6 +23,7 @@ const CabecillaList = lazy(() => import('./components/Cabecilla/CabecillaList'))
 const CabecillaForm = lazy(() => import('./components/Cabecilla/CabecillaForm'));
 const NaturalezaList = lazy(() => import('./components/Naturaleza/NaturalezaList'));
 const NaturalezaForm = lazy(() => import('./components/Naturaleza/NaturalezaForm'));
+const NotFoundPage = lazy(() => import('./pages/NotFoundPage'));
 
 const App: React.FC = () => {
   const navigate = useNavigate();
@@ -70,7 +71,8 @@ const App: React.FC = () => {
           
           {/* Nueva ruta para el dashboard de administrador */}
           <Route path="/admin/dashboard" element={<AdminRoute><AdminDashboardPage /></AdminRoute>} />
-
+            {/* Ruta para la página no encontrada */}
+            <Route path="*" element={<NotFoundPage />} />
           <Route path="/register" element={<RegisterPage />} />
         </Routes>
       </Suspense>

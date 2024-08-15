@@ -168,7 +168,7 @@ const ProtestaList: React.FC = () => {
             startIcon={<EditIcon />}
             sx={{ mr: 1 }}
           >
-            Editar
+            Detalles/edit
           </Button>
           {isAdmin() && (
             <Button
