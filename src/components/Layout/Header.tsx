@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link as RouterLink } from 'react-router-dom';
+import { Link as RouterLink, useNavigate } from 'react-router-dom';
 import { AppBar, Toolbar, Typography, Button, Box, Avatar, Menu, MenuItem, IconButton, Tooltip, Container } from '@mui/material';
 import MenuIcon from '@mui/icons-material/Menu';
 import HomeIcon from '@mui/icons-material/Home';
@@ -9,12 +9,14 @@ import CategoryIcon from '@mui/icons-material/Category';
 import AccountCircleIcon from '@mui/icons-material/AccountCircle';
 import PeopleIcon from '@mui/icons-material/People';
 import AnalyticsIcon from '@mui/icons-material/Analytics';
+import CampaignIcon from '@mui/icons-material/Campaign';
 import { useAuth } from '../../hooks/useAuth';
 
 const Header: React.FC = () => {
   const { user, logout, isAdmin } = useAuth();
   const [anchorElNav, setAnchorElNav] = useState<null | HTMLElement>(null);
   const [anchorElUser, setAnchorElUser] = useState<null | HTMLElement>(null);
+  const navigate = useNavigate();
 
   const handleOpenNavMenu = (event: React.MouseEvent<HTMLElement>) => {
     setAnchorElNav(event.currentTarget);
@@ -34,6 +36,7 @@ const Header: React.FC = () => {
   const handleLogout = () => {
     logout();
     handleCloseUserMenu();
+    navigate('/');
   };
 
   const menuItems = user ? [
@@ -59,14 +62,17 @@ const Header: React.FC = () => {
             sx={{
               mr: 2,
               display: { xs: 'none', md: 'flex' },
+              alignItems: 'center',
               fontFamily: 'monospace',
               fontWeight: 700,
               color: 'inherit',
               textDecoration: 'none',
             }}
           >
+            <CampaignIcon sx={{ mr: 1 }} />
             PROTESTAS
           </Typography>
+
 
           {user && (
             <Box sx={{ flexGrow: 1, display: { xs: 'flex', md: 'none' } }}>
@@ -197,10 +203,8 @@ const Header: React.FC = () => {
                 </Menu>
               </>
             ) : (
-              <>
                 <Button
                   color="primary"
-                  variant="contained"
                   component={RouterLink}
                   to="/login"
                   sx={{
@@ -210,15 +214,19 @@ const Header: React.FC = () => {
                     borderRadius: 2,
                     padding: '8px 16px',
                     boxShadow: 3,
+                    transition: 'all 0.3s ease-in-out',
                     '&:hover': {
-                      backgroundColor: 'primary.dark',
-                      boxShadow: 6,
+                      backgroundColor: '#1565C0', // Azul más oscuro para hover
+                      transform: 'translateY(-2px)',
+                    },
+                    '&:active': {
+                      backgroundColor: '#0D47A1', // Azul aún más oscuro para active
+                      transform: 'translateY(1px)',
                     },
                   }}
                 >
                   Iniciar sesión
                 </Button>
-              </>
             )}
           </Box>
         </Toolbar>

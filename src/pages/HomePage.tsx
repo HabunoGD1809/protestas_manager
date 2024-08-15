@@ -39,7 +39,7 @@ const HomePage: React.FC = () => {
                       {item.title}
                     </Typography>
                     <Typography variant="body2" color="text.secondary" paragraph>
-                      {item.description}
+                      { item.description }
                     </Typography>
                   </CardContent>
                   <Button component={RouterLink} to={item.link} variant="contained" color="primary" fullWidth sx={{ mt: 'auto', borderTopLeftRadius: 0, borderTopRightRadius: 0 }}>
@@ -61,11 +61,11 @@ const HomePage: React.FC = () => {
               <Typography variant="body1" paragraph>
                 Por favor, inicie sesión para usar la aplicación.
               </Typography>
-              <Button 
-                component={RouterLink} 
-                to="/login" 
-                variant="contained" 
-                color="primary" 
+              <Button
+                component={RouterLink}
+                to="/login"
+                variant="contained"
+                color="primary"
                 size="large"
                 sx={{ mt: 2 }}
               >

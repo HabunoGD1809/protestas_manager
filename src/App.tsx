@@ -5,6 +5,7 @@ import Layout from './components/Layout/Layout';
 import PrivateRoute from './components/Common/PrivateRoute';
 import AdminRoute from './components/Common/AdminRoute';
 import LoadingSpinner from './components/Common/LoadingSpinner';
+import PublicOnlyRoute from './components/Common/PublicOnlyRoute';
 
 const HomePage = lazy(() => import('./pages/HomePage'));
 const LoginPage = lazy(() => import('./pages/LoginPage'));
@@ -46,36 +47,32 @@ const App: React.FC = () => {
       <Layout>
         <Suspense fallback={<LoadingSpinner />}>
           <Routes>
-          <Route path="/" element={<HomePage />} />
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/perfil" element={<PrivateRoute><UserProfilePage /></PrivateRoute>} /> 
-          <Route path="/protestas" element={<PrivateRoute><ProtestaListPage /></PrivateRoute>} />
-          <Route path="/protestas/crear" element={<PrivateRoute><ProtestaFormPage /></PrivateRoute>} />
-          <Route path="/protestas/editar/:id" element={<PrivateRoute><ProtestaFormPage /></PrivateRoute>} />
-          <Route path="/protestas/:id" element={<PrivateRoute><ProtestaDetailPage /></PrivateRoute>} />
-          <Route path="/cabecillas" element={<PrivateRoute><CabecillaListPage /></PrivateRoute>} />
-          <Route path="/cabecillas/new" element={<PrivateRoute><CabecillaFormPage /></PrivateRoute>} />
-          <Route path="/cabecillas/:id" element={<PrivateRoute><CabecillaFormPage /></PrivateRoute>} />
-          <Route path="/naturalezas" element={<PrivateRoute><NaturalezaListPage /></PrivateRoute>} />
-          <Route path="/naturalezas/new" element={<PrivateRoute><NaturalezaFormPage /></PrivateRoute>} />
-          <Route path="/naturalezas/:id" element={<PrivateRoute><NaturalezaFormPage /></PrivateRoute>} />
-          <Route path="/usuarios" element={<AdminRoute><UserListPage /></AdminRoute>} />
-          <Route path="/cabecillas" element={<PrivateRoute><CabecillaList /></PrivateRoute>} />
-          <Route path="/cabecillas/new" element={<PrivateRoute><CabecillaForm /></PrivateRoute>} />
-          <Route path="/cabecillas/edit/:id" element={<PrivateRoute><CabecillaForm /></PrivateRoute>} />
-          <Route path="/naturalezas" element={<PrivateRoute><NaturalezaList /></PrivateRoute>} />
-          <Route path="/naturalezas/new" element={<PrivateRoute><NaturalezaForm /></PrivateRoute>} />
-          <Route path="/naturalezas/edit/:id" element={<PrivateRoute><NaturalezaForm /></PrivateRoute>} />
-          <Route path="/naturalezas/new" element={<PrivateRoute><NaturalezaFormPage /></PrivateRoute>} />
-          <Route path="/naturalezas/edit/:id" element={<PrivateRoute><NaturalezaFormPage /></PrivateRoute>} />
-          
-          {/* Nueva ruta para el dashboard de administrador */}
-          <Route path="/admin/dashboard" element={<AdminRoute><AdminDashboardPage /></AdminRoute>} />
-            {/* Ruta para la página no encontrada */}
+            <Route path="/" element={<HomePage />} />
+            <Route path="/login" element={<PublicOnlyRoute><LoginPage /></PublicOnlyRoute>} />
+            <Route path="/register" element={<PublicOnlyRoute><RegisterPage /></PublicOnlyRoute>} />
+            <Route path="/perfil" element={<PrivateRoute><UserProfilePage /></PrivateRoute>} />
+            <Route path="/protestas" element={<PrivateRoute><ProtestaListPage /></PrivateRoute>} />
+            <Route path="/usuarios" element={<AdminRoute><UserListPage /></AdminRoute>} />
+            <Route path="/protestas/crear" element={<PrivateRoute><ProtestaFormPage /></PrivateRoute>} />
+            <Route path="/protestas/:id" element={<PrivateRoute><ProtestaDetailPage /></PrivateRoute>} />
+            <Route path="/protestas/editar/:id" element={<PrivateRoute><ProtestaFormPage /></PrivateRoute>} />
+            <Route path="/cabecillas/:id" element={<PrivateRoute><CabecillaFormPage /></PrivateRoute>} />
+            <Route path="/cabecillas/new" element={<PrivateRoute><CabecillaFormPage /></PrivateRoute>} />
+            <Route path="/cabecillas/new" element={<PrivateRoute><CabecillaForm /></PrivateRoute>} />
+            <Route path="/cabecillas" element={<PrivateRoute><CabecillaList /></PrivateRoute>} />
+            <Route path="/cabecillas" element={<PrivateRoute><CabecillaListPage /></PrivateRoute>} />
+            <Route path="/cabecillas/edit/:id" element={<PrivateRoute><CabecillaForm /></PrivateRoute>} />
+            <Route path="/naturalezas/:id" element={<PrivateRoute><NaturalezaFormPage /></PrivateRoute>} />
+            <Route path="/naturalezas" element={<PrivateRoute><NaturalezaList /></PrivateRoute>} />
+            <Route path="/naturalezas" element={<PrivateRoute><NaturalezaListPage /></PrivateRoute>} />
+            <Route path="/naturalezas/new" element={<PrivateRoute><NaturalezaForm /></PrivateRoute>} />
+            <Route path="/naturalezas/new" element={<PrivateRoute><NaturalezaFormPage /></PrivateRoute>} />
+            <Route path="/naturalezas/edit/:id" element={<PrivateRoute><NaturalezaForm /></PrivateRoute>} />
+            <Route path="/naturalezas/edit/:id" element={<PrivateRoute><NaturalezaFormPage /></PrivateRoute>} />
+            <Route path="/admin/dashboard" element={<AdminRoute><AdminDashboardPage /></AdminRoute>} />
             <Route path="*" element={<NotFoundPage />} />
-          <Route path="/register" element={<RegisterPage />} />
-        </Routes>
-      </Suspense>
+          </Routes>
+        </Suspense>
       </Layout>
     </AuthProvider>
   );
