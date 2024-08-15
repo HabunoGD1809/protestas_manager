@@ -1,9 +1,5 @@
 import axios, { AxiosInstance, InternalAxiosRequestConfig, AxiosResponse, AxiosError } from "axios";
-import {
-  getStoredToken,
-  setStoredToken,
-  removeStoredToken,
-} from "../utils/tokenUtils";
+import { getCookie, setCookie, removeCookie } from '../utils/cookieUtils';
 import {
   Protesta,
   Naturaleza,
@@ -19,6 +15,7 @@ import {
 import { FilterValues } from "../components/Protesta/ProtestaList";
 import { NaturalezaFilters } from "../components/Naturaleza/NaturalezaFilter";
 import { cacheService } from "./cacheService";
+import { logError, logInfo } from './loggingService';
 
 const BASE_URL = "http://127.0.0.1:8000";
 
@@ -31,7 +28,7 @@ export const api: AxiosInstance = axios.create({
 
 // Request interceptor
 api.interceptors.request.use((config: InternalAxiosRequestConfig) => {
-  const token = getStoredToken();
+  const token = getCookie('token');
   if (token) {
     config.headers.set("Authorization", `Bearer ${token}`);
   }
@@ -60,9 +57,9 @@ api.interceptors.response.use(
   (response: AxiosResponse) => {
     const newToken = response.headers["new-token"];
     if (newToken) {
-      const refreshToken = getStoredToken("refreshToken");
+      const refreshToken = getCookie("refreshToken");
       if (refreshToken) {
-        setStoredToken(newToken, refreshToken);
+        setCookie('token', newToken, { path: '/', httpOnly: true, secure: true, sameSite: 'strict' });
       }
     }
     return response;
@@ -85,24 +82,32 @@ api.interceptors.response.use(
       isRefreshing = true;
 
       try {
-        const refreshTokenValue = getStoredToken("refreshToken");
+        const refreshTokenValue = getCookie("refreshToken");
         if (!refreshTokenValue) {
           throw new Error("No hay token de actualización disponible");
         }
         const newTokens = await authService.refreshToken(refreshTokenValue);
-        setStoredToken(newTokens.token_acceso, newTokens.token_actualizacion);
+        setCookie('token', newTokens.token_acceso, { path: '/', httpOnly: true, secure: true, sameSite: 'strict' });
+        setCookie('refreshToken', newTokens.token_actualizacion, { path: '/', httpOnly: true, secure: true, sameSite: 'strict' });
         api.defaults.headers.common["Authorization"] = "Bearer " + newTokens.token_acceso;
         processQueue(null, newTokens.token_acceso);
         return api(originalRequest);
       } catch (refreshError) {
         processQueue(refreshError as AxiosError, null);
-        removeStoredToken();
+        removeCookie('token');
+        removeCookie('refreshToken');
         window.dispatchEvent(new CustomEvent("auth-error", { detail: "Sesión expirada" }));
         return Promise.reject(refreshError);
       } finally {
         isRefreshing = false;
       }
     }
+    logError('API Error', {
+      message: error.message,
+      url: originalRequest?.url,
+      method: originalRequest?.method,
+      status: error.response?.status
+    });
     return Promise.reject(error);
   }
 );
@@ -128,11 +133,16 @@ class BaseService<T, CreateT = T> {
 
     if (cachedData) return cachedData;
 
-    const response = await api.get<PaginatedResponse<T>>(this.endpoint, {
-      params: { page, page_size: pageSize, ...filters },
-    });
-    cacheService.setPaginated(cacheKey, response.data, page, pageSize);
-    return response.data;
+    try {
+      const response = await api.get<PaginatedResponse<T>>(this.endpoint, {
+        params: { page, page_size: pageSize, ...filters },
+      });
+      cacheService.setPaginated(cacheKey, response.data, page, pageSize);
+      return response.data;
+    } catch (error) {
+      logError(`Error al obtener datos de ${this.endpoint}`, error as Error);
+      throw error;
+    }
   }
 
   async getById(id: string): Promise<T> {
@@ -141,28 +151,51 @@ class BaseService<T, CreateT = T> {
 
     if (cachedData) return cachedData;
 
-    const response = await api.get<T>(`${this.endpoint}/${id}`);
-    cacheService.set(cacheKey, response.data);
-    return response.data;
+    try {
+      const response = await api.get<T>(`${this.endpoint}/${id}`);
+      cacheService.set(cacheKey, response.data);
+      return response.data;
+    } catch (error) {
+      logError(`Error al obtener ${this.endpoint} por ID`, error as Error);
+      throw error;
+    }
   }
 
   async create(data: CreateT): Promise<T> {
-    const response = await api.post<T>(this.endpoint, data);
-    cacheService.remove(this.endpoint);
-    return response.data;
+    try {
+      const response = await api.post<T>(this.endpoint, data);
+      cacheService.remove(this.endpoint);
+      logInfo(`${this.endpoint} creado exitosamente`, { data: response.data });
+      return response.data;
+    } catch (error) {
+      logError(`Error al crear ${this.endpoint}`, error as Error);
+      throw error;
+    }
   }
 
   async update(id: string, data: Partial<CreateT>): Promise<T> {
-    const response = await api.put<T>(`${this.endpoint}/${id}`, data);
-    cacheService.remove(this.endpoint);
-    cacheService.remove(`${this.endpoint}_${id}`);
-    return response.data;
+    try {
+      const response = await api.put<T>(`${this.endpoint}/${id}`, data);
+      cacheService.remove(this.endpoint);
+      cacheService.remove(`${this.endpoint}_${id}`);
+      logInfo(`${this.endpoint} actualizado exitosamente`, { id });
+      return response.data;
+    } catch (error) {
+      logError(`Error al actualizar ${this.endpoint}`, error as Error);
+      throw error;
+    }
   }
 
   async delete(id: string): Promise<void> {
-    await api.delete(`${this.endpoint}/${id}`);
-    cacheService.remove(this.endpoint);
-    cacheService.remove(`${this.endpoint}_${id}`);
+    try {
+      await api.delete(`${this.endpoint}/${id}`);
+      cacheService.remove(this.endpoint);
+      cacheService.remove(`${this.endpoint}_${id}`);
+      logInfo(`${this.endpoint} eliminado exitosamente`, { id });
+    } catch (error) {
+      logError(`Error al eliminar ${this.endpoint}`, error as Error);
+      throw error;
+    }
   }
 }
 
@@ -173,17 +206,29 @@ export const authService = {
     formData.append("username", email);
     formData.append("password", password);
 
-    const response = await api.post<Token>("/token", formData.toString(), {
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    });
-    return response.data;
+    try {
+      const response = await api.post<Token>("/token", formData.toString(), {
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      });
+      logInfo('Inicio de sesión exitoso', { email });
+      return response.data;
+    } catch (error) {
+      logError('Error en el inicio de sesión', error as Error);
+      throw error;
+    }
   },
 
   register: async (userData: FormData): Promise<User> => {
-    const response = await api.post<User>("/registro", userData, {
-      headers: { "Content-Type": "multipart/form-data" },
-    });
-    return response.data;
+    try {
+      const response = await api.post<User>("/registro", userData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+      logInfo('Registro exitoso', { id: response.data.id });
+      return response.data;
+    } catch (error) {
+      logError('Error en el registro', error as Error);
+      throw error;
+    }
   },
 
   refreshToken: async (refreshToken: string): Promise<Token> => {
@@ -192,26 +237,36 @@ export const authService = {
         token_actualizacion: refreshToken,
       });
       const { token_acceso, token_actualizacion } = response.data;
-      setStoredToken(token_acceso, token_actualizacion);
+      setCookie('token', token_acceso, { path: '/', httpOnly: true, secure: true, sameSite: 'strict' });
+      setCookie('refreshToken', token_actualizacion, { path: '/', httpOnly: true, secure: true, sameSite: 'strict' });
+      logInfo('Token renovado exitosamente');
       return response.data;
     } catch (error) {
-      console.error("Error en refreshToken:", error);
-      removeStoredToken();
+      logError('Error al renovar el token', error as Error);
+      removeCookie('token');
+      removeCookie('refreshToken');
       window.dispatchEvent(new CustomEvent("auth-error", { detail: "Error al renovar el token" }));
       throw error;
     }
   },
 
   logout: () => {
-    removeStoredToken();
+    removeCookie('token');
+    removeCookie('refreshToken');
+    logInfo('Cierre de sesión exitoso');
   },
 
   obtenerUsuarioActual: async (): Promise<User> => {
-    const response = await api.get<User>("/usuarios/me");
-    return {
-      ...response.data,
-      foto: getFullImageUrl(response.data.foto)
-    };
+    try {
+      const response = await api.get<User>("/usuarios/me");
+      return {
+        ...response.data,
+        foto: getFullImageUrl(response.data.foto)
+      };
+    } catch (error) {
+      logError('Error al obtener usuario actual', error as Error);
+      throw error;
+    }
   },
 };
 
@@ -244,8 +299,13 @@ class CabecillaService extends BaseService<Cabecilla, FormData> {
   }
 
   async getAllNoPagination(): Promise<Cabecilla[]> {
-    const response = await api.get<Cabecilla[]>(`${this.endpoint}/all`);
-    return response.data.map(this.addFullImageUrl);
+    try {
+      const response = await api.get<Cabecilla[]>(`${this.endpoint}/all`);
+      return response.data.map(this.addFullImageUrl);
+    } catch (error) {
+      logError('Error al obtener todos los cabecillas', error as Error);
+      throw error;
+    }
   }
 
   async getById(id: string): Promise<Cabecilla> {
@@ -254,33 +314,56 @@ class CabecillaService extends BaseService<Cabecilla, FormData> {
   }
 
   async create(cabecilla: FormData): Promise<Cabecilla> {
-    const response = await api.post<Cabecilla>(this.endpoint, cabecilla, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-    });
-    return this.addFullImageUrl(response.data);
+    try {
+      const response = await api.post<Cabecilla>(this.endpoint, cabecilla, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+      logInfo('Cabecilla creado exitosamente', { id: response.data.id });
+      return this.addFullImageUrl(response.data);
+    } catch (error) {
+      logError('Error al crear cabecilla', error as Error);
+      throw error;
+    }
   }
 
   async update(id: string, cabecilla: FormData): Promise<Cabecilla> {
-    const response = await api.put<Cabecilla>(`${this.endpoint}/${id}`, cabecilla, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-    });
-    return this.addFullImageUrl(response.data);
+    try {
+      const response = await api.put<Cabecilla>(`${this.endpoint}/${id}`, cabecilla, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+      logInfo('Cabecilla actualizado exitosamente', { id });
+      return this.addFullImageUrl(response.data);
+    } catch (error) {
+      logError('Error al actualizar cabecilla', error as Error);
+      throw error;
+    }
   }
 
   async updateFoto(id: string, foto: File): Promise<Cabecilla> {
-    const formData = new FormData();
-    formData.append('foto', foto);
-    const response = await api.post<Cabecilla>(`${this.endpoint}/${id}/foto`, formData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-    });
-    return this.addFullImageUrl(response.data);
+    try {
+      const formData = new FormData();
+      formData.append('foto', foto);
+      const response = await api.post<Cabecilla>(`${this.endpoint}/${id}/foto`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+      logInfo('Foto de cabecilla actualizada exitosamente', { id });
+      return this.addFullImageUrl(response.data);
+    } catch (error) {
+      logError('Error al actualizar foto de cabecilla', error as Error);
+      throw error;
+    }
   }
 
   async getSuggestions(field: string, value: string): Promise<string[]> {
-    const response = await api.get<string[]>(`${this.endpoint}/suggestions`, {
-      params: { field, value }
-    });
-    return response.data;
+    try {
+      const response = await api.get<string[]>(`${this.endpoint}/suggestions`, {
+        params: { field, value }
+      });
+      return response.data;
+    } catch (error) {
+      logError('Error al obtener sugerencias', error as Error);
+      throw error;
+    }
   }
 
   private addFullImageUrl(cabecilla: Cabecilla): Cabecilla {
@@ -343,7 +426,7 @@ export const resumenService = {
       cacheService.set(cacheKey, response.data);
       return response.data;
     } catch (error) {
-      console.error("Error al obtener el resumen principal:", error);
+      logError("Error al obtener el resumen principal", error as Error);
       throw error;
     }
   },
@@ -361,29 +444,45 @@ class UserService extends BaseService<User, FormData> {
         headers: { "Content-Type": "multipart/form-data" },
       });
       cacheService.remove(this.endpoint);
+      logInfo('Usuario creado exitosamente', { id: response.data.id });
       return response.data;
     } catch (error) {
       if (axios.isAxiosError(error) && error.response) {
         const errorDetail = error.response.data.detail;
-        throw new Error(Array.isArray(errorDetail) ? errorDetail.map(err => err.msg).join(', ') : errorDetail || "Error creating user");
+        const errorMessage = Array.isArray(errorDetail) ? errorDetail.map(err => err.msg).join(', ') : errorDetail || "Error creating user";
+        logError('Error al crear usuario', new Error(errorMessage));
+        throw new Error(errorMessage);
       }
+      logError('Error inesperado al crear usuario', error as Error);
       throw new Error("An unexpected error occurred");
     }
   }
 
   async updateRole(id: string, role: "admin" | "usuario"): Promise<User> {
-    const response = await api.put<User>(`${this.endpoint}/${id}/rol`, null, {
-      params: { nuevo_rol: role },
-    });
-    cacheService.remove(this.endpoint);
-    cacheService.remove(`${this.endpoint}_${id}`);
-    return response.data;
+    try {
+      const response = await api.put<User>(`${this.endpoint}/${id}/rol`, null, {
+        params: { nuevo_rol: role },
+      });
+      cacheService.remove(this.endpoint);
+      cacheService.remove(`${this.endpoint}_${id}`);
+      logInfo('Rol de usuario actualizado exitosamente', { id, newRole: role });
+      return response.data;
+    } catch (error) {
+      logError('Error al actualizar el rol del usuario', error as Error);
+      throw error;
+    }
   }
 
   async delete(id: string): Promise<void> {
-    await api.delete(`/admin/usuarios/${id}`);
-    cacheService.remove(this.endpoint);
-    cacheService.remove(`${this.endpoint}_${id}`);
+    try {
+      await api.delete(`/admin/usuarios/${id}`);
+      cacheService.remove(this.endpoint);
+      cacheService.remove(`${this.endpoint}_${id}`);
+      logInfo('Usuario eliminado exitosamente', { id });
+    } catch (error) {
+      logError('Error al eliminar usuario', error as Error);
+      throw error;
+    }
   }
 
   getCurrentUser = authService.obtenerUsuarioActual;
@@ -398,7 +497,7 @@ export const checkUserExists = async (email: string): Promise<boolean> => {
     });
     return response.data.exists;
   } catch (error) {
-    console.error('Error checking user existence:', error);
+    logError('Error al verificar la existencia del usuario', error as Error);
     return false;
   }
 };

@@ -1,27 +1,28 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, lazy, Suspense } from 'react';
 import { Routes, Route, useNavigate } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
 import Layout from './components/Layout/Layout';
 import PrivateRoute from './components/Common/PrivateRoute';
 import AdminRoute from './components/Common/AdminRoute';
-import HomePage from './pages/HomePage';
-import LoginPage from './pages/LoginPage';
-import ProtestaListPage from './pages/ProtestaListPage';
-import ProtestaFormPage from './pages/ProtestaFormPage';
-import ProtestaDetailPage from './pages/ProtestaDetailPage';
-import CabecillaListPage from './pages/CabecillaListPage';
-import CabecillaFormPage from './pages/CabecillaFormPage';
-import NaturalezaListPage from './pages/NaturalezaListPage';
-import NaturalezaFormPage from './pages/NaturalezaFormPage';
-import UserListPage from './pages/UserListPage';
-import CabecillaList from './components/Cabecilla/CabecillaList';
-import CabecillaForm from './components/Cabecilla/CabecillaForm';
-import NaturalezaList from './components/Naturaleza/NaturalezaList';
-import NaturalezaForm from './components/Naturaleza/NaturalezaForm';
-import AdminDashboardPage from './pages/AdminDashboardPage';
-import UserProfilePage from './pages/UserProfilePage'; 
+import LoadingSpinner from './components/Common/LoadingSpinner';
 
-import RegisterPage from './pages/RegisterPage';
+const HomePage = lazy(() => import('./pages/HomePage'));
+const LoginPage = lazy(() => import('./pages/LoginPage'));
+const ProtestaListPage = lazy(() => import('./pages/ProtestaListPage'));
+const ProtestaFormPage = lazy(() => import('./pages/ProtestaFormPage'));
+const ProtestaDetailPage = lazy(() => import('./pages/ProtestaDetailPage'));
+const CabecillaListPage = lazy(() => import('./pages/CabecillaListPage'));
+const CabecillaFormPage = lazy(() => import('./pages/CabecillaFormPage'));
+const NaturalezaListPage = lazy(() => import('./pages/NaturalezaListPage'));
+const NaturalezaFormPage = lazy(() => import('./pages/NaturalezaFormPage'));
+const UserListPage = lazy(() => import('./pages/UserListPage'));
+const AdminDashboardPage = lazy(() => import('./pages/AdminDashboardPage'));
+const UserProfilePage = lazy(() => import('./pages/UserProfilePage'));
+const RegisterPage = lazy(() => import('./pages/RegisterPage'));
+const CabecillaList = lazy(() => import('./components/Cabecilla/CabecillaList'));
+const CabecillaForm = lazy(() => import('./components/Cabecilla/CabecillaForm'));
+const NaturalezaList = lazy(() => import('./components/Naturaleza/NaturalezaList'));
+const NaturalezaForm = lazy(() => import('./components/Naturaleza/NaturalezaForm'));
 
 const App: React.FC = () => {
   const navigate = useNavigate();
@@ -42,7 +43,8 @@ const App: React.FC = () => {
   return (
     <AuthProvider>
       <Layout>
-        <Routes>
+        <Suspense fallback={<LoadingSpinner />}>
+          <Routes>
           <Route path="/" element={<HomePage />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/perfil" element={<PrivateRoute><UserProfilePage /></PrivateRoute>} /> 
@@ -70,8 +72,8 @@ const App: React.FC = () => {
           <Route path="/admin/dashboard" element={<AdminRoute><AdminDashboardPage /></AdminRoute>} />
 
           <Route path="/register" element={<RegisterPage />} />
-          
         </Routes>
+      </Suspense>
       </Layout>
     </AuthProvider>
   );

@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react';
 import { api } from '../services/api';
 import { AxiosError } from 'axios';
+import { logError } from '../services/loggingService'; // Nuevo import
 
 type HttpMethod = 'get' | 'post' | 'put' | 'delete';
 
@@ -39,13 +40,13 @@ export const useApi = () => {
       if (err instanceof AxiosError) {
         const errorMessage = err.response?.data?.detail || err.message || 'Error en la solicitud';
         setError(typeof errorMessage === 'string' ? errorMessage : JSON.stringify(errorMessage));
-        // console.error('Error de API:', errorMessage, err.response?.data); //no borrar 
+        logError('Error de API', { error: err, url, method, data }); // Nuevo
       } else if (err instanceof Error) {
         setError(err.message);
-        console.error('Error:', err.message);
+        logError('Error', { error: err, url, method, data }); // Nuevo
       } else {
         setError('Ha ocurrido un error inesperado');
-        console.error('Error inesperado:', err);
+        logError('Error inesperado', { error: err, url, method, data }); // Nuevo
       }
       throw err;
     }

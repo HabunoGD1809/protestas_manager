@@ -13,7 +13,7 @@ class CacheService {
   set<T>(key: string, data: T): void {
     const cacheItem: CacheItem<T> = { data, timestamp: Date.now() };
     this.memoryCache[key] = cacheItem;
-    localStorage.setItem(key, JSON.stringify(cacheItem));
+    this.notifyUpdate(key);
   }
 
   get<T>(key: string): T | null {
@@ -21,27 +21,17 @@ class CacheService {
     if (memoryItem && this.isValid(memoryItem.timestamp)) {
       return memoryItem.data;
     }
-
-    const storedItem = localStorage.getItem(key);
-    if (storedItem) {
-      const parsedItem: CacheItem<T> = JSON.parse(storedItem);
-      if (this.isValid(parsedItem.timestamp)) {
-        this.memoryCache[key] = parsedItem;
-        return parsedItem.data;
-      }
-    }
-
     return null;
   }
 
   remove(key: string): void {
     delete this.memoryCache[key];
-    localStorage.removeItem(key);
+    this.notifyUpdate(key);
   }
 
   clear(): void {
     this.memoryCache = {};
-    localStorage.clear();
+    this.notifyUpdate('all');
   }
 
   private isValid(timestamp: number): boolean {
@@ -56,6 +46,28 @@ class CacheService {
   getPaginated<T>(key: string, page: number, pageSize: number): PaginatedResponse<T> | null {
     const paginatedKey = `${key}_${page}_${pageSize}`;
     return this.get(paginatedKey);
+  }
+
+  private notifyUpdate(key: string): void {
+    window.dispatchEvent(new CustomEvent('cacheUpdated', { detail: { key } }));
+  }
+
+  updateItemInPaginatedList<T>(
+    key: string,
+    updatedItem: T,
+    identifierField: keyof T
+  ): void {
+    Object.keys(this.memoryCache).forEach(cacheKey => {
+      if (cacheKey.startsWith(`${key}_`)) {
+        const cachedData = this.get(cacheKey) as PaginatedResponse<T> | null;
+        if (cachedData) {
+          cachedData.items = cachedData.items.map(item =>
+            item[identifierField] === updatedItem[identifierField] ? updatedItem : item
+          );
+          this.set(cacheKey, cachedData);
+        }
+      }
+    });
   }
 }
 

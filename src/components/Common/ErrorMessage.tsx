@@ -1,12 +1,18 @@
 import React from 'react';
-import { Alert } from '@mui/material';
+import { Alert, AlertTitle } from '@mui/material';
 
 interface ErrorMessageProps {
   message: string;
+  title?: string;
 }
 
-const ErrorMessage: React.FC<ErrorMessageProps> = ({ message }) => {
-  return <Alert severity="error">{message}</Alert>;
+const ErrorMessage: React.FC<ErrorMessageProps> = ({ message, title }) => {
+  return (
+    <Alert severity="error">
+      {title && <AlertTitle>{title}</AlertTitle>}
+      {message}
+    </Alert>
+  );
 };
 
 export default ErrorMessage;

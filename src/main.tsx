@@ -1,8 +1,8 @@
-// import React from 'react';
 import { createRoot } from 'react-dom/client';
 import { BrowserRouter as Router } from 'react-router-dom';
 import { ThemeProvider } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
+import { QueryClient, QueryClientProvider } from 'react-query'; 
 import App from './App';
 import theme from './styles/theme';
 import './styles/global.css';
@@ -15,13 +15,15 @@ if (!container) {
 
 const root = createRoot(container);
 
+const queryClient = new QueryClient(); 
+
 root.render(
-  // <React.StrictMode>
-    <Router>
-      <ThemeProvider theme={theme}>
-        <CssBaseline />
+  <Router>
+    <ThemeProvider theme={theme}>
+      <CssBaseline />
+      <QueryClientProvider client={queryClient}>
         <App />
-      </ThemeProvider>
-    </Router>
-  // </React.StrictMode>
+      </QueryClientProvider>
+    </ThemeProvider>
+  </Router>
 );

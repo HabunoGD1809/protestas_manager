@@ -1,10 +1,9 @@
-import React, { createContext, useState, useEffect, useCallback, useRef, ReactNode } from 'react';
+import { createContext, useState, useEffect, useCallback, useRef, ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { User } from '../types';
-import { getStoredUser, setStoredUser, removeStoredUser, getStoredToken, setStoredToken, removeStoredToken } from '../utils/tokenUtils';
+import { getCookie, setCookie, removeCookie, getStoredUser, setStoredUser, removeStoredUser } from '../utils/cookieUtils';
 import { authService, checkUserExists } from '../services/api';
 import InactivityDialog from '../components/Common/InactivityDialog';
-import axios from 'axios';
 
 export interface AuthContextType {
   user: User | null;
@@ -48,13 +47,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     onLogout: () => { },
   });
 
-
   const handleLogout = useCallback((reason?: 'inactivity' | 'manual') => {
     console.log('Cerrando sesión del usuario');
     authService.logout();
     setUser(null);
     setIsAuthenticated(false);
-    removeStoredToken();
+    removeCookie('token');
+    removeCookie('refreshToken');
     removeStoredUser();
     if (inactivityTimerRef.current) clearTimeout(inactivityTimerRef.current);
     if (refreshTimerRef.current) clearInterval(refreshTimerRef.current);
@@ -71,22 +70,20 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     setIsRefreshing(true);
     console.log('Iniciando proceso de renovación de token');
 
-    const refreshTokenValue = getStoredToken('refreshToken');
+    const refreshTokenValue = getCookie('refreshToken');
 
     if (refreshTokenValue) {
       try {
         console.log('Intentando renovar token');
         const newTokens = await authService.refreshToken(refreshTokenValue);
 
-        setStoredToken(newTokens.token_acceso, newTokens.token_actualizacion);
+        setCookie('token', newTokens.token_acceso, { path: '/', secure: true, sameSite: 'strict' });
+        setCookie('refreshToken', newTokens.token_actualizacion, { path: '/', secure: true, sameSite: 'strict' });
 
         setIsRefreshing(false);
         return true;
       } catch (error) {
         console.error('Error al renovar el token:', error);
-        if (axios.isAxiosError(error)) {
-          console.error('Detalles del error:', error.response?.data);
-        }
         handleLogout();
         setIsRefreshing(false);
         return false;
@@ -142,7 +139,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   useEffect(() => {
     const initAuth = async () => {
-      const token = getStoredToken();
+      const token = getCookie('token');
       if (token) {
         try {
           const userData = await authService.obtenerUsuarioActual();
@@ -199,7 +196,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
       console.log('Intentando iniciar sesión');
       const { token_acceso, token_actualizacion } = await authService.login(email, password);
-      setStoredToken(token_acceso, token_actualizacion);
+      setCookie('token', token_acceso, { path: '/', secure: true, sameSite: 'strict' });
+      setCookie('refreshToken', token_actualizacion, { path: '/', secure: true, sameSite: 'strict' });
       console.log('Tokens almacenados');
 
       const userData = await authService.obtenerUsuarioActual();
