@@ -54,16 +54,7 @@ const processQueue = (error: AxiosError | null, token: string | null = null) => 
 };
 
 api.interceptors.response.use(
-  (response: AxiosResponse) => {
-    const newToken = response.headers["new-token"];
-    if (newToken) {
-      const refreshToken = getCookie("refreshToken");
-      if (refreshToken) {
-        setCookie('token', newToken, { path: '/', httpOnly: true, secure: true, sameSite: 'strict' });
-      }
-    }
-    return response;
-  },
+  (response: AxiosResponse) => response,
   async (error: AxiosError) => {
     const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
     if (error.response?.status === 401 && !originalRequest._retry) {
@@ -87,8 +78,8 @@ api.interceptors.response.use(
           throw new Error("No hay token de actualización disponible");
         }
         const newTokens = await authService.refreshToken(refreshTokenValue);
-        setCookie('token', newTokens.token_acceso, { path: '/', httpOnly: true, secure: true, sameSite: 'strict' });
-        setCookie('refreshToken', newTokens.token_actualizacion, { path: '/', httpOnly: true, secure: true, sameSite: 'strict' });
+        setCookie('token', newTokens.token_acceso, { path: '/', secure: true, sameSite: 'strict' });
+        setCookie('refreshToken', newTokens.token_actualizacion, { path: '/', secure: true, sameSite: 'strict' });
         api.defaults.headers.common["Authorization"] = "Bearer " + newTokens.token_acceso;
         processQueue(null, newTokens.token_acceso);
         return api(originalRequest);
@@ -96,18 +87,13 @@ api.interceptors.response.use(
         processQueue(refreshError as AxiosError, null);
         removeCookie('token');
         removeCookie('refreshToken');
+        logError('Error al renovar el token', refreshError as Error);
         window.dispatchEvent(new CustomEvent("auth-error", { detail: "Sesión expirada" }));
         return Promise.reject(refreshError);
       } finally {
         isRefreshing = false;
       }
     }
-    logError('API Error', {
-      message: error.message,
-      url: originalRequest?.url,
-      method: originalRequest?.method,
-      status: error.response?.status
-    });
     return Promise.reject(error);
   }
 );
@@ -237,15 +223,14 @@ export const authService = {
         token_actualizacion: refreshToken,
       });
       const { token_acceso, token_actualizacion } = response.data;
-      setCookie('token', token_acceso, { path: '/', httpOnly: true, secure: true, sameSite: 'strict' });
-      setCookie('refreshToken', token_actualizacion, { path: '/', httpOnly: true, secure: true, sameSite: 'strict' });
+      setCookie('token', token_acceso, { path: '/', secure: true, sameSite: 'strict' });
+      setCookie('refreshToken', token_actualizacion, { path: '/', secure: true, sameSite: 'strict' });
       logInfo('Token renovado exitosamente');
       return response.data;
     } catch (error) {
       logError('Error al renovar el token', error as Error);
       removeCookie('token');
       removeCookie('refreshToken');
-      window.dispatchEvent(new CustomEvent("auth-error", { detail: "Error al renovar el token" }));
       throw error;
     }
   },

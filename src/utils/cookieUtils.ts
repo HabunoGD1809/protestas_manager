@@ -6,11 +6,11 @@ export const getCookie = (name: string): string | undefined => {
 };
 
 export const setCookie = (name: string, value: string, options?: Cookies.CookieAttributes): void => {
-  Cookies.set(name, value, options);
+  Cookies.set(name, value, { ...options, secure: true, sameSite: 'strict' });
 };
 
 export const removeCookie = (name: string): void => {
-  Cookies.remove(name);
+  Cookies.remove(name, { path: '/', secure: true, sameSite: 'strict' });
 };
 
 export const getStoredUser = (): User | null => {
@@ -23,5 +23,5 @@ export const setStoredUser = (user: User): void => {
 };
 
 export const removeStoredUser = (): void => {
-  Cookies.remove('user');
+  Cookies.remove('user', { path: '/', secure: true, sameSite: 'strict' });
 };

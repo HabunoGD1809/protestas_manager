@@ -1,9 +1,11 @@
-import { createContext, useState, useEffect, useCallback, useRef, ReactNode } from 'react';
+import React, { createContext, useState, useEffect, useCallback, useRef, ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { User } from '../types';
 import { getCookie, setCookie, removeCookie, getStoredUser, setStoredUser, removeStoredUser } from '../utils/cookieUtils';
 import { authService, checkUserExists } from '../services/api';
 import InactivityDialog from '../components/Common/InactivityDialog';
+import { logError, logInfo } from '../services/loggingService';
+import { AxiosError } from 'axios';
 
 export interface AuthContextType {
   user: User | null;
@@ -47,8 +49,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     onLogout: () => { },
   });
 
-  const handleLogout = useCallback((reason?: 'inactivity' | 'manual') => {
-    console.log('Cerrando sesión del usuario');
+  const handleLogout = useCallback((reason?: 'inactivity' | 'manual' | 'error') => {
+    logInfo('Cerrando sesión del usuario', { reason });
     authService.logout();
     setUser(null);
     setIsAuthenticated(false);
@@ -58,66 +60,35 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     if (inactivityTimerRef.current) clearTimeout(inactivityTimerRef.current);
     if (refreshTimerRef.current) clearInterval(refreshTimerRef.current);
 
-    if (reason === 'inactivity') {
-      navigate('/login?inactivity=true');
-    } else {
-      navigate('/login');
-    }
+    navigate(reason === 'inactivity' ? '/login?inactivity=true' : '/login');
   }, [navigate]);
 
   const refreshUserToken = useCallback(async () => {
     if (isRefreshing) return false;
     setIsRefreshing(true);
-    console.log('Iniciando proceso de renovación de token');
+    logInfo('Iniciando proceso de renovación de token');
 
     const refreshTokenValue = getCookie('refreshToken');
 
     if (refreshTokenValue) {
       try {
-        console.log('Intentando renovar token');
         const newTokens = await authService.refreshToken(refreshTokenValue);
-
         setCookie('token', newTokens.token_acceso, { path: '/', secure: true, sameSite: 'strict' });
         setCookie('refreshToken', newTokens.token_actualizacion, { path: '/', secure: true, sameSite: 'strict' });
-
-        setIsRefreshing(false);
+        logInfo('Token renovado exitosamente');
         return true;
       } catch (error) {
-        console.error('Error al renovar el token:', error);
-        handleLogout();
-        setIsRefreshing(false);
+        logError('Error al renovar el token', error);
         return false;
+      } finally {
+        setIsRefreshing(false);
       }
     } else {
-      console.error('No hay token de actualización disponible');
-      handleLogout();
+      logError('No hay token de actualización disponible', new Error('No refresh token'));
       setIsRefreshing(false);
       return false;
     }
-  }, [handleLogout, isRefreshing]);
-
-  const showInactivityDialog = useCallback(() => {
-    setDialogState({
-      open: true,
-      onKeepActive: async () => {
-        console.log('Manteniendo la sesión activa');
-        setDialogState(prev => ({ ...prev, open: false }));
-        const success = await refreshUserToken();
-        if (success) {
-          console.log('Sesión mantenida con éxito');
-          startInactivityTimer();
-        } else {
-          console.log('No se pudo mantener la sesión activa');
-          handleLogout('inactivity');
-        }
-      },
-      onLogout: () => {
-        console.log('Finalizando sesión por inactividad');
-        setDialogState(prev => ({ ...prev, open: false }));
-        handleLogout('inactivity');
-      },
-    });
-  }, [refreshUserToken, handleLogout]);
+  }, []);
 
   const startInactivityTimer = useCallback(() => {
     if (inactivityTimerRef.current) {
@@ -126,7 +97,30 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     inactivityTimerRef.current = setTimeout(() => {
       showInactivityDialog();
     }, INACTIVITY_TIMEOUT);
-  }, [showInactivityDialog]);
+  }, []);
+
+  const showInactivityDialog = useCallback(() => {
+    setDialogState({
+      open: true,
+      onKeepActive: async () => {
+        logInfo('Manteniendo la sesión activa');
+        setDialogState(prev => ({ ...prev, open: false }));
+        const success = await refreshUserToken();
+        if (success) {
+          logInfo('Sesión mantenida con éxito');
+          startInactivityTimer();
+        } else {
+          logInfo('No se pudo mantener la sesión activa');
+          handleLogout('inactivity');
+        }
+      },
+      onLogout: () => {
+        logInfo('Finalizando sesión por inactividad');
+        setDialogState(prev => ({ ...prev, open: false }));
+        handleLogout('inactivity');
+      },
+    });
+  }, [refreshUserToken, handleLogout, startInactivityTimer]);
 
   const startRefreshTokenTimer = useCallback(() => {
     if (refreshTimerRef.current) {
@@ -145,15 +139,33 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           const userData = await authService.obtenerUsuarioActual();
           setUser(userData);
           setIsAuthenticated(true);
+          logInfo('Autenticación inicializada exitosamente');
         } catch (error) {
-          console.error('Error al inicializar la autenticación:', error);
-          handleLogout();
+          logError('Error al inicializar la autenticación', error);
+          if (error instanceof AxiosError && error.response?.status === 401) {
+            const refreshSuccess = await refreshUserToken();
+            if (refreshSuccess) {
+              try {
+                const userData = await authService.obtenerUsuarioActual();
+                setUser(userData);
+                setIsAuthenticated(true);
+                logInfo('Autenticación recuperada después de refrescar token');
+              } catch (secondError) {
+                logError('Error al obtener usuario después de refrescar token', secondError);
+                handleLogout('error');
+              }
+            } else {
+              handleLogout('error');
+            }
+          } else {
+            handleLogout('error');
+          }
         }
       }
     };
 
     initAuth();
-  }, [handleLogout]);
+  }, [handleLogout, refreshUserToken]);
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -188,46 +200,43 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const handleLogin = async (email: string, password: string) => {
     try {
-      console.log('Verificando si el usuario existe');
+      logInfo('Verificando si el usuario existe');
       const userExists = await checkUserExists(email);
       if (!userExists) {
         throw new Error('El usuario no está registrado en la base de datos.');
       }
 
-      console.log('Intentando iniciar sesión');
+      logInfo('Intentando iniciar sesión');
       const { token_acceso, token_actualizacion } = await authService.login(email, password);
       setCookie('token', token_acceso, { path: '/', secure: true, sameSite: 'strict' });
       setCookie('refreshToken', token_actualizacion, { path: '/', secure: true, sameSite: 'strict' });
-      console.log('Tokens almacenados');
+      logInfo('Tokens almacenados');
 
       const userData = await authService.obtenerUsuarioActual();
       setUser(userData);
       setIsAuthenticated(true);
       setStoredUser(userData);
-      console.log('Inicio de sesión exitoso');
+      logInfo('Inicio de sesión exitoso');
     } catch (error) {
-      console.error('Error durante el inicio de sesión:', error);
+      logError('Error durante el inicio de sesión', error);
       throw error;
     }
   };
 
   const handleRegister = async (userData: FormData) => {
     try {
-      console.log('Intentando registrar');
+      logInfo('Intentando registrar usuario');
       const user = await authService.register(userData);
-      console.log('Respuesta del registro:', user);
+      logInfo('Respuesta del registro recibida', { userId: user.id });
 
       if (user) {
-        console.log('Registro exitoso');
+        logInfo('Registro exitoso');
         return user;
       } else {
         throw new Error('Respuesta del registro incompleta');
       }
     } catch (error) {
-      console.error('Error durante el registro:', error);
-      if (error instanceof Error) {
-        console.error('Mensaje de error:', error.message);
-      }
+      logError('Error durante el registro', error);
       throw error;
     }
   };
