@@ -1,11 +1,12 @@
 import React from 'react';
-import { Form, Input, Button } from 'antd';
+import { Form, Input, Button, Space } from 'antd';
+import '../../styles/commonFilter.css';
 
 export interface NaturalezaFilters {
   nombre?: string;
 }
 
-interface NaturalezaFilterProps {
+export interface NaturalezaFilterProps {
   onFilter: (values: NaturalezaFilters) => void;
 }
 
@@ -17,22 +18,22 @@ const NaturalezaFilter: React.FC<NaturalezaFilterProps> = ({ onFilter }) => {
   };
 
   return (
-    <Form form={form} layout="inline" onFinish={handleFilter}>
-      <Form.Item name="nombre">
-        <Input placeholder="Nombre" />
+    <Form form={form} layout="vertical" onFinish={handleFilter} className="filter-form">
+      <Form.Item name="nombre" label="Nombre">
+        <Input placeholder="Ingrese el nombre de la naturaleza" />
       </Form.Item>
       <Form.Item>
-        <Button type="primary" htmlType="submit">
-          Filtrar
-        </Button>
-      </Form.Item>
-      <Form.Item>
-        <Button onClick={() => {
-          form.resetFields();
-          onFilter({});
-        }}>
-          Limpiar
-        </Button>
+        <Space className="filter-buttons">
+          <Button type="primary" htmlType="submit">
+            Filtrar
+          </Button>
+          <Button onClick={() => {
+            form.resetFields();
+            onFilter({});
+          }}>
+            Limpiar
+          </Button>
+        </Space>
       </Form.Item>
     </Form>
   );

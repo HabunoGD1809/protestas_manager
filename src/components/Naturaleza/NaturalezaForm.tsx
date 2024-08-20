@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { TextField, Button, Box, Typography, Popover } from '@mui/material';
-import { ChromePicker, ColorResult } from 'react-color';
+import { HexColorPicker, HexColorInput } from "react-colorful";
 import { message } from 'antd';
 import { useApi } from '../../hooks/useApi';
 import { Naturaleza, CrearNaturaleza } from '../../types';
 import IconSelector from '../../utils/IconSelector';
-import * as Icons from '@mui/icons-material';
+import * as IconoirIcons from 'iconoir-react';
+
+interface IconoirIconComponent extends React.FC<React.SVGProps<SVGSVGElement>> { }
 
 const NaturalezaForm: React.FC = () => {
   const [formData, setFormData] = useState<CrearNaturaleza>({
@@ -22,22 +24,21 @@ const NaturalezaForm: React.FC = () => {
   const { id } = useParams<{ id: string }>();
 
   useEffect(() => {
-    if (id) {
-      const fetchNaturaleza = async () => {
-        try {
-          const data = await request<Naturaleza>('get', `/naturalezas/${id}`);
-          setFormData({
-            nombre: data.nombre,
-            color: data.color,
-            icono: data.icono
-          });
-        } catch (err) {
-          console.error('Error al obtener naturaleza:', err);
-          message.error('Error al cargar los datos de la naturaleza');
-        }
-      };
-      fetchNaturaleza();
-    }
+    const fetchNaturaleza = async () => {
+      if (!id) return;
+      try {
+        const data = await request<Naturaleza>('get', `/naturalezas/${id}`);
+        setFormData({
+          nombre: data.nombre,
+          color: data.color,
+          icono: data.icono
+        });
+      } catch (err) {
+        console.error('Error al obtener naturaleza:', err);
+        message.error('Error al cargar los datos de la naturaleza');
+      }
+    };
+    fetchNaturaleza();
   }, [id, request]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -47,12 +48,12 @@ const NaturalezaForm: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!formData.nombre || !formData.color) {
       message.error('El nombre y el color son obligatorios');
       return;
     }
-    
+
     try {
       if (id) {
         await request<Naturaleza>('put', `/naturalezas/${id}`, formData);
@@ -72,15 +73,18 @@ const NaturalezaForm: React.FC = () => {
     setFormData(prev => ({ ...prev, icono: iconName }));
   };
 
-  const handleColorChange = (color: ColorResult) => {
-    setFormData(prev => ({ ...prev, color: color.hex }));
+  const handleColorChange = (color: string) => {
+    setFormData(prev => ({ ...prev, color }));
   };
 
-  const SelectedIcon = formData.icono ? Icons[formData.icono as keyof typeof Icons] : null;
+  const SelectedIcon = formData.icono ?
+    IconoirIcons[formData.icono as keyof typeof IconoirIcons] as IconoirIconComponent :
+    null;
 
   return (
     <Box component="form" onSubmit={handleSubmit} sx={{ mt: 1 }}>
       <Typography variant="h6" sx={{ mb: 2 }}>
+        {id ? 'Editar' : 'Crear'} Naturaleza
       </Typography>
       <TextField
         margin="normal"
@@ -110,9 +114,11 @@ const NaturalezaForm: React.FC = () => {
               height: 40,
               backgroundColor: formData.color,
               border: '1px solid #000',
-              borderRadius: 1
+              borderRadius: 1,
+              mr: 2
             }}
           />
+          <HexColorInput color={formData.color} onChange={handleColorChange} />
         </Box>
         <Popover
           open={isColorPickerOpen}
@@ -123,11 +129,7 @@ const NaturalezaForm: React.FC = () => {
             horizontal: 'left',
           }}
         >
-          <ChromePicker
-            color={formData.color}
-            onChange={handleColorChange}
-            disableAlpha
-          />
+          <HexColorPicker color={formData.color} onChange={handleColorChange} />
         </Popover>
       </Box>
       <Box sx={{ display: 'flex', alignItems: 'center', mt: 2, mb: 2 }}>

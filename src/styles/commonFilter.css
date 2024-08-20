@@ -1,0 +1,41 @@
+.filter-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-bottom: 24px;
+  background-color: #ffffff;
+  padding: 16px;
+  border-radius: 10px;
+  border: 1px solid #d9d9d94f;  
+}
+
+.filter-form .ant-form-item {
+  margin-bottom: 0;
+  flex: 1 1 200px;
+}
+
+.filter-form .ant-input,
+.filter-form .ant-select,
+.filter-form .ant-picker {
+  width: 100%;
+}
+
+.filter-buttons {
+  display: flex;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.filter-buttons .ant-btn {
+  flex: 1;
+}
+
+@media (max-width: 576px) {
+  .filter-form {
+    flex-direction: column;
+  }
+
+  .filter-form .ant-form-item {
+    flex: 1 1 100%;
+  }
+}

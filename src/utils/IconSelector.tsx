@@ -1,18 +1,18 @@
 import React, { useState, useMemo } from 'react';
-import { 
-  Dialog, 
-  DialogTitle, 
-  DialogContent, 
-  TextField, 
-  Grid, 
-  IconButton, 
+import {
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  TextField,
+  Grid,
+  IconButton,
   Button,
   Typography,
   Box,
   Divider,
   useTheme
 } from '@mui/material';
-import * as Icons from '@mui/icons-material';
+import * as IconoirIcons from 'iconoir-react';
 import SearchIcon from '@mui/icons-material/Search';
 
 interface IconSelectorProps {
@@ -21,6 +21,8 @@ interface IconSelectorProps {
   onSelect: (iconName: string) => void;
 }
 
+interface IconoirIconComponent extends React.FC<React.SVGProps<SVGSVGElement>> { }
+
 const IconSelector: React.FC<IconSelectorProps> = ({ open, onClose, onSelect }) => {
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(0);
@@ -28,7 +30,7 @@ const IconSelector: React.FC<IconSelectorProps> = ({ open, onClose, onSelect }) 
   const theme = useTheme();
 
   const iconList = useMemo(() => {
-    return Object.keys(Icons).filter(key => 
+    return Object.keys(IconoirIcons).filter(key =>
       key.toLowerCase().includes(search.toLowerCase())
     );
   }, [search]);
@@ -43,7 +45,7 @@ const IconSelector: React.FC<IconSelectorProps> = ({ open, onClose, onSelect }) 
   return (
     <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
       <DialogTitle>
-        <Typography variant="h6">Seleccionar un Icono</Typography>
+        Seleccionar un Icono
       </DialogTitle>
       <Divider />
       <DialogContent>
@@ -61,24 +63,24 @@ const IconSelector: React.FC<IconSelectorProps> = ({ open, onClose, onSelect }) 
             }}
           />
         </Box>
-        <Box sx={{ 
-          maxHeight: '400px', 
-          overflowY: 'auto', 
+        <Box sx={{
+          maxHeight: '400px',
+          overflowY: 'auto',
           border: `1px solid ${theme.palette.divider}`,
           borderRadius: theme.shape.borderRadius,
           p: 2
         }}>
           <Grid container spacing={1}>
             {paginatedIcons.map((iconName) => {
-              const Icon = Icons[iconName as keyof typeof Icons];
+              const Icon = IconoirIcons[iconName as keyof typeof IconoirIcons] as IconoirIconComponent;
               return (
                 <Grid item key={iconName}>
-                  <IconButton 
-                    onClick={() => handleSelect(iconName)} 
+                  <IconButton
+                    onClick={() => handleSelect(iconName)}
                     title={iconName}
-                    sx={{ 
-                      '&:hover': { 
-                        backgroundColor: theme.palette.action.hover 
+                    sx={{
+                      '&:hover': {
+                        backgroundColor: theme.palette.action.hover
                       }
                     }}
                   >
@@ -94,15 +96,15 @@ const IconSelector: React.FC<IconSelectorProps> = ({ open, onClose, onSelect }) 
             Mostrando {paginatedIcons.length} de {iconList.length} iconos
           </Typography>
           <Box>
-            <Button 
-              disabled={page === 0} 
+            <Button
+              disabled={page === 0}
               onClick={() => setPage(p => Math.max(0, p - 1))}
               sx={{ mr: 1 }}
             >
               Anterior
             </Button>
-            <Button 
-              disabled={(page + 1) * itemsPerPage >= iconList.length} 
+            <Button
+              disabled={(page + 1) * itemsPerPage >= iconList.length}
               onClick={() => setPage(p => p + 1)}
             >
               Siguiente

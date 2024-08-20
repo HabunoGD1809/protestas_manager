@@ -1,35 +1,33 @@
 import React, { useEffect, useState } from 'react';
-import { Link as RouterLink } from 'react-router-dom';
-import { Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Button, IconButton, Box, Typography, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle } from '@mui/material';
-import { message } from 'antd';
+import { useNavigate } from 'react-router-dom';
+import { Typography, Button, message, Tooltip } from 'antd';
+import { PlusOutlined } from '@ant-design/icons';
 import { useApi } from '../../hooks/useApi';
 import { Naturaleza } from '../../types';
-import Pagination from '../Common/Pagination';
 import { naturalezaService } from '../../services/api';
-import NaturalezaFilter from './NaturalezaFilter';
+import NaturalezaFilter, { NaturalezaFilters } from './NaturalezaFilter';
 import LoadingSpinner from '../Common/LoadingSpinner';
 import ErrorMessage from '../Common/ErrorMessage';
-import * as Icons from '@mui/icons-material';
-import EditIcon from '@mui/icons-material/Edit';
-import DeleteIcon from '@mui/icons-material/Delete';
 import { useAuth } from '../../hooks/useAuth';
-import { NaturalezaFilters } from "../Naturaleza/NaturalezaFilter";
+import CommonTable from '../Common/CommonTable';
+import * as IconoirIcons from 'iconoir-react';
 
+const { Title } = Typography;
+
+interface IconoirIconComponent extends React.FC<React.SVGProps<SVGSVGElement>> { }
 
 const NaturalezaList: React.FC = () => {
   const [naturalezas, setNaturalezas] = useState<Naturaleza[]>([]);
   const [pagination, setPagination] = useState({ current: 1, pageSize: 10, total: 0 });
   const [filters, setFilters] = useState<NaturalezaFilters>({});
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [naturalezaToDelete, setNaturalezaToDelete] = useState<Naturaleza | null>(null);
   const { loading, error } = useApi();
   const { isAdmin } = useAuth();
+  const navigate = useNavigate();
 
   const fetchNaturalezas = async (page: number, pageSize: number) => {
     try {
       const data = await naturalezaService.getAll(page, pageSize, filters);
-            // console.log('Datos recibidos:', data); //no borrar 
-      setNaturalezas(data.items || []);
+      setNaturalezas(data.items);
       setPagination({
         current: data.page,
         pageSize: data.page_size,
@@ -53,19 +51,19 @@ const NaturalezaList: React.FC = () => {
     setFilters(newFilters);
     fetchNaturalezas(1, pagination.pageSize);
   };
-  
-  const handleDeleteNaturaleza = async () => {
-    if (naturalezaToDelete) {
-      try {
-        await naturalezaService.delete(naturalezaToDelete.id);
-        setNaturalezas(prevNaturalezas => prevNaturalezas.filter(n => n.id !== naturalezaToDelete.id));
-        setDeleteDialogOpen(false);
-        setNaturalezaToDelete(null);
-        message.success('Naturaleza eliminada exitosamente');
-      } catch (error) {
-        console.error('Error deleting naturaleza:', error);
-        message.error('Error al eliminar la naturaleza');
-      }
+
+  const handleEdit = (naturaleza: Naturaleza) => {
+    navigate(`/naturalezas/edit/${naturaleza.id}`);
+  };
+
+  const handleDelete = async (naturaleza: Naturaleza) => {
+    try {
+      await naturalezaService.delete(naturaleza.id);
+      setNaturalezas(prevNaturalezas => prevNaturalezas.filter(n => n.id !== naturaleza.id));
+      message.success('Naturaleza eliminada exitosamente');
+    } catch (error) {
+      console.error('Error deleting naturaleza:', error);
+      message.error('Error al eliminar la naturaleza');
     }
   };
 
@@ -73,51 +71,28 @@ const NaturalezaList: React.FC = () => {
     { title: 'Nombre', dataIndex: 'nombre', key: 'nombre' },
     {
       title: 'Color',
-      dataIndex: 'color', key: 'color',
-      render: (naturaleza: Naturaleza) => (
-        <div style={{ backgroundColor: naturaleza.color, width: 20, height: 20, borderRadius: '50%' }}></div>
+      dataIndex: 'color',
+      key: 'color',
+      render: (color: string) => (
+        <div style={{ backgroundColor: color, width: 20, height: 20, borderRadius: '50%' }}></div>
       )
     },
     {
       title: 'Icono',
       dataIndex: 'icono',
       key: 'icono',
-      render: (naturaleza: Naturaleza) => {
-        const IconComponent = Icons[naturaleza.icono as keyof typeof Icons];
-        return IconComponent ? <IconButton><IconComponent /></IconButton> : null;
+      render: (icono: string) => {
+        const IconComponent = IconoirIcons[icono as keyof typeof IconoirIcons] as IconoirIconComponent;
+        return (
+          <Tooltip title={icono}>
+            {IconComponent ? (
+              <IconComponent style={{ fontSize: '20px' }} />
+            ) : (
+              <span>{icono}</span>
+            )}
+          </Tooltip>
+        );
       }
-    },
-    {
-      title: 'Acciones',
-      key: 'actions',
-      render: (naturaleza: Naturaleza) => (
-        <Box>
-          <Button
-            component={RouterLink}
-            to={`/naturalezas/edit/${naturaleza.id}`}
-            variant="outlined"
-            size="small"
-            startIcon={<EditIcon />}
-            sx={{ mr: 1 }}
-          >
-            Editar
-          </Button>
-          {isAdmin() && (
-            <Button
-              variant="outlined"
-              color="secondary"
-              size="small"
-              startIcon={<DeleteIcon />}
-              onClick={() => {
-                setNaturalezaToDelete(naturaleza);
-                setDeleteDialogOpen(true);
-              }}
-            >
-              Eliminar
-            </Button>
-          )}
-        </Box>
-      ),
     },
   ];
 
@@ -125,72 +100,30 @@ const NaturalezaList: React.FC = () => {
   if (error) return <ErrorMessage message={error} />;
 
   return (
-    <Box>
-      <Typography variant="h4" gutterBottom>Lista de Naturalezas</Typography>
+    <div>
+      <Title level={2}>Lista de Naturalezas</Title>
       <NaturalezaFilter onFilter={handleFilter} />
       <Button
-        component={RouterLink}
-        to="/naturalezas/new"
-        variant="contained"
-        color="primary"
-        sx={{ mb: 2, mt: 2 }}
+        type="primary"
+        icon={<PlusOutlined />}
+        onClick={() => navigate('/naturalezas/new')}
+        style={{ marginBottom: 16 }}
       >
         Crear nueva Naturaleza
       </Button>
-      {naturalezas.length > 0 ? (
-        <TableContainer component={Paper}>
-          <Table>
-            <TableHead>
-              <TableRow>
-                {columns.map((column) => (
-                  <TableCell key={column.key}>{column.title}</TableCell>
-                ))}
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {naturalezas.map((naturaleza) => (
-                <TableRow key={naturaleza.id}>
-                  {columns.map((column) => (
-                    <TableCell key={`${naturaleza.id}-${column.key}`}>
-                      {column.render
-                        ? column.render(naturaleza)
-                        : naturaleza[column.dataIndex as keyof Naturaleza]}
-                    </TableCell>
-                  ))}
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </TableContainer>
-      ) : (
-        <Typography variant="body1">No hay naturalezas para mostrar.</Typography>
-      )}
-      <Pagination
-        current={pagination.current}
-        total={pagination.total}
-        pageSize={pagination.pageSize}
-        onChange={handlePaginationChange}
+      <CommonTable
+        data={naturalezas}
+        columns={columns}
+        pagination={{
+          ...pagination,
+          onChange: handlePaginationChange,
+        }}
+        loading={loading}
+        onEdit={handleEdit}
+        onDelete={handleDelete}
+        isAdmin={isAdmin()}
       />
-
-      {/* Delete Confirmation Dialog */}
-      <Dialog
-        open={deleteDialogOpen}
-        onClose={() => setDeleteDialogOpen(false)}
-      >
-        <DialogTitle>Confirmar eliminación</DialogTitle>
-        <DialogContent>
-          <DialogContentText>
-            ¿Estás seguro de que quieres eliminar esta naturaleza?
-          </DialogContentText>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setDeleteDialogOpen(false)}>Cancelar</Button>
-          <Button onClick={handleDeleteNaturaleza} color="secondary">
-            Eliminar
-          </Button>
-        </DialogActions>
-      </Dialog>
-    </Box>
+    </div>
   );
 };
 
