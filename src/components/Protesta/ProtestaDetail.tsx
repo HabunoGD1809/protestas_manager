@@ -4,7 +4,7 @@ import { Protesta, Naturaleza, Provincia } from '../../types';
 import { useApi } from '../../hooks/useApi';
 import { useAuth } from '../../hooks/useAuth';
 import { Card, Descriptions, Button, Space, message, Tag, Modal, Avatar } from 'antd';
-import { EditOutlined, DeleteOutlined, ArrowLeftOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
+import { EditOutlined, DeleteOutlined, ArrowLeftOutlined, ExclamationCircleOutlined, UserOutlined, MailOutlined } from '@ant-design/icons';
 import { getFullImageUrl } from '../../services/api';
 
 const ProtestaDetail: React.FC = () => {
@@ -133,6 +133,18 @@ const ProtestaDetail: React.FC = () => {
         <Descriptions.Item label="Provincia">{provincia?.nombre}</Descriptions.Item>
         <Descriptions.Item label="Fecha del Evento">{protesta.fecha_evento}</Descriptions.Item>
         <Descriptions.Item label="Fecha de Creación">{protesta.fecha_creacion}</Descriptions.Item>
+        <Descriptions.Item label="Creado por">
+          <Space>
+            <UserOutlined />
+            {protesta.creador_nombre || 'No disponible'}
+          </Space>
+        </Descriptions.Item>
+        <Descriptions.Item label="Email del Creador">
+          <Space>
+            <MailOutlined />
+            {protesta.creador_email || 'No disponible'}
+          </Space>
+        </Descriptions.Item>
       </Descriptions>
       <Descriptions column={1}>
         <Descriptions.Item label="Resumen">{protesta.resumen}</Descriptions.Item>

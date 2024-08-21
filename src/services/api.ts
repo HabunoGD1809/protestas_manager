@@ -253,6 +253,21 @@ export const authService = {
       throw error;
     }
   },
+
+  actualizarFotoUsuario: async (foto: File): Promise<User> => {
+    try {
+      const formData = new FormData();
+      formData.append('foto', foto);
+      const response = await api.post<User>('/usuarios/foto', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+      logInfo('Foto de usuario actualizada exitosamente');
+      return response.data;
+    } catch (error) {
+      logError('Error al actualizar la foto del usuario', error as Error);
+      throw error;
+    }
+  },
 };
 
 // Protesta service

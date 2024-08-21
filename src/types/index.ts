@@ -24,9 +24,10 @@ export interface Protesta {
   fecha_creacion: string;
   soft_delete: boolean;
   cabecillas: Cabecilla[];
-}
-
-export interface CrearProtesta {
+  creador_nombre?: string;
+  creador_email?: string;
+  
+}export interface CrearProtesta {
   nombre: string;
   naturaleza_id: string;
   provincia_id: string;

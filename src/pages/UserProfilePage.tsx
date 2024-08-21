@@ -1,72 +1,82 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { User } from '../types';
 import { authService } from '../services/api';
-import { Box, Avatar, Typography, Container, CircularProgress, Alert } from '@mui/material';
+import { Box, Avatar, Typography, Container, CircularProgress, Alert, Button, Input } from '@mui/material';
+import CameraAltIcon from '@mui/icons-material/CameraAlt';
+import '../styles/UserProfilePage.css';
 
 const UserProfilePage: React.FC = () => {
    const [user, setUser] = useState<User | null>(null);
    const [loading, setLoading] = useState(true);
    const [error, setError] = useState<string | null>(null);
+   const [uploading, setUploading] = useState(false);
+   const fileInputRef = useRef<HTMLInputElement>(null);
 
    useEffect(() => {
-      const fetchUserProfile = async () => {
-         try {
-            const userData = await authService.obtenerUsuarioActual();
-            setUser(userData);
-            setLoading(false);
-         } catch (err) {
-            setError('Error al cargar el perfil de usuario');
-            setLoading(false);
-         }
-      };
-
       fetchUserProfile();
    }, []);
+
+   const fetchUserProfile = async () => {
+      try {
+         const userData = await authService.obtenerUsuarioActual();
+         setUser(userData);
+         setLoading(false);
+      } catch (err) {
+         setError('Error al cargar el perfil de usuario');
+         setLoading(false);
+      }
+   };
+
+   const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+      const file = event.target.files?.[0];
+      if (file) {
+         setUploading(true);
+         try {
+            const updatedUser = await authService.actualizarFotoUsuario(file);
+            setUser(updatedUser);
+         } catch (err) {
+            setError('Error al actualizar la foto de perfil');
+         } finally {
+            setUploading(false);
+         }
+      }
+   };
+
+   const triggerFileInput = () => {
+      fileInputRef.current?.click();
+   };
 
    if (loading) return <Container><CircularProgress /></Container>;
    if (error) return <Container><Alert severity="error">{error}</Alert></Container>;
    if (!user) return <Container><Typography>No se encontró información del usuario</Typography></Container>;
 
    return (
-      <Container
-         style={{
-            height: '400px',
-            display: 'flex',
-            justifyContent: 'center',
-            alignItems: 'center',
-            backgroundColor: '#f5f5f5',
-            overflow: 'hidden',
-            borderRadius: '8px', 
-         }}
-      >
-         <Box
-            maxWidth="sm"
-            width="100%"
-            bgcolor="white"
-            boxShadow={3}
-            borderRadius={1}
-            padding={2}
-            border={2} 
-            borderColor="#0C9FFF" 
-            style={{
-               display: 'flex',
-               flexDirection: 'column',
-               alignItems: 'center'
-            }}
-         >
-            <Box
-               display="flex"
-               justifyContent="center"
-               marginBottom={2}
-            >
+      <Container className="user-profile-container">
+         <Box className="user-profile-box">
+            <Box display="flex" justifyContent="center" alignItems="center" marginBottom={2} position="relative">
                <Avatar
                   src={user.foto}
                   alt={`${user.nombre} ${user.apellidos}`}
-                  style={{
-                     width: 100,
-                     height: 100,
-                     border: '4px solid #1976d2'
-                  }}
+                  className="user-avatar"
+               />
+               <Button
+                  variant="contained"
+                  color="primary"
+                  size="small"
+                  startIcon={<CameraAltIcon />}
+                  onClick={triggerFileInput}
+                  className="change-photo-button"
+                  disabled={uploading}
+                  style={{ marginLeft: '10px' }} // Ajustar margen para alineación
+               >
+                  {uploading ? 'Subiendo...' : 'Cambiar foto'}
+               </Button>
+               <Input
+                  type="file"
+                  inputRef={fileInputRef}
+                  style={{ display: 'none' }}
+                  onChange={handleFileChange}
+                  inputProps={{ accept: 'image/*' }}
                />
             </Box>
             <Typography variant="h5" align="center">{user.nombre} {user.apellidos}</Typography>

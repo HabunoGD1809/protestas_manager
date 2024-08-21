@@ -30,7 +30,7 @@ const ProtestaList: React.FC = () => {
       setPagination({
         current: data.page,
         pageSize: data.page_size,
-        total: data.total
+        total: data.total,
       });
     } catch (error) {
       console.error('Error fetching protestas:', error);
@@ -135,6 +135,16 @@ const ProtestaList: React.FC = () => {
       dataIndex: 'cabecillas',
       key: 'cabecillas',
       render: renderCabecillas,
+    },
+    {
+      title: 'Creador',
+      dataIndex: 'creador_nombre',
+      key: 'creador_nombre',
+      render: (value: string, record: Protesta) => (
+        <Tooltip title={record.creador_email}>
+          <span>{value || 'N/A'}</span>
+        </Tooltip>
+      ),
     },
   ];
 
