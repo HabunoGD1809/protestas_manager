@@ -198,12 +198,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     };
   }, [isAuthenticated, startInactivityTimer]);
 
+
   const handleLogin = async (email: string, password: string) => {
     try {
       logInfo('Verificando si el usuario existe');
       const userExists = await checkUserExists(email);
       if (!userExists) {
-        throw new Error('El usuario no está registrado en la base de datos.');
+        throw new Error('USER_NOT_REGISTERED');
       }
 
       logInfo('Intentando iniciar sesión');
@@ -219,6 +220,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       logInfo('Inicio de sesión exitoso');
     } catch (error) {
       logError('Error durante el inicio de sesión', error);
+      if (error instanceof AxiosError) {
+        if (error.code === 'ECONNABORTED') {
+          throw new Error('CONNECTION_TIMEOUT');
+        } else if (!error.response) {
+          throw new Error('NO_SERVER_RESPONSE');
+        } else if (error.response.status === 401) {
+          throw new Error('INVALID_CREDENTIALS');
+        }
+      }
       throw error;
     }
   };

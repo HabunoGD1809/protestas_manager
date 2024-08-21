@@ -8,7 +8,7 @@ const Login: React.FC = () => {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [inactivityMessage, setInactivityMessage] = useState('');
-  const { login, checkUserExists } = useAuth();
+  const { login } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -35,23 +35,28 @@ const Login: React.FC = () => {
     }
 
     try {
-      console.log('Verificando existencia del usuario...');
-      const userExists = await checkUserExists(email);
-      console.log('Resultado de verificación:', userExists);
-
-      if (!userExists) {
-        setError('El usuario no está registrado en la base de datos.');
-        return;
-      }
-
-      console.log('Usuario verificado, intentando iniciar sesión...');
       await login(email, password);
       console.log('Inicio de sesión exitoso');
       navigate('/');
     } catch (err) {
       console.error('Error durante el proceso de inicio de sesión:', err);
       if (err instanceof Error) {
-        setError(`Error de autenticación: ${err.message}`);
+        switch (err.message) {
+          case 'USER_NOT_REGISTERED':
+            setError('El usuario no está registrado en la base de datos.');
+            break;
+          case 'CONNECTION_TIMEOUT':
+            setError('La conexión al servidor ha excedido el tiempo de espera. Por favor, intenta de nuevo.');
+            break;
+          case 'NO_SERVER_RESPONSE':
+            setError('No se pudo conectar con el servidor. Por favor, verifica tu conexión a internet e intenta de nuevo.');
+            break;
+          case 'INVALID_CREDENTIALS':
+            setError('Credenciales inválidas. Por favor, verifica tu email y contraseña.');
+            break;
+          default:
+            setError(`Error de autenticación: ${err.message}`);
+        }
       } else {
         setError('Ocurrió un error inesperado. Por favor, intenta de nuevo.');
       }

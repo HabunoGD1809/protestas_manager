@@ -31,6 +31,7 @@ const UserProfilePage: React.FC = () => {
       }
    };
 
+   
    const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
       const file = event.target.files?.[0];
       if (file) {
@@ -45,7 +46,17 @@ const UserProfilePage: React.FC = () => {
             setPhotoUrl(updatedUser.foto || null);
             message.success('Foto actualizada. Actualiza la página para ver los cambios permanentes.', 5);
          } catch (err) {
-            message.error('Error al actualizar la foto de perfil');
+            if (err instanceof Error) {
+               if ('response' in err && typeof err.response === 'object' && err.response !== null) {
+                  const response = err.response as { data?: { detail?: string } };
+                  const errorMessage = response.data?.detail || 'Error desconocido al actualizar la foto de perfil';
+                  message.error(errorMessage);
+               } else {
+                  message.error('Error al actualizar la foto de perfil');
+               }
+            } else {
+               message.error('Error inesperado al actualizar la foto de perfil');
+            }
             setTempPhotoUrl(null);
          } finally {
             setUploading(false);
