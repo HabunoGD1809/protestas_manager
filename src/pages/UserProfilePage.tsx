@@ -3,6 +3,7 @@ import { User } from '../types';
 import { authService } from '../services/api';
 import { Box, Avatar, Typography, Container, CircularProgress, Alert, Button, Input } from '@mui/material';
 import CameraAltIcon from '@mui/icons-material/CameraAlt';
+import { message } from 'antd';
 import '../styles/UserProfilePage.css';
 
 const UserProfilePage: React.FC = () => {
@@ -10,6 +11,8 @@ const UserProfilePage: React.FC = () => {
    const [loading, setLoading] = useState(true);
    const [error, setError] = useState<string | null>(null);
    const [uploading, setUploading] = useState(false);
+   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
+   const [tempPhotoUrl, setTempPhotoUrl] = useState<string | null>(null);
    const fileInputRef = useRef<HTMLInputElement>(null);
 
    useEffect(() => {
@@ -20,6 +23,7 @@ const UserProfilePage: React.FC = () => {
       try {
          const userData = await authService.obtenerUsuarioActual();
          setUser(userData);
+         setPhotoUrl(userData.foto || null);
          setLoading(false);
       } catch (err) {
          setError('Error al cargar el perfil de usuario');
@@ -32,10 +36,17 @@ const UserProfilePage: React.FC = () => {
       if (file) {
          setUploading(true);
          try {
+            // Crear una URL temporal para la vista previa inmediata
+            const tempUrl = URL.createObjectURL(file);
+            setTempPhotoUrl(tempUrl);
+
             const updatedUser = await authService.actualizarFotoUsuario(file);
             setUser(updatedUser);
+            setPhotoUrl(updatedUser.foto || null);
+            message.success('Foto actualizada. Actualiza la página para ver los cambios permanentes.', 5);
          } catch (err) {
-            setError('Error al actualizar la foto de perfil');
+            message.error('Error al actualizar la foto de perfil');
+            setTempPhotoUrl(null);
          } finally {
             setUploading(false);
          }
@@ -53,9 +64,9 @@ const UserProfilePage: React.FC = () => {
    return (
       <Container className="user-profile-container">
          <Box className="user-profile-box">
-            <Box display="flex" justifyContent="center" alignItems="center" marginBottom={2} position="relative">
+            <Box display="flex" justifyContent="center" alignItems="center" marginBottom={2} position="relative" flexDirection="column">
                <Avatar
-                  src={user.foto}
+                  src={tempPhotoUrl || photoUrl || undefined}
                   alt={`${user.nombre} ${user.apellidos}`}
                   className="user-avatar"
                />
@@ -67,7 +78,7 @@ const UserProfilePage: React.FC = () => {
                   onClick={triggerFileInput}
                   className="change-photo-button"
                   disabled={uploading}
-                  style={{ marginLeft: '10px' }} // Ajustar margen para alineación
+                  style={{ marginTop: '10px' }}
                >
                   {uploading ? 'Subiendo...' : 'Cambiar foto'}
                </Button>
