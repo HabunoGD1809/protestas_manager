@@ -12,7 +12,7 @@ import {
   User,
   Token,
 } from "../types";
-import { FilterValues } from "../components/Protesta/ProtestaList";
+import { FilterValues } from "../components/Protesta/ProtestaFilter"; 
 import { NaturalezaFilters } from "../components/Naturaleza/NaturalezaFilter";
 import { cacheService } from "./cacheService";
 import { logError, logInfo } from './loggingService';
@@ -380,19 +380,31 @@ class ProvinciaService extends BaseService<Provincia> {
     super("/provincias");
   }
 
-  async getAllNoPagination(): Promise<Provincia[]> {
-    const cacheKey = `${this.endpoint}_all`;
-    const cachedData = cacheService.get<Provincia[]>(cacheKey);
+  // Sobrescribimos el método getAll de la clase base
+  async getAll(): Promise<Provincia[]>;
+  async getAll(page?: number, pageSize?: number, filters?: Record<string, unknown>): Promise<PaginatedResponse<Provincia>>;
+  async getAll(page?: number, pageSize?: number, filters?: Record<string, unknown>): Promise<Provincia[] | PaginatedResponse<Provincia>> {
+    if (page === undefined && pageSize === undefined && filters === undefined) {
+      const cacheKey = `${this.endpoint}_all`;
+      const cachedData = cacheService.get<Provincia[]>(cacheKey);
 
-    if (cachedData) return cachedData;
+      if (cachedData) return cachedData;
 
-    const response = await api.get<Provincia[]>(`${this.endpoint}/all`);
-    cacheService.set(cacheKey, response.data);
-    return response.data;
+      try {
+        const response = await api.get<Provincia[]>(this.endpoint);
+        cacheService.set(cacheKey, response.data);
+        return response.data;
+      } catch (error) {
+        logError('Error al obtener todas las provincias', error as Error);
+        throw error;
+      }
+    } else {
+      return super.getAll(page, pageSize, filters);
+    }
   }
 
-  async getAll(page: number = 1, pageSize: number = 10, filters?: Record<string, unknown>): Promise<PaginatedResponse<Provincia>> {
-    return super.getAll(page, pageSize, filters);
+  async getById(id: string): Promise<Provincia> {
+    return super.getById(id);
   }
 }
 

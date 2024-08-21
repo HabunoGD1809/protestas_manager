@@ -41,7 +41,7 @@ const ProtestaForm: React.FC<ProtestaFormProps> = ({ initialData, onSubmit }) =>
         ]);
 
         setNaturalezas(naturalezasResponse.items || []);
-        setProvincias(provinciasResponse);
+        setProvincias(provinciasResponse); // Ahora provinciasResponse es directamente un array de Provincia
         setCabecillas(cabecillasResponse);
 
         if (initialData) {
