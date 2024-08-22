@@ -10,6 +10,7 @@ import { protestaService } from '../../services/api';
 import LoadingSpinner from '../Common/LoadingSpinner';
 import ErrorMessage from '../Common/ErrorMessage';
 import CommonTable from '../Common/CommonTable';
+import DeleteConfirmationDialog from '../Common/DeleteConfirmationDialog';
 
 const { Title } = Typography;
 
@@ -19,6 +20,8 @@ const ProtestaList: React.FC = () => {
   const [provincias, setProvincias] = useState<Provincia[]>([]);
   const [pagination, setPagination] = useState({ current: 1, pageSize: 10, total: 0 });
   const [filters, setFilters] = useState<FilterValues>({});
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [protestaToDelete, setProtestaToDelete] = useState<Protesta | null>(null);
   const { loading, error, request } = useApi();
   const { isAdmin } = useAuth();
   const navigate = useNavigate();
@@ -69,14 +72,25 @@ const ProtestaList: React.FC = () => {
     navigate(`/protestas/${protesta.id}`);
   };
 
-  const handleDelete = async (protesta: Protesta) => {
-    try {
-      await protestaService.delete(protesta.id);
-      setProtestas(prevProtestas => prevProtestas.filter(p => p.id !== protesta.id));
-      message.success('Protesta eliminada exitosamente');
-    } catch (error) {
-      console.error('Error deleting protesta:', error);
-      message.error('Error al eliminar la protesta');
+  const handleDeleteClick = (protesta: Protesta) => {
+    setProtestaToDelete(protesta);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (protestaToDelete) {
+      try {
+        await protestaService.delete(protestaToDelete.id);
+        setProtestas(prevProtestas => prevProtestas.filter(p => p.id !== protestaToDelete.id));
+        setDeleteDialogOpen(false);
+        setProtestaToDelete(null);
+      } catch (error) {
+        if (error instanceof Error) {
+          throw new Error(error.message);
+        } else {
+          throw new Error('Error desconocido al eliminar la protesta');
+        }
+      }
     }
   };
 
@@ -176,8 +190,14 @@ const ProtestaList: React.FC = () => {
         }}
         loading={loading}
         onEdit={handleEdit}
-        onDelete={handleDelete}
+        onDelete={handleDeleteClick}
         isAdmin={isAdmin()}
+      />
+      <DeleteConfirmationDialog
+        isOpen={deleteDialogOpen}
+        onClose={() => setDeleteDialogOpen(false)}
+        onConfirm={handleDeleteConfirm}
+        itemName={protestaToDelete ? protestaToDelete.nombre : ''}
       />
     </div>
   );

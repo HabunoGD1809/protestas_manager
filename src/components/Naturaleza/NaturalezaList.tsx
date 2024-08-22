@@ -10,6 +10,7 @@ import LoadingSpinner from '../Common/LoadingSpinner';
 import ErrorMessage from '../Common/ErrorMessage';
 import { useAuth } from '../../hooks/useAuth';
 import CommonTable from '../Common/CommonTable';
+import DeleteConfirmationDialog from '../Common/DeleteConfirmationDialog';
 import * as IconoirIcons from 'iconoir-react';
 
 const { Title } = Typography;
@@ -20,6 +21,8 @@ const NaturalezaList: React.FC = () => {
   const [naturalezas, setNaturalezas] = useState<Naturaleza[]>([]);
   const [pagination, setPagination] = useState({ current: 1, pageSize: 10, total: 0 });
   const [filters, setFilters] = useState<NaturalezaFilters>({});
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [naturalezaToDelete, setNaturalezaToDelete] = useState<Naturaleza | null>(null);
   const { loading, error } = useApi();
   const { isAdmin } = useAuth();
   const navigate = useNavigate();
@@ -56,14 +59,25 @@ const NaturalezaList: React.FC = () => {
     navigate(`/naturalezas/edit/${naturaleza.id}`);
   };
 
-  const handleDelete = async (naturaleza: Naturaleza) => {
-    try {
-      await naturalezaService.delete(naturaleza.id);
-      setNaturalezas(prevNaturalezas => prevNaturalezas.filter(n => n.id !== naturaleza.id));
-      message.success('Naturaleza eliminada exitosamente');
-    } catch (error) {
-      console.error('Error deleting naturaleza:', error);
-      message.error('Error al eliminar la naturaleza');
+  const handleDeleteClick = (naturaleza: Naturaleza) => {
+    setNaturalezaToDelete(naturaleza);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (naturalezaToDelete) {
+      try {
+        await naturalezaService.delete(naturalezaToDelete.id);
+        setNaturalezas(prevNaturalezas => prevNaturalezas.filter(n => n.id !== naturalezaToDelete.id));
+        setDeleteDialogOpen(false);
+        setNaturalezaToDelete(null);
+      } catch (error) {
+        if (error instanceof Error) {
+          throw new Error(error.message);
+        } else {
+          throw new Error('Error desconocido al eliminar la naturaleza');
+        }
+      }
     }
   };
 
@@ -120,8 +134,14 @@ const NaturalezaList: React.FC = () => {
         }}
         loading={loading}
         onEdit={handleEdit}
-        onDelete={handleDelete}
+        onDelete={handleDeleteClick}
         isAdmin={isAdmin()}
+      />
+      <DeleteConfirmationDialog
+        isOpen={deleteDialogOpen}
+        onClose={() => setDeleteDialogOpen(false)}
+        onConfirm={handleDeleteConfirm}
+        itemName={naturalezaToDelete ? naturalezaToDelete.nombre : ''}
       />
     </div>
   );

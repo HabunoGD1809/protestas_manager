@@ -11,6 +11,7 @@ import ErrorMessage from '../Common/ErrorMessage';
 import { useAuth } from '../../hooks/useAuth';
 import { getFullImageUrl } from '../../services/api';
 import CommonTable from '../Common/CommonTable';
+import DeleteConfirmationDialog from '../Common/DeleteConfirmationDialog';
 
 const { Title } = Typography;
 
@@ -18,6 +19,8 @@ const CabecillaList: React.FC = () => {
   const [cabecillas, setCabecillas] = useState<Cabecilla[]>([]);
   const [pagination, setPagination] = useState({ current: 1, pageSize: 10, total: 0 });
   const [filters, setFilters] = useState<CabecillaFilterValues>({});
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [cabecillaToDelete, setCabecillaToDelete] = useState<Cabecilla | null>(null);
   const { loading, error } = useApi();
   const { isAdmin } = useAuth();
   const navigate = useNavigate();
@@ -61,14 +64,25 @@ const CabecillaList: React.FC = () => {
     navigate(`/cabecillas/edit/${cabecilla.id}`);
   };
 
-  const handleDelete = async (cabecilla: Cabecilla) => {
-    try {
-      await cabecillaService.delete(cabecilla.id);
-      setCabecillas(prevCabecillas => prevCabecillas.filter(c => c.id !== cabecilla.id));
-      message.success(`Cabecilla ${cabecilla.nombre} ${cabecilla.apellido} eliminado exitosamente`);
-    } catch (error) {
-      console.error('Error deleting cabecilla:', error);
-      message.error('Error al eliminar el cabecilla');
+  const handleDeleteClick = (cabecilla: Cabecilla) => {
+    setCabecillaToDelete(cabecilla);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (cabecillaToDelete) {
+      try {
+        await cabecillaService.delete(cabecillaToDelete.id);
+        setCabecillas(prevCabecillas => prevCabecillas.filter(c => c.id !== cabecillaToDelete.id));
+        setDeleteDialogOpen(false);
+        setCabecillaToDelete(null);
+      } catch (error) {
+        if (error instanceof Error) {
+          throw new Error(error.message);
+        } else {
+          throw new Error('Error desconocido al eliminar el cabecilla');
+        }
+      }
     }
   };
 
@@ -110,8 +124,14 @@ const CabecillaList: React.FC = () => {
         }}
         loading={loading}
         onEdit={handleEdit}
-        onDelete={handleDelete}
+        onDelete={handleDeleteClick}
         isAdmin={isAdmin()}
+      />
+      <DeleteConfirmationDialog
+        isOpen={deleteDialogOpen}
+        onClose={() => setDeleteDialogOpen(false)}
+        onConfirm={handleDeleteConfirm}
+        itemName={cabecillaToDelete ? `${cabecillaToDelete.nombre} ${cabecillaToDelete.apellido}` : ''}
       />
     </div>
   );
