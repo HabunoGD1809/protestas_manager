@@ -1,41 +1,62 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Link as RouterLink } from 'react-router-dom';
-import { 
-  Typography, Grid, Paper, Box, Button, useTheme, 
+import {
+  Typography, Grid, Paper, Box, Button, useTheme,
   CircularProgress, Alert, Table, TableBody, TableCell, TableContainer, TableHead, TableRow
 } from '@mui/material';
-import { 
-  Person as PersonIcon, 
-  Nature as NatureIcon, 
-  Flag as FlagIcon, 
+import {
+  Person as PersonIcon,
+  Nature as NatureIcon,
+  Flag as FlagIcon,
   List as ListIcon,
 } from '@mui/icons-material';
-import { DataGrid, GridColDef, GridRenderCellParams, GridValueGetterParams } from '@mui/x-data-grid'; 
-import { 
+import { DataGrid, GridColDef,  } from '@mui/x-data-grid';
+import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
-  BarChart, Bar, PieChart, Pie, Cell
+  BarChart, Bar, PieChart, Pie, Cell, YAxisProps
 } from 'recharts';
 import { useApi } from '../hooks/useApi';
-import { ResumenPrincipal, ProtestasRecientes } from '../types';
+import { ResumenPrincipal,  } from '../types';
 
 const AdminDashboardPage: React.FC = () => {
   const theme = useTheme();
   const { loading, error, request } = useApi();
   const [dashboardData, setDashboardData] = useState<ResumenPrincipal | null>(null);
 
-  useEffect(() => {
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     try {
       const data = await request<ResumenPrincipal>('get', '/pagina-principal');
-      // console.log('Fetched dashboard data:', data); // no borrar
       setDashboardData(data);
     } catch (err) {
       console.error('Error fetching dashboard data:', err);
     }
-  };
+  }, [request]);
 
-  fetchData();
-}, [request]);
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  const protestasRecentesColumns: GridColDef[] = [
+    { field: 'id', headerName: 'ID', width: 220 },
+    { field: 'nombre', headerName: 'Nombre', width: 200 },
+    { field: 'fecha_evento', headerName: 'Fecha Evento', width: 130 },
+    { field: 'fecha_creacion', headerName: 'Fecha Creación', width: 130 },
+    {
+      field: 'actions',
+      headerName: 'Acciones',
+      width: 120,
+      renderCell: (params) => (
+        <Button
+          component={RouterLink}
+          to={`/protestas/${params.id}`}
+          variant="outlined"
+          size="small"
+        >
+          Ver Detalles
+        </Button>
+      ),
+    },
+  ];
 
   if (loading) {
     return (
@@ -49,12 +70,18 @@ const AdminDashboardPage: React.FC = () => {
     return (
       <Box m={2}>
         <Alert severity="error">{error}</Alert>
+        <Button onClick={fetchData} sx={{ mt: 2 }}>Reintentar</Button>
       </Box>
     );
   }
 
   if (!dashboardData) {
-    return null;
+    return (
+      <Box m={2}>
+        <Alert severity="info">No se pudo cargar la información del dashboard.</Alert>
+        <Button onClick={fetchData} sx={{ mt: 2 }}>Reintentar</Button>
+      </Box>
+    );
   }
 
   const statCards = [
@@ -64,71 +91,27 @@ const AdminDashboardPage: React.FC = () => {
     { icon: <PersonIcon fontSize="large" sx={{ color: theme.palette.error.main }} />, count: dashboardData.totales.cabecillas, label: 'Cabecillas', link: '/cabecillas' },
   ];
 
-  const protestasRecentesColumns: GridColDef<ProtestasRecientes>[] = [
-  { field: 'id', headerName: 'ID', width: 70 },
-  { field: 'nombre', headerName: 'Nombre', width: 200 },
-  { 
-    field: 'fecha_evento', 
-    headerName: 'Fecha Evento', 
-    width: 130, 
-    valueGetter: (params: GridValueGetterParams<ProtestasRecientes>) => {
-      if (params.value) {
-        try {
-          return new Date(params.value).toLocaleDateString();
-        } catch (error) {
-          console.error('Error parsing fecha_evento:', error);
-          return 'Invalid Date';
-        }
-      }
-      return 'N/A';
-    }
-  },
-  { 
-    field: 'fecha_creacion', 
-    headerName: 'Fecha Creación', 
-    width: 130, 
-    valueGetter: (params: GridValueGetterParams<ProtestasRecientes>) => {
-      if (params.value) {
-        try {
-          return new Date(params.value).toLocaleDateString();
-        } catch (error) {
-          console.error('Error parsing fecha_creacion:', error);
-          return 'Invalid Date';
-        }
-      }
-      return 'N/A';
-    }
-  },
-  {
-    field: 'actions',
-    headerName: 'Acciones',
-    width: 120,
-    renderCell: (params: GridRenderCellParams<ProtestasRecientes>) => (
-      <Button
-        component={RouterLink}
-        to={`/protestas/${params.id || ''}`}
-        variant="outlined"
-        size="small"
-        disabled={!params.id}
-      >
-        Ver Detalles
-      </Button>
-    ),
-  },
-];
-
   const protestasPorNaturalezaData = Object.entries(dashboardData.protestas_por_naturaleza).map(([name, value]) => ({ name, value }));
   const protestasPorProvinciaData = Object.entries(dashboardData.protestas_por_provincia).map(([name, value]) => ({ name, value }));
   const protestasUltimos30DiasData = Object.entries(dashboardData.protestas_ultimos_30_dias).map(([date, count]) => ({ date, count: Number(count) }));
 
   const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8'];
 
+  const CustomYAxis: React.FC<YAxisProps> = (props) => (
+    <YAxis
+      allowDecimals={false}
+      allowDataOverflow={false}
+      domain={['auto', 'auto']}
+      {...props}
+    />
+  );
+
   return (
     <Box sx={{ flexGrow: 1, p: 3 }}>
       <Typography variant="h4" gutterBottom>
         Panel de Administración
       </Typography>
-      
+
       <Grid container spacing={3}>
         {statCards.map((card, index) => (
           <Grid item xs={12} sm={6} md={3} key={index}>
@@ -176,7 +159,7 @@ const AdminDashboardPage: React.FC = () => {
               <BarChart data={protestasPorProvinciaData}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="name" />
-                <YAxis />
+                <CustomYAxis />
                 <Tooltip />
                 <Legend />
                 <Bar dataKey="value" fill={theme.palette.primary.main} />
@@ -194,7 +177,7 @@ const AdminDashboardPage: React.FC = () => {
               <LineChart data={protestasUltimos30DiasData}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="date" />
-                <YAxis />
+                <CustomYAxis />
                 <Tooltip />
                 <Legend />
                 <Line type="monotone" dataKey="count" stroke={theme.palette.secondary.main} activeDot={{ r: 8 }} />
@@ -235,7 +218,8 @@ const AdminDashboardPage: React.FC = () => {
               <Table>
                 <TableHead>
                   <TableRow>
-                    <TableCell>Nombre</TableCell><TableCell align="right">Protestas Creadas</TableCell>
+                    <TableCell>Nombre</TableCell>
+                    <TableCell align="right">Protestas Creadas</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>

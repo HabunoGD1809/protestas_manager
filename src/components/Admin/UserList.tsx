@@ -1,22 +1,15 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   Grid,
-  Card,
-  CardContent,
-  CardActions,
-  Avatar,
-  Typography,
-  Button,
-  CircularProgress,
-  Box,
+  Dialog,
+  DialogContent,
+  DialogTitle,
+  Alert,
   useTheme,
   useMediaQuery,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogContentText,
-  DialogTitle,
-  Alert
+  CircularProgress,
+  Chip,
+  Box
 } from '@mui/material';
 import { User } from '../../types';
 import ChangeUserRole from './ChangeUserRole';
@@ -24,20 +17,54 @@ import Pagination from '../Common/Pagination';
 import { userService, getFullImageUrl } from '../../services/api';
 import CreateUserForm from './CreateUserForm';
 import { message } from 'antd';
+import DeleteConfirmationDialog from '../Common/DeleteConfirmationDialog';
+import {
+  StyledBox,
+  StyledErrorAlert,
+  StyledCreateButton,
+  StyledCard,
+  StyledCardContent,
+  StyledAvatar,
+  StyledUserName,
+  StyledUserInfo,
+  StyledCardActions,
+  StyledPaginationContainer,
+  StyledNoUsersText,
+  StyledLoadingContainer,
+  StyledCurrentUserChip
+} from '../../styles/UserListStyles';
+
+// Función de utilidad para manejar errores de manera consistente
+const handleError = (error: unknown, setError: React.Dispatch<React.SetStateAction<string | null>>) => {
+  const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
+  console.error('Error:', errorMessage);
+  setError(errorMessage);
+  message.error(errorMessage);
+};
 
 const UserList: React.FC = () => {
+  const theme = useTheme();
+  const isSmallScreen = useMediaQuery(theme.breakpoints.down('sm'));
   const [users, setUsers] = useState<User[]>([]);
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [pagination, setPagination] = useState({ current: 1, pageSize: 12, total: 0 });
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [userToDelete, setUserToDelete] = useState<User | null>(null);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
-  const theme = useTheme();
-  const isSmallScreen = useMediaQuery(theme.breakpoints.down('sm'));
+
+  const fetchCurrentUser = useCallback(async () => {
+    try {
+      const user = await userService.getCurrentUser();
+      setCurrentUser(user);
+    } catch (err) {
+      handleError(err, setError);
+    }
+  }, []);
 
   const handleRoleChange = useCallback((userId: string, newRole: 'admin' | 'usuario') => {
-    setUsers(prevUsers => prevUsers.map(user => 
+    setUsers(prevUsers => prevUsers.map(user =>
       user.id === userId ? { ...user, rol: newRole } : user
     ));
     message.success(`Rol de usuario actualizado a ${newRole}`);
@@ -48,7 +75,6 @@ const UserList: React.FC = () => {
     setError(null);
     try {
       const response = await userService.getAll(page, pageSize);
-      // console.log('API Response:', response); //no borrar
       if (Array.isArray(response)) {
         const usersWithFullImageUrls = response.map(user => ({
           ...user,
@@ -74,168 +100,150 @@ const UserList: React.FC = () => {
         throw new Error('Respuesta de API inválida');
       }
     } catch (err) {
-      console.error('Error al obtener usuarios:', err);
-      setError('Error al cargar los usuarios. Por favor, intente de nuevo más tarde.');
-      message.error('No se pudieron cargar los usuarios. Por favor, intente de nuevo.');
+      handleError(err, setError);
       setUsers([]);
     } finally {
       setIsLoading(false);
     }
   }, []);
 
-  useEffect(() => {
-    fetchUsers(pagination.current, pagination.pageSize);
-  }, [fetchUsers, pagination.current, pagination.pageSize]);
-
   const handlePaginationChange = useCallback((page: number, pageSize?: number) => {
     setPagination(prev => ({ ...prev, current: page, pageSize: pageSize || prev.pageSize }));
   }, []);
 
   const handleDeleteUser = useCallback(async () => {
-  if (userToDelete) {
-    try {
-      const currentUser = await userService.getCurrentUser();
-      if (currentUser.id === userToDelete.id) {
-        message.error('No puedes eliminar tu propia cuenta.');
+    if (userToDelete) {
+      try {
+        if (currentUser && currentUser.id === userToDelete.id) {
+          throw new Error('No puedes eliminar tu propia cuenta.');
+        }
+
+        await userService.delete(userToDelete.id);
+        setUsers(prevUsers => prevUsers.filter(user => user.id !== userToDelete.id));
         setDeleteDialogOpen(false);
         setUserToDelete(null);
-        return;
+        message.success('Usuario eliminado exitosamente');
+      } catch (error) {
+        handleError(error, setError);
       }
-
-      await userService.delete(userToDelete.id);
-      setUsers(prevUsers => prevUsers.filter(user => user.id !== userToDelete.id));
-      setDeleteDialogOpen(false);
-      setUserToDelete(null);
-      message.success(`Usuario ${userToDelete.nombre} ${userToDelete.apellidos} eliminado exitosamente`);
-    } catch (error) {
-      console.error('Error al eliminar usuario:', error);
-      setError('Error al eliminar el usuario. Por favor, intente de nuevo.');
-      message.error('No se pudo eliminar el usuario. Por favor, intente de nuevo.');
     }
-  }
-}, [userToDelete]);
-
+  }, [userToDelete, currentUser]);
 
   const handleCreateUser = useCallback(async (userData: FormData) => {
-  try {
-    const newUser = await userService.create(userData);
-    setUsers(prevUsers => [...prevUsers, newUser]);
-    setCreateDialogOpen(false);
-    message.success('Usuario creado exitosamente');
-  } catch (error) {
-    if (error instanceof Error) {
-      if (error.message.includes("Ya existe un usuario con el email")) {
-        message.error('Ya existe un usuario con el email proporcionado. Por favor, elija otro.');
-      } else {
-        setError(error.message);
-        message.error('No se pudo crear el usuario. Por favor, intente de nuevo.');
-      }
-    } else {
-      setError('Error al crear el usuario. Por favor, intente de nuevo.');
-      message.error('No se pudo crear el usuario. Por favor, intente de nuevo.');
+    try {
+      const newUser = await userService.create(userData);
+      setUsers(prevUsers => [...prevUsers, newUser]);
+      setCreateDialogOpen(false);
+      message.success('Usuario creado exitosamente');
+    } catch (error) {
+      handleError(error, setError);
     }
-  }
-}, []);
+  }, []);
+
+  useEffect(() => {
+    fetchCurrentUser();
+  }, [fetchCurrentUser]);
+
+  useEffect(() => {
+    fetchUsers(pagination.current, pagination.pageSize);
+  }, [fetchUsers, pagination.current, pagination.pageSize]);
 
   if (isLoading) {
     return (
-      <Box display="flex" justifyContent="center" alignItems="center" height="100vh">
+      <StyledLoadingContainer>
         <CircularProgress />
-      </Box>
+      </StyledLoadingContainer>
     );
   }
 
   return (
-    <Box sx={{ padding: theme.spacing(isSmallScreen ? 1 : 2) }}>
+    <StyledBox>
       {error && (
-        <Alert severity="error" sx={{ mb: 2 }}>
-          {error}
-        </Alert>
+        <StyledErrorAlert>
+          <Alert severity="error">
+            {error}
+          </Alert>
+        </StyledErrorAlert>
       )}
-      <Button 
-        variant="contained" 
-        color="primary" 
+      <StyledCreateButton
+        variant="contained"
+        color="primary"
         onClick={() => setCreateDialogOpen(true)}
-        sx={{ mb: 2 }}
       >
         Crear Nuevo Usuario
-      </Button>
+      </StyledCreateButton>
       {users.length > 0 ? (
         <Grid container spacing={isSmallScreen ? 2 : 3}>
           {users.map((user) => (
             <Grid item xs={12} sm={6} md={4} lg={3} key={user.id}>
-              <Card elevation={3}>
-                <CardContent>
-                  <Box display="flex" flexDirection="column" alignItems="center" mb={isSmallScreen ? 1 : 2}>
-                    <Avatar
-                      src={user.foto || undefined}
-                      alt={`${user.nombre} ${user.apellidos}`}
-                      sx={{ width: isSmallScreen ? 60 : 80, height: isSmallScreen ? 60 : 80, mb: 1 }}
-                    />
-                    <Typography variant={isSmallScreen ? "subtitle1" : "h6"} component="div" textAlign="center">
-                      {user.nombre} {user.apellidos}
-                    </Typography>
-                  </Box>
-                  <Typography variant="body2" color="text.secondary" gutterBottom>
+              <StyledCard elevation={3} isCurrentUser={currentUser?.id === user.id}>
+                <StyledCardContent>
+                  <StyledAvatar
+                    src={user.foto || undefined}
+                    alt={`${user.nombre} ${user.apellidos}`}
+                  />
+                  <StyledUserName variant={isSmallScreen ? "subtitle1" : "h6"}>
+                    {user.nombre} {user.apellidos}
+                    {currentUser?.id === user.id && (
+                      <StyledCurrentUserChip label="Tú" color="primary" size="small" />
+                    )}
+                  </StyledUserName>
+                  <StyledUserInfo variant="body2" color="text.secondary">
                     Email: {user.email}
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    Rol: {user.rol}
-                  </Typography>
-                </CardContent>
-                <CardActions sx={{ flexDirection: isSmallScreen ? 'column' : 'row', alignItems: 'stretch' }}>
+                  </StyledUserInfo>
+                  <Box sx={{
+                    marginBottom: theme.spacing(1),
+                    textAlign: 'center',
+                    ...theme.typography.body2,
+                    color: theme.palette.text.secondary
+                  }}>
+                    Rol: <Chip label={user.rol} color={user.rol === 'admin' ? 'secondary' : 'default'} size="small" />
+                  </Box>
+                </StyledCardContent>
+                <StyledCardActions>
                   <ChangeUserRole
                     userId={user.id}
                     currentRole={user.rol}
                     onRoleChange={(newRole) => handleRoleChange(user.id, newRole)}
+                    disabled={currentUser?.id === user.id}
                   />
-                  <Button 
-                    size="small" 
-                    color="secondary" 
+                  <StyledCreateButton
+                    size="small"
+                    color="secondary"
                     fullWidth={isSmallScreen}
                     onClick={() => {
                       setUserToDelete(user);
                       setDeleteDialogOpen(true);
                     }}
+                    disabled={currentUser?.id === user.id}
                   >
                     Eliminar
-                  </Button>
-                </CardActions>
-              </Card>
+                  </StyledCreateButton>
+                </StyledCardActions>
+              </StyledCard>
             </Grid>
           ))}
         </Grid>
       ) : (
-        <Typography variant="body1" textAlign="center" mt={3}>
+        <StyledNoUsersText variant="body1">
           No hay usuarios para mostrar.
-        </Typography>
+        </StyledNoUsersText>
       )}
-      <Box mt={4} display="flex" justifyContent="center">
+      <StyledPaginationContainer>
         <Pagination
           current={pagination.current}
           total={pagination.total}
           pageSize={pagination.pageSize}
           onChange={handlePaginationChange}
         />
-      </Box>
+      </StyledPaginationContainer>
 
-      <Dialog
-        open={deleteDialogOpen}
+      <DeleteConfirmationDialog
+        isOpen={deleteDialogOpen}
         onClose={() => setDeleteDialogOpen(false)}
-      >
-        <DialogTitle>Confirmar eliminación</DialogTitle>
-        <DialogContent>
-          <DialogContentText>
-            ¿Estás seguro de que quieres eliminar a este usuario?
-          </DialogContentText>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setDeleteDialogOpen(false)}>Cancelar</Button>
-          <Button onClick={handleDeleteUser} color="secondary">
-            Eliminar
-          </Button>
-        </DialogActions>
-      </Dialog>
+        onConfirm={handleDeleteUser}
+        itemName={userToDelete ? `${userToDelete.nombre} ${userToDelete.apellidos}` : ''}
+      />
 
       <Dialog
         open={createDialogOpen}
@@ -246,7 +254,7 @@ const UserList: React.FC = () => {
           <CreateUserForm onSubmit={handleCreateUser} onCancel={() => setCreateDialogOpen(false)} />
         </DialogContent>
       </Dialog>
-    </Box>
+    </StyledBox>
   );
 };
 

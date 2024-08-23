@@ -8,7 +8,7 @@ interface InactivityDialogProps {
   countdownDuration: number;
 }
 
-const InactivityDialog: React.FC<InactivityDialogProps> = ({
+  const InactivityDialog: React.FC<InactivityDialogProps> = ({
   open,
   onKeepActive,
   onLogout,
@@ -23,7 +23,9 @@ const InactivityDialog: React.FC<InactivityDialogProps> = ({
     } else if (countdown === 0) {
       onLogout();
     }
-    return () => clearTimeout(timer);
+    return () => {
+      if (timer) clearTimeout(timer);
+    };
   }, [open, countdown, onLogout]);
 
   useEffect(() => {
@@ -31,6 +33,15 @@ const InactivityDialog: React.FC<InactivityDialogProps> = ({
       setCountdown(countdownDuration);
     }
   }, [open, countdownDuration]);
+
+  const handleKeepActive = () => {
+    try {
+      onKeepActive();
+    } catch (error) {
+      console.error('Error al mantener la sesión activa:', error);
+      onLogout(); // Si hay un error, cerramos la sesión por seguridad
+    }
+  };
 
   return (
     <Dialog open={open}>
@@ -44,7 +55,7 @@ const InactivityDialog: React.FC<InactivityDialogProps> = ({
         <Button onClick={onLogout} color="secondary">
           Cerrar sesión
         </Button>
-        <Button onClick={onKeepActive} color="primary" autoFocus>
+        <Button onClick={handleKeepActive} color="primary" autoFocus>
           Mantener sesión activa
         </Button>
       </DialogActions>

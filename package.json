@@ -41,7 +41,7 @@
     "react-query": "^3.39.3",
     "react-router-dom": "^6.24.1",
     "react-text-mask": "^5.5.0",
-    "recharts": "^2.12.7",
+    "recharts": "^2.10.2",
     "yup": "^1.4.0"
   },
   "devDependencies": {

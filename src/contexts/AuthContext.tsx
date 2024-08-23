@@ -6,6 +6,11 @@ import { authService, checkUserExists } from '../services/api';
 import InactivityDialog from '../components/Common/InactivityDialog';
 import { logError, logInfo } from '../services/loggingService';
 import { AxiosError } from 'axios';
+import { BroadcastChannel } from 'broadcast-channel';
+
+interface AuthChannelMessage {
+  type: 'logout';
+}
 
 export interface AuthContextType {
   user: User | null;
@@ -49,7 +54,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     onLogout: () => { },
   });
 
-  const handleLogout = useCallback((reason?: 'inactivity' | 'manual' | 'error') => {
+  const authChannel = useRef<BroadcastChannel<AuthChannelMessage> | null>(null);
+
+  const handleLogout = useCallback((reason?: 'inactivity' | 'manual' | 'error' | 'sync') => {
     logInfo('Cerrando sesión del usuario', { reason });
     authService.logout();
     setUser(null);
@@ -60,8 +67,32 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     if (inactivityTimerRef.current) clearTimeout(inactivityTimerRef.current);
     if (refreshTimerRef.current) clearInterval(refreshTimerRef.current);
 
+    if (reason !== 'sync' && authChannel.current) {
+      authChannel.current.postMessage({ type: 'logout' }).catch(error => {
+        logError('Error al enviar mensaje de cierre de sesión', error);
+      });
+    }
+
     navigate(reason === 'inactivity' ? '/login?inactivity=true' : '/login');
   }, [navigate]);
+
+  useEffect(() => {
+    authChannel.current = new BroadcastChannel<AuthChannelMessage>('auth_channel');
+    const channel = authChannel.current;
+
+    channel.onmessage = (msg: AuthChannelMessage) => {
+      if (msg.type === 'logout') {
+        handleLogout('sync');
+      }
+    };
+
+    return () => {
+      if (authChannel.current) {
+        authChannel.current.close();
+        authChannel.current = null;
+      }
+    };
+  }, [handleLogout]);
 
   const refreshUserToken = useCallback(async () => {
     if (isRefreshing) return false;
@@ -197,7 +228,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       window.removeEventListener('keypress', resetInactivityTimer);
     };
   }, [isAuthenticated, startInactivityTimer]);
-
 
   const handleLogin = async (email: string, password: string) => {
     try {

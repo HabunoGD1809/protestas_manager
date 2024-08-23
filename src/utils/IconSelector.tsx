@@ -14,6 +14,7 @@ import {
 } from '@mui/material';
 import * as IconoirIcons from 'iconoir-react';
 import SearchIcon from '@mui/icons-material/Search';
+import CloseIcon from '@mui/icons-material/Close';
 
 interface IconSelectorProps {
   open: boolean;
@@ -30,8 +31,12 @@ const IconSelector: React.FC<IconSelectorProps> = ({ open, onClose, onSelect }) 
   const theme = useTheme();
 
   const iconList = useMemo(() => {
+    const searchTerms = search.toLowerCase().split(' ');
     return Object.keys(IconoirIcons).filter(key =>
-      key.toLowerCase().includes(search.toLowerCase())
+      searchTerms.every(term =>
+        key.toLowerCase().includes(term) ||
+        key.toLowerCase().replace(/([a-z])([A-Z])/g, '$1 $2').toLowerCase().includes(term)
+      )
     );
   }, [search]);
 
@@ -44,8 +49,17 @@ const IconSelector: React.FC<IconSelectorProps> = ({ open, onClose, onSelect }) 
 
   return (
     <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
-      <DialogTitle>
+      <DialogTitle sx={{ m: 0, p: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         Seleccionar un Icono
+        <IconButton
+          aria-label="close"
+          onClick={onClose}
+          sx={{
+            color: (theme) => theme.palette.grey[500],
+          }}
+        >
+          <CloseIcon />
+        </IconButton>
       </DialogTitle>
       <Divider />
       <DialogContent>
@@ -53,7 +67,7 @@ const IconSelector: React.FC<IconSelectorProps> = ({ open, onClose, onSelect }) 
           <TextField
             fullWidth
             variant="outlined"
-            placeholder="Buscar iconos..."
+            placeholder="Buscar iconos... / Search icons..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             InputProps={{

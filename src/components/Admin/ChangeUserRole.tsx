@@ -1,42 +1,56 @@
 import React from 'react';
-import { Select, MenuItem, FormControl, InputLabel, SelectChangeEvent } from '@mui/material';
-import { userService } from '../../services/api';
-import axios from 'axios';
+import { Button, Menu, MenuItem } from '@mui/material';
+import ArrowDropDownIcon from '@mui/icons-material/ArrowDropDown';
 
 interface ChangeUserRoleProps {
   userId: string;
   currentRole: 'admin' | 'usuario';
   onRoleChange: (newRole: 'admin' | 'usuario') => void;
+  disabled?: boolean;
 }
 
-const ChangeUserRole: React.FC<ChangeUserRoleProps> = ({ userId, currentRole, onRoleChange }) => {
-const handleRoleChange = async (event: SelectChangeEvent<'admin' | 'usuario'>) => {
-  const newRole = event.target.value as 'admin' | 'usuario';
-  try {
-    await userService.updateRole(userId, newRole);
+const ChangeUserRole: React.FC<ChangeUserRoleProps> = ({ currentRole, onRoleChange, disabled }): JSX.Element => {
+  const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
+
+  const handleClick = (event: React.MouseEvent<HTMLButtonElement>) => {
+    setAnchorEl(event.currentTarget);
+  };
+
+  const handleClose = () => {
+    setAnchorEl(null);
+  };
+
+  const handleRoleChange = (newRole: 'admin' | 'usuario') => {
     onRoleChange(newRole);
-  } catch (error) {
-    if (axios.isAxiosError(error) && error.response) {
-      console.error('Error al cambiar el rol del usuario:', error.response.data);
-    } else {
-      console.error('Error al cambiar el rol del usuario:', error);
-    }
-  }
-};
+    handleClose();
+  };
 
   return (
-    <FormControl fullWidth>
-      <InputLabel id={`role-select-label-${userId}`}>Rol</InputLabel>
-      <Select
-        labelId={`role-select-label-${userId}`}
-        value={currentRole}
-        label="Rol"
-        onChange={handleRoleChange}
+    <>
+      <Button
+        aria-controls="simple-menu"
+        aria-haspopup="true"
+        onClick={handleClick}
+        endIcon={<ArrowDropDownIcon />}
+        disabled={disabled}
       >
-        <MenuItem value="usuario">Usuario</MenuItem>
-        <MenuItem value="admin">Admin</MenuItem>
-      </Select>
-    </FormControl>
+        Cambiar Rol
+      </Button>
+      <Menu
+        id="simple-menu"
+        anchorEl={anchorEl}
+        keepMounted
+        open={Boolean(anchorEl)}
+        onClose={handleClose}
+      >
+        <MenuItem onClick={() => handleRoleChange('admin')} disabled={currentRole === 'admin'}>
+          Admin
+        </MenuItem>
+        <MenuItem onClick={() => handleRoleChange('usuario')} disabled={currentRole === 'usuario'}>
+          Usuario
+        </MenuItem>
+      </Menu>
+    </>
   );
 };
 
