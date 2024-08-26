@@ -1,8 +1,8 @@
 import { useState, useCallback } from 'react';
 import { api } from '../services/api';
 import { AxiosError } from 'axios';
-import { logError } from '../services/loggingService';
-import { tabSyncService } from '../services/tabSyncService';
+import { logError } from '../services/loggingService'; 
+
 
 type HttpMethod = 'get' | 'post' | 'put' | 'delete';
 
@@ -18,31 +18,22 @@ export const useApi = () => {
       const config = {
         headers: data instanceof FormData ? { 'Content-Type': 'multipart/form-data' } : {}
       };
-
-      const performRequest = async () => {
-        switch (method) {
-          case 'get':
-            return await api.get<T>(url, config);
-          case 'post':
-            return await api.post<T>(url, data, config);
-          case 'put':
-            return await api.put<T>(url, data, config);
-          case 'delete':
-            return await api.delete<T>(url, config);
-          default:
-            throw new Error(`Método HTTP no soportado: ${method}`);
-        }
-      };
-
-      if (method !== 'get') {
-        response = await tabSyncService.withLock(url, performRequest);
-        if (response === null) {
-          throw new Error('No se pudo adquirir el bloqueo para realizar la operación');
-        }
-      } else {
-        response = await performRequest();
+      switch (method) {
+        case 'get':
+          response = await api.get<T>(url, config);
+          break;
+        case 'post':
+          response = await api.post<T>(url, data, config);
+          break;
+        case 'put':
+          response = await api.put<T>(url, data, config);
+          break;
+        case 'delete':
+          response = await api.delete<T>(url, config);
+          break;
+        default:
+          throw new Error(`Método HTTP no soportado: ${method}`);
       }
-
       setLoading(false);
       return response.data;
     } catch (err) {
@@ -50,13 +41,13 @@ export const useApi = () => {
       if (err instanceof AxiosError) {
         const errorMessage = err.response?.data?.detail || err.message || 'Error en la solicitud';
         setError(typeof errorMessage === 'string' ? errorMessage : JSON.stringify(errorMessage));
-        logError('Error de API', { error: err, url, method, data });
+        logError('Error de API', { error: err, url, method, data }); 
       } else if (err instanceof Error) {
         setError(err.message);
-        logError('Error', { error: err, url, method, data });
+        logError('Error', { error: err, url, method, data }); 
       } else {
         setError('Ha ocurrido un error inesperado');
-        logError('Error inesperado', { error: err, url, method, data });
+        logError('Error inesperado', { error: err, url, method, data }); 
       }
       throw err;
     }

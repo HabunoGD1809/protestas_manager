@@ -7,13 +7,15 @@ export default defineConfig(({ mode }) => {
   return {
     plugins: [react()],
     server: {
+      // host: '0.0.0.0', 
+      // port: 3000, 
       proxy: {
         '/api': {
-          target: env.VITE_BASE_URL || 'http://127.0.0.1:8000', 
+          target: env.VITE_BASE_URL || 'http://127.0.0.1:8000',
           changeOrigin: true,
           secure: false,
         },
       },
     },
-  };
+  };  
 });

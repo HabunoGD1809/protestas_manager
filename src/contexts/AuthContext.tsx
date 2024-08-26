@@ -7,6 +7,7 @@ import InactivityDialog from '../components/Common/InactivityDialog';
 import { logError, logInfo } from '../services/loggingService';
 import { AxiosError } from 'axios';
 import { BroadcastChannel } from 'broadcast-channel';
+import { cacheService } from '../services/cacheService';
 
 interface AuthChannelMessage {
   type: 'logout';
@@ -64,6 +65,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     removeCookie('token');
     removeCookie('refreshToken');
     removeStoredUser();
+    cacheService.clear(); // Limpiar todo el caché al cerrar sesión
     if (inactivityTimerRef.current) clearTimeout(inactivityTimerRef.current);
     if (refreshTimerRef.current) clearInterval(refreshTimerRef.current);
 
@@ -107,6 +109,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         setCookie('token', newTokens.token_acceso, { path: '/', secure: true, sameSite: 'strict' });
         setCookie('refreshToken', newTokens.token_actualizacion, { path: '/', secure: true, sameSite: 'strict' });
         logInfo('Token renovado exitosamente');
+        cacheService.markAllAsStale(); // Invalidar todo el caché después de renovar el token
         return true;
       } catch (error) {
         logError('Error al renovar el token', error);
@@ -119,7 +122,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setIsRefreshing(false);
       return false;
     }
-  }, []);
+  }, [isRefreshing]);
 
   const startInactivityTimer = useCallback(() => {
     if (inactivityTimerRef.current) {
@@ -167,7 +170,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const token = getCookie('token');
       if (token) {
         try {
-          const userData = await authService.obtenerUsuarioActual();
+          let userData = cacheService.get<User>('current_user');
+          if (!userData) {
+            userData = await authService.obtenerUsuarioActual();
+            cacheService.set('current_user', userData);
+          }
           setUser(userData);
           setIsAuthenticated(true);
           logInfo('Autenticación inicializada exitosamente');
@@ -180,6 +187,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
                 const userData = await authService.obtenerUsuarioActual();
                 setUser(userData);
                 setIsAuthenticated(true);
+                cacheService.set('current_user', userData);
                 logInfo('Autenticación recuperada después de refrescar token');
               } catch (secondError) {
                 logError('Error al obtener usuario después de refrescar token', secondError);
@@ -247,6 +255,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setUser(userData);
       setIsAuthenticated(true);
       setStoredUser(userData);
+      cacheService.set('current_user', userData); // Cachear el usuario actual
       logInfo('Inicio de sesión exitoso');
     } catch (error) {
       logError('Error durante el inicio de sesión', error);

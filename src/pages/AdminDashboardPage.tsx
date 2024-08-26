@@ -10,13 +10,13 @@ import {
   Flag as FlagIcon,
   List as ListIcon,
 } from '@mui/icons-material';
-import { DataGrid, GridColDef,  } from '@mui/x-data-grid';
+import { DataGrid, GridColDef } from '@mui/x-data-grid';
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
   BarChart, Bar, PieChart, Pie, Cell, YAxisProps
 } from 'recharts';
 import { useApi } from '../hooks/useApi';
-import { ResumenPrincipal,  } from '../types';
+import { ResumenPrincipal } from '../types';
 
 const AdminDashboardPage: React.FC = () => {
   const theme = useTheme();
@@ -143,8 +143,8 @@ const AdminDashboardPage: React.FC = () => {
                   dataKey="value"
                   label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
                 >
-                  {protestasPorNaturalezaData.map((_entry, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  {protestasPorNaturalezaData.map((entry, index) => (
+                    <Cell key={`cell-${entry.name}-${index}`} fill={COLORS[index % COLORS.length]} />
                   ))}
                 </Pie>
                 <Tooltip />

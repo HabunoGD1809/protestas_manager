@@ -12,11 +12,11 @@ import {
   User,
   Token,
 } from "../types";
-import { FilterValues } from "../components/Protesta/ProtestaFilter"; 
+import { FilterValues } from "../components/Protesta/ProtestaFilter";
 import { NaturalezaFilters } from "../components/Naturaleza/NaturalezaFilter";
 import { cacheService } from "./cacheService";
 import { logError, logInfo } from './loggingService';
-import { tabSyncService } from './tabSyncService';
+// import { tabSyncService } from './tabSyncService';
 
 
 const BASE_URL = import.meta.env.VITE_API_URL || "/api";
@@ -150,64 +150,39 @@ class BaseService<T, CreateT = T> {
   }
 
   async create(data: CreateT): Promise<T> {
-    const result = await tabSyncService.withLock(`${this.endpoint}_create`, async () => {
-      try {
-        const response = await api.post<T>(this.endpoint, data);
-        cacheService.remove(this.endpoint);
-        logInfo(`${this.endpoint} creado exitosamente`, { data: response.data });
-        return response.data;
-      } catch (error) {
-        logError(`Error al crear ${this.endpoint}`, error as Error);
-        throw error;
-      }
-    });
-
-    if (result === null) {
-      logError(`No se pudo adquirir el bloqueo para crear ${this.endpoint}`, new Error('Lock acquisition failed'));
-      throw new Error(`No se pudo crear ${this.endpoint} debido a un conflicto de concurrencia`);
+    try {
+      const response = await api.post<T>(this.endpoint, data);
+      cacheService.remove(this.endpoint);
+      logInfo(`${this.endpoint} creado exitosamente`, { data: response.data });
+      return response.data;
+    } catch (error) {
+      logError(`Error al crear ${this.endpoint}`, error as Error);
+      throw error;
     }
-
-    return result;
   }
 
   async update(id: string, data: Partial<CreateT>): Promise<T> {
-    const result = await tabSyncService.withLock(`${this.endpoint}_${id}`, async () => {
-      try {
-        const response = await api.put<T>(`${this.endpoint}/${id}`, data);
-        cacheService.remove(this.endpoint);
-        cacheService.remove(`${this.endpoint}_${id}`);
-        logInfo(`${this.endpoint} actualizado exitosamente`, { id });
-        return response.data;
-      } catch (error) {
-        logError(`Error al actualizar ${this.endpoint}`, error as Error);
-        throw error;
-      }
-    });
-
-    if (result === null) {
-      logError(`No se pudo adquirir el bloqueo para actualizar ${this.endpoint}`, new Error('Lock acquisition failed'));
-      throw new Error(`No se pudo actualizar ${this.endpoint} debido a un conflicto de concurrencia`);
+    try {
+      const response = await api.put<T>(`${this.endpoint}/${id}`, data);
+      cacheService.remove(this.endpoint);
+      cacheService.remove(`${this.endpoint}_${id}`);
+      logInfo(`${this.endpoint} actualizado exitosamente`, { id });
+      return response.data;
+    } catch (error) {
+      logError(`Error al actualizar ${this.endpoint}`, error as Error);
+      throw error;
     }
-
-    return result;
   }
 
   async delete(id: string): Promise<void> {
-    const result = await tabSyncService.withLock(`${this.endpoint}_${id}`, async () => {
-      try {
-        await api.delete(`${this.endpoint}/${id}`);
-        cacheService.remove(this.endpoint);
-        cacheService.remove(`${this.endpoint}_${id}`);
-        logInfo(`${this.endpoint} eliminado exitosamente`, { id });
-      } catch (error) {
-        logError(`Error al eliminar ${this.endpoint}`, error as Error);
-        throw error;
-      }
-    });
-
-    if (result === null) {
-      logError(`No se pudo adquirir el bloqueo para eliminar ${this.endpoint}`, new Error('Lock acquisition failed'));
-      throw new Error(`No se pudo eliminar ${this.endpoint} debido a un conflicto de concurrencia`);
+    try {
+      await api.delete(`${this.endpoint}/${id}`);
+      cacheService.remove(this.endpoint);
+      cacheService.remove(`${this.endpoint}_${id}`);
+      logInfo(`${this.endpoint} eliminado exitosamente`, { id });
+    } catch (error) {
+      logError(`Error al eliminar ${this.endpoint}`, error as Error);
+      throw error;
     }
   }
 }

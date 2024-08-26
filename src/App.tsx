@@ -6,6 +6,7 @@ import PrivateRoute from './components/Common/PrivateRoute';
 import AdminRoute from './components/Common/AdminRoute';
 import LoadingSpinner from './components/Common/LoadingSpinner';
 import PublicOnlyRoute from './components/Common/PublicOnlyRoute';
+// import { versionCheckService } from './services/versionCheckService';
 
 const HomePage = lazy(() => import('./pages/HomePage'));
 const LoginPage = lazy(() => import('./pages/LoginPage'));
@@ -36,6 +37,8 @@ const App: React.FC = () => {
     };
 
     window.addEventListener('auth-error', handleAuthError as EventListener);
+
+    // versionCheckService.startVersionCheck();
 
     return () => {
       window.removeEventListener('auth-error', handleAuthError as EventListener);
