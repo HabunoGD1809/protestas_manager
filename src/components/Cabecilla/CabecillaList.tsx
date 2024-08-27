@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Typography, Button, message, Avatar } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
@@ -25,9 +25,9 @@ const CabecillaList: React.FC = () => {
   const { isAdmin } = useAuth();
   const navigate = useNavigate();
 
-  const fetchCabecillas = async (page: number, pageSize: number) => {
+  const fetchCabecillas = useCallback(async (page: number, pageSize: number, newFilters?: CabecillaFilterValues) => {
     try {
-      const filterRecord: Record<string, string> = Object.entries(filters).reduce((acc, [key, value]) => {
+      const filterRecord: Record<string, string> = Object.entries(newFilters || filters).reduce((acc, [key, value]) => {
         if (value !== undefined && value !== '') {
           acc[key] = value.toString();
         }
@@ -45,46 +45,56 @@ const CabecillaList: React.FC = () => {
       console.error('Error fetching cabecillas:', err);
       message.error('Error al cargar la lista de cabecillas');
     }
-  };
+  }, [filters]);
 
   useEffect(() => {
     fetchCabecillas(pagination.current, pagination.pageSize);
-  }, [filters]);
+  }, [fetchCabecillas, pagination.current, pagination.pageSize]);
 
-  const handlePaginationChange = (page: number, pageSize?: number) => {
+  const handlePaginationChange = useCallback((page: number, pageSize?: number) => {
     fetchCabecillas(page, pageSize || pagination.pageSize);
-  };
+  }, [fetchCabecillas, pagination.pageSize]);
 
-  const handleFilter = (newFilters: CabecillaFilterValues) => {
+  const handleFilter = useCallback((newFilters: CabecillaFilterValues) => {
     setFilters(newFilters);
-    fetchCabecillas(1, pagination.pageSize);
-  };
+    fetchCabecillas(1, pagination.pageSize, newFilters);
+  }, [fetchCabecillas, pagination.pageSize]);
 
-  const handleEdit = (cabecilla: Cabecilla) => {
+  const handleEdit = useCallback((cabecilla: Cabecilla) => {
     navigate(`/cabecillas/edit/${cabecilla.id}`);
-  };
+  }, [navigate]);
 
-  const handleDeleteClick = (cabecilla: Cabecilla) => {
+  const handleDeleteClick = useCallback((cabecilla: Cabecilla) => {
     setCabecillaToDelete(cabecilla);
     setDeleteDialogOpen(true);
-  };
+  }, []);
 
-  const handleDeleteConfirm = async () => {
+  const handleDeleteConfirm = useCallback(async () => {
     if (cabecillaToDelete) {
       try {
         await cabecillaService.delete(cabecillaToDelete.id);
         setCabecillas(prevCabecillas => prevCabecillas.filter(c => c.id !== cabecillaToDelete.id));
         setDeleteDialogOpen(false);
         setCabecillaToDelete(null);
+        message.success('Cabecilla eliminado exitosamente');
       } catch (error) {
-        if (error instanceof Error) {
-          throw new Error(error.message);
-        } else {
-          throw new Error('Error desconocido al eliminar el cabecilla');
-        }
+        console.error('Error al eliminar el cabecilla:', error);
+        message.error('Error al eliminar el cabecilla');
       }
     }
-  };
+  }, [cabecillaToDelete]);
+
+  useEffect(() => {
+    const handlePotentialDataUpdate = () => {
+      fetchCabecillas(pagination.current, pagination.pageSize);
+    };
+
+    window.addEventListener('potentialDataUpdate', handlePotentialDataUpdate);
+
+    return () => {
+      window.removeEventListener('potentialDataUpdate', handlePotentialDataUpdate);
+    };
+  }, [fetchCabecillas, pagination, pagination.pageSize]);
 
   const columns = [
     {

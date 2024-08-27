@@ -53,18 +53,26 @@ const ProtestaFilter: React.FC<ProtestaFilterProps> = ({ naturalezas, provincias
         <Col xs={24} sm={12} md={6}>
           <Form.Item name="naturaleza_id" label="Naturaleza">
             <Select placeholder="Seleccione la naturaleza" allowClear>
-              {naturalezas.map(n => (
-                <Option key={n.id} value={n.id}>{n.nombre}</Option>
-              ))}
+              {naturalezas && naturalezas.length > 0 ? (
+                naturalezas.map(n => (
+                  <Option key={n.id} value={n.id}>{n.nombre}</Option>
+                ))
+              ) : (
+                <Option value="">No hay naturalezas disponibles</Option>
+              )}
             </Select>
           </Form.Item>
         </Col>
         <Col xs={24} sm={12} md={6}>
           <Form.Item name="provincia_id" label="Provincia">
             <Select placeholder="Seleccione la provincia" allowClear>
-              {provincias.map(p => (
-                <Option key={p.id} value={p.id}>{p.nombre}</Option>
-              ))}
+              {provincias && provincias.length > 0 ? (
+                provincias.map(p => (
+                  <Option key={p.id} value={p.id}>{p.nombre}</Option>
+                ))
+              ) : (
+                <Option value="">No hay provincias disponibles</Option>
+              )}
             </Select>
           </Form.Item>
         </Col>

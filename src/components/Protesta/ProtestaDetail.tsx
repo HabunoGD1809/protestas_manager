@@ -6,6 +6,8 @@ import { useAuth } from '../../hooks/useAuth';
 import { Card, Descriptions, Button, Space, message, Tag, Modal, Avatar } from 'antd';
 import { EditOutlined, DeleteOutlined, ArrowLeftOutlined, ExclamationCircleOutlined, UserOutlined, MailOutlined } from '@ant-design/icons';
 import { getFullImageUrl } from '../../services/api';
+import { cacheService } from '../../services/cacheService';
+// import { versionCheckService } from '../../services/versionCheckService';
 
 const ProtestaDetail: React.FC = () => {
   const [protesta, setProtesta] = useState<Protesta | null>(null);
@@ -22,18 +24,32 @@ const ProtestaDetail: React.FC = () => {
       navigate('/protestas/crear');
       return;
     }
-    try {
-      const data = await request<Protesta>('get', `/protestas/${protestaId}`);
-      setProtesta(data);
-      if (data.naturaleza_id) {
-        fetchNaturaleza(data.naturaleza_id);
+    const cacheKey = `protesta_${protestaId}`;
+    const cachedProtesta = cacheService.get<Protesta>(cacheKey);
+
+    if (cachedProtesta) {
+      setProtesta(cachedProtesta);
+      if (cachedProtesta.naturaleza_id) {
+        fetchNaturaleza(cachedProtesta.naturaleza_id);
       }
-      if (data.provincia_id) {
-        fetchProvincia(data.provincia_id);
+      if (cachedProtesta.provincia_id) {
+        fetchProvincia(cachedProtesta.provincia_id);
       }
-    } catch (error) {
-      console.error('Error al cargar los detalles de la protesta:', error);
-      message.error('Error al cargar los detalles de la protesta');
+    } else {
+      try {
+        const data = await request<Protesta>('get', `/protestas/${protestaId}`);
+        setProtesta(data);
+        cacheService.set(cacheKey, data);
+        if (data.naturaleza_id) {
+          fetchNaturaleza(data.naturaleza_id);
+        }
+        if (data.provincia_id) {
+          fetchProvincia(data.provincia_id);
+        }
+      } catch (error) {
+        console.error('Error al cargar los detalles de la protesta:', error);
+        message.error('Error al cargar los detalles de la protesta');
+      }
     }
   }, [request, navigate]);
 
@@ -44,22 +60,53 @@ const ProtestaDetail: React.FC = () => {
   }, [id, fetchProtesta]);
 
   const fetchNaturaleza = async (naturalezaId: string) => {
-    try {
-      const data = await request<Naturaleza>('get', `/naturalezas/${naturalezaId}`);
-      setNaturaleza(data);
-    } catch (error) {
-      console.error('Error al cargar los detalles de la naturaleza:', error);
+    const cacheKey = `naturaleza_${naturalezaId}`;
+    const cachedNaturaleza = cacheService.get<Naturaleza>(cacheKey);
+
+    if (cachedNaturaleza) {
+      setNaturaleza(cachedNaturaleza);
+    } else {
+      try {
+        const data = await request<Naturaleza>('get', `/naturalezas/${naturalezaId}`);
+        setNaturaleza(data);
+        cacheService.set(cacheKey, data);
+      } catch (error) {
+        console.error('Error al cargar los detalles de la naturaleza:', error);
+      }
     }
   };
 
   const fetchProvincia = async (provinciaId: string) => {
-    try {
-      const data = await request<Provincia>('get', `/provincias/${provinciaId}`);
-      setProvincia(data);
-    } catch (error) {
-      console.error('Error al cargar los detalles de la provincia:', error);
+    const cacheKey = `provincia_${provinciaId}`;
+    const cachedProvincia = cacheService.get<Provincia>(cacheKey);
+
+    if (cachedProvincia) {
+      setProvincia(cachedProvincia);
+    } else {
+      try {
+        const data = await request<Provincia>('get', `/provincias/${provinciaId}`);
+        setProvincia(data);
+        cacheService.set(cacheKey, data);
+      } catch (error) {
+        console.error('Error al cargar los detalles de la provincia:', error);
+      }
     }
   };
+
+  useEffect(() => {
+    const handlePotentialDataUpdate = () => {
+      if (id && id !== 'crear') {
+        cacheService.markAsStale(`protesta_${id}`);
+        fetchProtesta(id);
+      }
+    };
+
+    window.addEventListener('potentialDataUpdate', handlePotentialDataUpdate);
+
+    return () => {
+      window.removeEventListener('potentialDataUpdate', handlePotentialDataUpdate);
+    };
+  }, [id, fetchProtesta]);
 
   const handleDelete = () => {
     if (id && protesta) {
@@ -74,6 +121,7 @@ const ProtestaDetail: React.FC = () => {
           try {
             await request('delete', `/protestas/${id}`);
             message.success(`Protesta "${protesta.nombre}" eliminada con éxito`);
+            cacheService.remove(`protesta_${id}`);
             navigate('/protestas');
           } catch (error) {
             console.error('Error al eliminar la protesta:', error);

@@ -34,7 +34,6 @@ import {
   StyledCurrentUserChip
 } from '../../styles/UserListStyles';
 
-// Función de utilidad para manejar errores de manera consistente
 const handleError = (error: unknown, setError: React.Dispatch<React.SetStateAction<string | null>>) => {
   const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
   console.error('Error:', errorMessage);
@@ -63,47 +62,52 @@ const UserList: React.FC = () => {
     }
   }, []);
 
-  const handleRoleChange = useCallback((userId: string, newRole: 'admin' | 'usuario') => {
-    setUsers(prevUsers => prevUsers.map(user =>
-      user.id === userId ? { ...user, rol: newRole } : user
-    ));
-    message.success(`Rol de usuario actualizado a ${newRole}`);
-  }, []);
-
   const fetchUsers = useCallback(async (page: number, pageSize: number) => {
     setIsLoading(true);
     setError(null);
     try {
       const response = await userService.getAll(page, pageSize);
+      let usersData: User[] = [];
+      let paginationData = { current: page, pageSize: pageSize, total: 0 };
+
       if (Array.isArray(response)) {
-        const usersWithFullImageUrls = response.map(user => ({
-          ...user,
-          foto: getFullImageUrl(user.foto)
-        }));
-        setUsers(usersWithFullImageUrls);
-        setPagination(prev => ({
-          ...prev,
-          total: response.length,
-        }));
-      } else if (response && Array.isArray(response.items)) {
-        const usersWithFullImageUrls = response.items.map(user => ({
-          ...user,
-          foto: getFullImageUrl(user.foto)
-        }));
-        setUsers(usersWithFullImageUrls);
-        setPagination({
+        usersData = response;
+        paginationData.total = response.length;
+      } else if (response && 'items' in response && Array.isArray(response.items)) {
+        usersData = response.items;
+        paginationData = {
           current: response.page,
           pageSize: response.page_size,
           total: response.total
-        });
+        };
       } else {
-        throw new Error('Respuesta de API inválida');
+        throw new Error('Formato de respuesta inesperado');
       }
+
+      const usersWithFullImageUrls = usersData.map(user => ({
+        ...user,
+        foto: getFullImageUrl(user.foto)
+      }));
+
+      setUsers(usersWithFullImageUrls);
+      setPagination(paginationData);
     } catch (err) {
       handleError(err, setError);
       setUsers([]);
     } finally {
       setIsLoading(false);
+    }
+  }, []);
+
+  const handleRoleChange = useCallback(async (userId: string, newRole: 'admin' | 'usuario') => {
+    try {
+      await userService.updateRole(userId, newRole);
+      setUsers(prevUsers => prevUsers.map(user =>
+        user.id === userId ? { ...user, rol: newRole } : user
+      ));
+      message.success(`Rol de usuario actualizado a ${newRole}`);
+    } catch (error) {
+      handleError(error, setError);
     }
   }, []);
 
@@ -146,6 +150,18 @@ const UserList: React.FC = () => {
 
   useEffect(() => {
     fetchUsers(pagination.current, pagination.pageSize);
+  }, [fetchUsers, pagination.current, pagination.pageSize]);
+
+  useEffect(() => {
+    const handlePotentialDataUpdate = () => {
+      fetchUsers(pagination.current, pagination.pageSize);
+    };
+
+    window.addEventListener('potentialDataUpdate', handlePotentialDataUpdate);
+
+    return () => {
+      window.removeEventListener('potentialDataUpdate', handlePotentialDataUpdate);
+    };
   }, [fetchUsers, pagination.current, pagination.pageSize]);
 
   if (isLoading) {

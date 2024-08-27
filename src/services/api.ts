@@ -15,9 +15,8 @@ import {
 import { FilterValues } from "../components/Protesta/ProtestaFilter";
 import { NaturalezaFilters } from "../components/Naturaleza/NaturalezaFilter";
 import { cacheService } from "./cacheService";
+import { versionCheckService } from "./versionCheckService";
 import { logError, logInfo } from './loggingService';
-// import { tabSyncService } from './tabSyncService';
-
 
 const BASE_URL = import.meta.env.VITE_API_URL || "/api";
 
@@ -119,7 +118,10 @@ class BaseService<T, CreateT = T> {
     const cacheKey = `${this.endpoint}_${JSON.stringify(filters)}`;
     const cachedData = cacheService.getPaginated<T>(cacheKey, page, pageSize);
 
-    if (cachedData) return cachedData;
+    if (cachedData) {
+      this.backgroundRefresh(cacheKey, page, pageSize, filters);
+      return cachedData;
+    }
 
     try {
       const response = await api.get<PaginatedResponse<T>>(this.endpoint, {
@@ -137,7 +139,10 @@ class BaseService<T, CreateT = T> {
     const cacheKey = `${this.endpoint}_${id}`;
     const cachedData = cacheService.get<T>(cacheKey);
 
-    if (cachedData) return cachedData;
+    if (cachedData) {
+      this.backgroundRefreshSingle(cacheKey, id);
+      return cachedData;
+    }
 
     try {
       const response = await api.get<T>(`${this.endpoint}/${id}`);
@@ -152,7 +157,8 @@ class BaseService<T, CreateT = T> {
   async create(data: CreateT): Promise<T> {
     try {
       const response = await api.post<T>(this.endpoint, data);
-      cacheService.remove(this.endpoint);
+      cacheService.invalidateRelatedCache(this.endpoint);
+      versionCheckService.forceVersionCheck();
       logInfo(`${this.endpoint} creado exitosamente`, { data: response.data });
       return response.data;
     } catch (error) {
@@ -164,8 +170,8 @@ class BaseService<T, CreateT = T> {
   async update(id: string, data: Partial<CreateT>): Promise<T> {
     try {
       const response = await api.put<T>(`${this.endpoint}/${id}`, data);
-      cacheService.remove(this.endpoint);
-      cacheService.remove(`${this.endpoint}_${id}`);
+      cacheService.invalidateRelatedCache(this.endpoint);
+      versionCheckService.forceVersionCheck();
       logInfo(`${this.endpoint} actualizado exitosamente`, { id });
       return response.data;
     } catch (error) {
@@ -177,12 +183,42 @@ class BaseService<T, CreateT = T> {
   async delete(id: string): Promise<void> {
     try {
       await api.delete(`${this.endpoint}/${id}`);
-      cacheService.remove(this.endpoint);
-      cacheService.remove(`${this.endpoint}_${id}`);
+      cacheService.invalidateRelatedCache(this.endpoint);
+      versionCheckService.forceVersionCheck();
       logInfo(`${this.endpoint} eliminado exitosamente`, { id });
     } catch (error) {
       logError(`Error al eliminar ${this.endpoint}`, error as Error);
       throw error;
+    }
+  }
+
+  invalidateCache(): void {
+    cacheService.invalidateRelatedCache(this.endpoint);
+  }
+
+  forceVersionCheck(): void {
+    versionCheckService.forceVersionCheck();
+  }
+
+  private async backgroundRefresh(cacheKey: string, page: number, pageSize: number, filters?: Record<string, unknown>): Promise<void> {
+    try {
+      const response = await api.get<PaginatedResponse<T>>(this.endpoint, {
+        params: { page, page_size: pageSize, ...filters },
+      });
+      cacheService.setPaginated(cacheKey, response.data, page, pageSize);
+      logInfo(`Actualización en segundo plano completada para ${this.endpoint}`, { cacheKey });
+    } catch (error) {
+      logError(`Error en la actualización en segundo plano para ${this.endpoint}`, error as Error);
+    }
+  }
+
+  private async backgroundRefreshSingle(cacheKey: string, id: string): Promise<void> {
+    try {
+      const response = await api.get<T>(`${this.endpoint}/${id}`);
+      cacheService.set(cacheKey, response.data);
+      logInfo(`Actualización en segundo plano completada para ${this.endpoint}/${id}`, { cacheKey });
+    } catch (error) {
+      logError(`Error en la actualización en segundo plano para ${this.endpoint}/${id}`, error as Error);
     }
   }
 }
@@ -320,6 +356,8 @@ class CabecillaService extends BaseService<Cabecilla, FormData> {
       const response = await api.post<Cabecilla>(this.endpoint, cabecilla, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
+      cacheService.invalidateRelatedCache(this.endpoint);
+      versionCheckService.forceVersionCheck();
       logInfo('Cabecilla creado exitosamente', { id: response.data.id });
       return this.addFullImageUrl(response.data);
     } catch (error) {
@@ -333,6 +371,8 @@ class CabecillaService extends BaseService<Cabecilla, FormData> {
       const response = await api.put<Cabecilla>(`${this.endpoint}/${id}`, cabecilla, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
+      cacheService.invalidateRelatedCache(this.endpoint);
+      versionCheckService.forceVersionCheck();
       logInfo('Cabecilla actualizado exitosamente', { id });
       return this.addFullImageUrl(response.data);
     } catch (error) {
@@ -348,6 +388,8 @@ class CabecillaService extends BaseService<Cabecilla, FormData> {
       const response = await api.post<Cabecilla>(`${this.endpoint}/${id}/foto`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
+      cacheService.invalidateRelatedCache(this.endpoint);
+      versionCheckService.forceVersionCheck();
       logInfo('Foto de cabecilla actualizada exitosamente', { id });
       return this.addFullImageUrl(response.data);
     } catch (error) {
@@ -405,7 +447,10 @@ class ProvinciaService extends BaseService<Provincia> {
       const cacheKey = `${this.endpoint}_all`;
       const cachedData = cacheService.get<Provincia[]>(cacheKey);
 
-      if (cachedData) return cachedData;
+      if (cachedData) {
+        this.backgroundRefreshAll(cacheKey);
+        return cachedData;
+      }
 
       try {
         const response = await api.get<Provincia[]>(this.endpoint);
@@ -420,8 +465,14 @@ class ProvinciaService extends BaseService<Provincia> {
     }
   }
 
-  async getById(id: string): Promise<Provincia> {
-    return super.getById(id);
+  private async backgroundRefreshAll(cacheKey: string): Promise<void> {
+    try {
+      const response = await api.get<Provincia[]>(this.endpoint);
+      cacheService.set(cacheKey, response.data);
+      logInfo('Actualización en segundo plano completada para todas las provincias');
+    } catch (error) {
+      logError('Error en la actualización en segundo plano de todas las provincias', error as Error);
+    }
   }
 }
 
@@ -433,7 +484,10 @@ export const resumenService = {
     const cacheKey = "resumen_principal";
     const cachedData = cacheService.get<ResumenPrincipal>(cacheKey);
 
-    if (cachedData) return cachedData;
+    if (cachedData) {
+      resumenService.backgroundRefresh();
+      return cachedData;
+    }
 
     try {
       const response = await api.get<ResumenPrincipal>("/pagina-principal");
@@ -443,6 +497,20 @@ export const resumenService = {
       logError("Error al obtener el resumen principal", error as Error);
       throw error;
     }
+  },
+
+  backgroundRefresh: async (): Promise<void> => {
+    try {
+      const response = await api.get<ResumenPrincipal>("/pagina-principal");
+      cacheService.set("resumen_principal", response.data);
+      logInfo("Actualización en segundo plano completada para el resumen principal");
+    } catch (error) {
+      logError("Error en la actualización en segundo plano del resumen principal", error as Error);
+    }
+  },
+
+  invalidateCache: (): void => {
+    cacheService.remove("resumen_principal");
   },
 };
 
@@ -457,7 +525,8 @@ class UserService extends BaseService<User, FormData> {
       const response = await api.post<User>("/admin/usuarios", userData, {
         headers: { "Content-Type": "multipart/form-data" },
       });
-      cacheService.remove(this.endpoint);
+      cacheService.invalidateRelatedCache(this.endpoint);
+      versionCheckService.forceVersionCheck();
       logInfo('Usuario creado exitosamente', { id: response.data.id });
       return response.data;
     } catch (error) {
@@ -477,8 +546,8 @@ class UserService extends BaseService<User, FormData> {
       const response = await api.put<User>(`${this.endpoint}/${id}/rol`, null, {
         params: { nuevo_rol: role },
       });
-      cacheService.remove(this.endpoint);
-      cacheService.remove(`${this.endpoint}_${id}`);
+      cacheService.invalidateRelatedCache(this.endpoint);
+      versionCheckService.forceVersionCheck();
       logInfo('Rol de usuario actualizado exitosamente', { id, newRole: role });
       return response.data;
     } catch (error) {
@@ -490,8 +559,8 @@ class UserService extends BaseService<User, FormData> {
   async delete(id: string): Promise<void> {
     try {
       await api.delete(`/admin/usuarios/${id}`);
-      cacheService.remove(this.endpoint);
-      cacheService.remove(`${this.endpoint}_${id}`);
+      cacheService.invalidateRelatedCache(this.endpoint);
+      versionCheckService.forceVersionCheck();
       logInfo('Usuario eliminado exitosamente', { id });
     } catch (error) {
       logError('Error al eliminar usuario', error as Error);
@@ -515,3 +584,12 @@ export const checkUserExists = async (email: string): Promise<boolean> => {
     return false;
   }
 };
+
+// Manejador global para potentialDataUpdate
+window.addEventListener('potentialDataUpdate', () => {
+  cacheService.markAllAsStale();
+  [protestaService, cabecillaService, naturalezaService, provinciaService, userService].forEach(service => {
+    service.invalidateCache();
+  });
+  resumenService.invalidateCache();
+});

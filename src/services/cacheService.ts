@@ -24,7 +24,7 @@ class CacheService {
 
   constructor(config: Partial<CacheConfig> = {}) {
     this.config = {
-      cacheDuration: 0.1 * 60 * 1000, // 5 minutos por defecto
+      cacheDuration: 30 * 1000, // 30 segundos por defecto
       maxCacheSize: 100, // 100 elementos por defecto
       ...config
     };

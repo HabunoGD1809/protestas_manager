@@ -11,6 +11,8 @@ import LoadingSpinner from '../Common/LoadingSpinner';
 import ErrorMessage from '../Common/ErrorMessage';
 import CommonTable from '../Common/CommonTable';
 import DeleteConfirmationDialog from '../Common/DeleteConfirmationDialog';
+import { cacheService } from '../../services/cacheService';
+// import { versionCheckService } from '../../services/versionCheckService';
 
 const { Title } = Typography;
 
@@ -27,17 +29,30 @@ const ProtestaList: React.FC = () => {
   const navigate = useNavigate();
 
   const fetchProtestas = useCallback(async (page: number, pageSize: number) => {
-    try {
-      const data = await protestaService.getAll(page, pageSize, filters);
-      setProtestas(data.items);
+    const cacheKey = `protestas_${page}_${pageSize}_${JSON.stringify(filters)}`;
+    const cachedData = cacheService.getPaginated<Protesta>(cacheKey, page, pageSize);
+
+    if (cachedData) {
+      setProtestas(cachedData.items);
       setPagination({
-        current: data.page,
-        pageSize: data.page_size,
-        total: data.total,
+        current: cachedData.page,
+        pageSize: cachedData.page_size,
+        total: cachedData.total,
       });
-    } catch (error) {
-      console.error('Error fetching protestas:', error);
-      message.error('Error al cargar la lista de protestas');
+    } else {
+      try {
+        const data = await protestaService.getAll(page, pageSize, filters);
+        setProtestas(data.items);
+        setPagination({
+          current: data.page,
+          pageSize: data.page_size,
+          total: data.total,
+        });
+        cacheService.setPaginated(cacheKey, data, page, pageSize);
+      } catch (error) {
+        console.error('Error fetching protestas:', error);
+        message.error('Error al cargar la lista de protestas');
+      }
     }
   }, [filters]);
 
@@ -47,26 +62,51 @@ const ProtestaList: React.FC = () => {
 
   useEffect(() => {
     const fetchNaturalezas = async () => {
-      try {
-        const data = await request<PaginatedResponse<Naturaleza>>('get', '/naturalezas');
-        setNaturalezas(data.items);
-      } catch (error) {
-        console.error('Error fetching naturalezas:', error);
+      const cachedNaturalezas = cacheService.get<Naturaleza[]>('naturalezas');
+      if (cachedNaturalezas) {
+        setNaturalezas(cachedNaturalezas);
+      } else {
+        try {
+          const data = await request<PaginatedResponse<Naturaleza>>('get', '/naturalezas');
+          setNaturalezas(data.items);
+          cacheService.set('naturalezas', data.items);
+        } catch (error) {
+          console.error('Error fetching naturalezas:', error);
+        }
       }
     };
 
     const fetchProvincias = async () => {
-      try {
-        const data = await request<Provincia[]>('get', '/provincias');
-        setProvincias(data);
-      } catch (error) {
-        console.error('Error fetching provincias:', error);
+      const cachedProvincias = cacheService.get<Provincia[]>('provincias');
+      if (cachedProvincias) {
+        setProvincias(cachedProvincias);
+      } else {
+        try {
+          const data = await request<Provincia[]>('get', '/provincias');
+          setProvincias(data);
+          cacheService.set('provincias', data);
+        } catch (error) {
+          console.error('Error fetching provincias:', error);
+        }
       }
     };
 
     fetchNaturalezas();
     fetchProvincias();
   }, [request]);
+
+  useEffect(() => {
+    const handlePotentialDataUpdate = () => {
+      cacheService.markAllAsStale();
+      fetchProtestas(pagination.current, pagination.pageSize);
+    };
+
+    window.addEventListener('potentialDataUpdate', handlePotentialDataUpdate);
+
+    return () => {
+      window.removeEventListener('potentialDataUpdate', handlePotentialDataUpdate);
+    };
+  }, [fetchProtestas, pagination]);
 
   const handleEdit = (protesta: Protesta) => {
     navigate(`/protestas/${protesta.id}`);
@@ -84,6 +124,9 @@ const ProtestaList: React.FC = () => {
         setProtestas(prevProtestas => prevProtestas.filter(p => p.id !== protestaToDelete.id));
         setDeleteDialogOpen(false);
         setProtestaToDelete(null);
+        // Invalidate cache after successful delete
+        cacheService.remove(`protesta_${protestaToDelete.id}`);
+        cacheService.markAllAsStale();
       } catch (error) {
         if (error instanceof Error) {
           throw new Error(error.message);

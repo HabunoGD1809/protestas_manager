@@ -17,23 +17,48 @@ import {
 } from 'recharts';
 import { useApi } from '../hooks/useApi';
 import { ResumenPrincipal } from '../types';
+import { resumenService } from '../services/api';
+import { cacheService } from '../services/cacheService';
 
 const AdminDashboardPage: React.FC = () => {
   const theme = useTheme();
-  const { loading, error, request } = useApi();
+  const { loading, error } = useApi();
   const [dashboardData, setDashboardData] = useState<ResumenPrincipal | null>(null);
 
   const fetchData = useCallback(async () => {
     try {
-      const data = await request<ResumenPrincipal>('get', '/pagina-principal');
-      setDashboardData(data);
+      const cachedData = cacheService.get<ResumenPrincipal>('resumen_principal');
+      if (cachedData) {
+        setDashboardData(cachedData);
+        // Actualizar en segundo plano
+        resumenService.getPaginaPrincipal().then(newData => {
+          setDashboardData(newData);
+          cacheService.set('resumen_principal', newData);
+        }).catch(console.error);
+      } else {
+        const data = await resumenService.getPaginaPrincipal();
+        setDashboardData(data);
+        cacheService.set('resumen_principal', data);
+      }
     } catch (err) {
       console.error('Error fetching dashboard data:', err);
     }
-  }, [request]);
+  }, []);
 
   useEffect(() => {
     fetchData();
+  }, [fetchData]);
+
+  useEffect(() => {
+    const handlePotentialDataUpdate = () => {
+      fetchData();
+    };
+
+    window.addEventListener('potentialDataUpdate', handlePotentialDataUpdate);
+
+    return () => {
+      window.removeEventListener('potentialDataUpdate', handlePotentialDataUpdate);
+    };
   }, [fetchData]);
 
   const protestasRecentesColumns: GridColDef[] = [

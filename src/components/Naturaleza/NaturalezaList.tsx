@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Typography, Button, message, Tooltip } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
@@ -27,9 +27,9 @@ const NaturalezaList: React.FC = () => {
   const { isAdmin } = useAuth();
   const navigate = useNavigate();
 
-  const fetchNaturalezas = async (page: number, pageSize: number) => {
+  const fetchNaturalezas = useCallback(async (page: number, pageSize: number, newFilters?: NaturalezaFilters) => {
     try {
-      const data = await naturalezaService.getAll(page, pageSize, filters);
+      const data = await naturalezaService.getAll(page, pageSize, newFilters || filters);
       setNaturalezas(data.items);
       setPagination({
         current: data.page,
@@ -40,46 +40,56 @@ const NaturalezaList: React.FC = () => {
       console.error('Error fetching naturalezas:', err);
       message.error('Error al cargar la lista de naturalezas');
     }
-  };
+  }, [filters]);
 
   useEffect(() => {
     fetchNaturalezas(pagination.current, pagination.pageSize);
-  }, [filters]);
+  }, [fetchNaturalezas, pagination.current, pagination.pageSize]);
 
-  const handlePaginationChange = (page: number, pageSize?: number) => {
+  const handlePaginationChange = useCallback((page: number, pageSize?: number) => {
     fetchNaturalezas(page, pageSize || pagination.pageSize);
-  };
+  }, [fetchNaturalezas, pagination.pageSize]);
 
-  const handleFilter = (newFilters: NaturalezaFilters) => {
+  const handleFilter = useCallback((newFilters: NaturalezaFilters) => {
     setFilters(newFilters);
-    fetchNaturalezas(1, pagination.pageSize);
-  };
+    fetchNaturalezas(1, pagination.pageSize, newFilters);
+  }, [fetchNaturalezas, pagination.pageSize]);
 
-  const handleEdit = (naturaleza: Naturaleza) => {
+  const handleEdit = useCallback((naturaleza: Naturaleza) => {
     navigate(`/naturalezas/edit/${naturaleza.id}`);
-  };
+  }, [navigate]);
 
-  const handleDeleteClick = (naturaleza: Naturaleza) => {
+  const handleDeleteClick = useCallback((naturaleza: Naturaleza) => {
     setNaturalezaToDelete(naturaleza);
     setDeleteDialogOpen(true);
-  };
+  }, []);
 
-  const handleDeleteConfirm = async () => {
+  const handleDeleteConfirm = useCallback(async () => {
     if (naturalezaToDelete) {
       try {
         await naturalezaService.delete(naturalezaToDelete.id);
         setNaturalezas(prevNaturalezas => prevNaturalezas.filter(n => n.id !== naturalezaToDelete.id));
         setDeleteDialogOpen(false);
         setNaturalezaToDelete(null);
+        message.success('Naturaleza eliminada exitosamente');
       } catch (error) {
-        if (error instanceof Error) {
-          throw new Error(error.message);
-        } else {
-          throw new Error('Error desconocido al eliminar la naturaleza');
-        }
+        console.error('Error al eliminar la naturaleza:', error);
+        message.error('Error al eliminar la naturaleza');
       }
     }
-  };
+  }, [naturalezaToDelete]);
+
+  useEffect(() => {
+    const handlePotentialDataUpdate = () => {
+      fetchNaturalezas(pagination.current, pagination.pageSize);
+    };
+
+    window.addEventListener('potentialDataUpdate', handlePotentialDataUpdate);
+
+    return () => {
+      window.removeEventListener('potentialDataUpdate', handlePotentialDataUpdate);
+    };
+  }, [fetchNaturalezas, pagination, pagination.pageSize]);
 
   const columns = [
     { title: 'Nombre', dataIndex: 'nombre', key: 'nombre' },
