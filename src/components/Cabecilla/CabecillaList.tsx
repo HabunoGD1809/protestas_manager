@@ -3,13 +3,13 @@ import { useNavigate } from 'react-router-dom';
 import { Typography, Button, message, Avatar } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
 import { useApi } from '../../hooks/useApi';
-import { Cabecilla } from '../../types';
-import { cabecillaService } from '../../services/api';
+import { Cabecilla } from '../../types/types';
+import { cabecillaService } from '../../services/apiService';
 import CabecillaFilter, { CabecillaFilterValues } from './CabecillaFilter';
 import LoadingSpinner from '../Common/LoadingSpinner';
 import ErrorMessage from '../Common/ErrorMessage';
 import { useAuth } from '../../hooks/useAuth';
-import { getFullImageUrl } from '../../services/api';
+import { getFullImageUrl } from '../../services/apiService';
 import CommonTable from '../Common/CommonTable';
 import DeleteConfirmationDialog from '../Common/DeleteConfirmationDialog';
 

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { TextField, Button, Typography, Box, Avatar, FormControl, InputLabel, Select, MenuItem, SelectChangeEvent } from '@mui/material';
-import { getFullImageUrl } from '../../services/api';
+import { getFullImageUrl } from '../../services/apiService';
 
 interface CreateUserFormProps {
   onSubmit: (userData: FormData) => void;

@@ -1,8 +1,8 @@
 import React, { createContext, useState, useEffect, useCallback, useRef, ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { User } from '../types';
+import { User } from '../types/types';
 import { getCookie, setCookie, removeCookie, getStoredUser, setStoredUser, removeStoredUser } from '../utils/cookieUtils';
-import { authService, checkUserExists } from '../services/api';
+import { authService, checkUserExists } from '../services/apiService';
 import InactivityDialog from '../components/Common/InactivityDialog';
 import { logError, logInfo } from '../services/loggingService';
 import { AxiosError } from 'axios';

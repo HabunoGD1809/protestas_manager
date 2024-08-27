@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { User } from '../types';
-import { authService } from '../services/api';
+import { User } from '../types/types';
+import { authService } from '../services/apiService';
 import { Box, Avatar, Typography, Container, CircularProgress, Alert, Button, Input } from '@mui/material';
 import CameraAltIcon from '@mui/icons-material/CameraAlt';
 import { message } from 'antd';
@@ -31,7 +31,7 @@ const UserProfilePage: React.FC = () => {
       }
    };
 
-   
+
    const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
       const file = event.target.files?.[0];
       if (file) {

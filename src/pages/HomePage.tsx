@@ -10,46 +10,18 @@ import LoginIcon from '@mui/icons-material/Login';
 const HomePage: React.FC = () => {
   const { user } = useAuth();
 
-  return (
-    <Container maxWidth="lg">
-      <Box sx={{ my: 4 }}>
-        <Paper elevation={3} sx={{ p: 4, borderRadius: 2, background: 'linear-gradient(45deg, #2196F3 30%, #21CBF3 90%)' }}>
-          <Typography variant="h3" gutterBottom sx={{ color: 'white', fontWeight: 'bold' }}>
-            Bienvenido a la aplicación Protestas
-          </Typography>
-          <Typography variant="h6" sx={{ color: 'white', mb: 2 }}>
-            Gestiona y monitorea protestas de manera eficiente
-          </Typography>
-        </Paper>
-
-        {user ? (
-          <Grid container spacing={4} sx={{ mt: 4 }}>
-            {[
-              { title: 'Protestas', description: 'Ver y gestionar protestas', icon: <ProtestIcon />, link: '/protestas' },
-              { title: 'Cabecillas', description: 'Gestionar líderes de protesta', icon: <LeaderIcon />, link: '/cabecillas' },
-              { title: 'Naturalezas', description: 'Gestionar tipos de protesta', icon: <NatureIcon />, link: '/naturalezas' },
-            ].map((item, index) => (
-              <Grid item xs={12} md={4} key={index}>
-                <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column', transition: '0.3s', '&:hover': { transform: 'translateY(-5px)', boxShadow: 3 } }}>
-                  <CardContent sx={{ flexGrow: 1 }}>
-                    <Avatar sx={{ bgcolor: 'secondary.main', mb: 2 }}>
-                      {item.icon}
-                    </Avatar>
-                    <Typography variant="h5" component="div" gutterBottom>
-                      {item.title}
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary" paragraph>
-                      { item.description }
-                    </Typography>
-                  </CardContent>
-                  <Button component={RouterLink} to={item.link} variant="contained" color="primary" fullWidth sx={{ mt: 'auto', borderTopLeftRadius: 0, borderTopRightRadius: 0 }}>
-                    Ver {item.title}
-                  </Button>
-                </Card>
-              </Grid>
-            ))}
-          </Grid>
-        ) : (
+  if (!user) {
+    return (
+      <Container maxWidth="lg">
+        <Box sx={{ my: 4 }}>
+          <Paper elevation={3} sx={{ p: 4, borderRadius: 2, background: 'linear-gradient(45deg, #2196F3 30%, #21CBF3 90%)' }}>
+            <Typography variant="h3" gutterBottom sx={{ color: 'white', fontWeight: 'bold' }}>
+              Bienvenido a la aplicación Protestas
+            </Typography>
+            <Typography variant="h6" sx={{ color: 'white', mb: 2 }}>
+              Gestiona y monitorea protestas de manera eficiente
+            </Typography>
+          </Paper>
           <Card sx={{ mt: 4, p: 2, textAlign: 'center' }}>
             <CardContent>
               <Avatar sx={{ bgcolor: 'primary.main', m: 'auto', mb: 2 }}>
@@ -73,7 +45,48 @@ const HomePage: React.FC = () => {
               </Button>
             </CardContent>
           </Card>
-        )}
+        </Box>
+      </Container>
+    );
+  }
+
+  return (
+    <Container maxWidth="lg">
+      <Box sx={{ my: 4 }}>
+        <Paper elevation={3} sx={{ p: 4, borderRadius: 2, background: 'linear-gradient(45deg, #2196F3 30%, #21CBF3 90%)' }}>
+          <Typography variant="h3" gutterBottom sx={{ color: 'white', fontWeight: 'bold' }}>
+            Bienvenido a la aplicación Protestas
+          </Typography>
+          <Typography variant="h6" sx={{ color: 'white', mb: 2 }}>
+            Gestiona y monitorea protestas de manera eficiente
+          </Typography>
+        </Paper>
+        <Grid container spacing={4} sx={{ mt: 4 }}>
+          {[
+            { title: 'Protestas', description: 'Ver y gestionar protestas', icon: <ProtestIcon />, link: '/protestas' },
+            { title: 'Cabecillas', description: 'Gestionar líderes de protesta', icon: <LeaderIcon />, link: '/cabecillas' },
+            { title: 'Naturalezas', description: 'Gestionar tipos de protesta', icon: <NatureIcon />, link: '/naturalezas' },
+          ].map((item, index) => (
+            <Grid item xs={12} md={4} key={index}>
+              <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column', transition: '0.3s', '&:hover': { transform: 'translateY(-5px)', boxShadow: 3 } }}>
+                <CardContent sx={{ flexGrow: 1 }}>
+                  <Avatar sx={{ bgcolor: 'secondary.main', mb: 2 }}>
+                    {item.icon}
+                  </Avatar>
+                  <Typography variant="h5" component="div" gutterBottom>
+                    {item.title}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary" paragraph>
+                    {item.description}
+                  </Typography>
+                </CardContent>
+                <Button component={RouterLink} to={item.link} variant="contained" color="primary" fullWidth sx={{ mt: 'auto', borderTopLeftRadius: 0, borderTopRightRadius: 0 }}>
+                  Ver {item.title}
+                </Button>
+              </Card>
+            </Grid>
+          ))}
+        </Grid>
       </Box>
     </Container>
   );

@@ -1,6 +1,6 @@
 import React from 'react';
 import { Form, Input, Select, DatePicker, Button, Space, Row, Col } from 'antd';
-import { Naturaleza, Provincia } from '../../types';
+import { Naturaleza, Provincia } from '../../types/types';
 import { Moment } from 'moment';
 import '../../styles/commonFilter.css';
 

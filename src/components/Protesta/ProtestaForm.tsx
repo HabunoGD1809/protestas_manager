@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Form, Input, DatePicker, Select, Button, Spin, message } from 'antd';
-import { Protesta, CrearProtesta, Naturaleza, Provincia, Cabecilla } from '../../types';
+import { Protesta, CrearProtesta, Naturaleza, Provincia, Cabecilla } from '../../types/types';
 import { useApi } from '../../hooks/useApi';
-import { cabecillaService, naturalezaService, provinciaService } from '../../services/api';
+import { cabecillaService, naturalezaService, provinciaService } from '../../services/apiService';
 import moment from 'moment';
 import { SearchOutlined } from '@ant-design/icons';
 

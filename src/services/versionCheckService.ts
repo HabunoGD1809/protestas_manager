@@ -1,4 +1,4 @@
-import { api } from './api';
+import { api } from './apiService';
 import { cacheService } from './cacheService';
 import { logError, logInfo } from './loggingService';
 

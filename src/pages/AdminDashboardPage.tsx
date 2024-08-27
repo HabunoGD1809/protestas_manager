@@ -16,8 +16,8 @@ import {
   BarChart, Bar, PieChart, Pie, Cell, YAxisProps
 } from 'recharts';
 import { useApi } from '../hooks/useApi';
-import { ResumenPrincipal } from '../types';
-import { resumenService } from '../services/api';
+import { ResumenPrincipal } from '../types/types';
+import { resumenService } from '../services/apiService';
 import { cacheService } from '../services/cacheService';
 
 const AdminDashboardPage: React.FC = () => {

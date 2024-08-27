@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useApi } from '../../hooks/useApi';
 import { Card, Statistic, Row, Col, Alert } from 'antd';
 import { PieChartOutlined, CalendarOutlined, TeamOutlined } from '@ant-design/icons';
-import { Protesta, Naturaleza, PaginatedResponse } from '../../types';
+import { Protesta, Naturaleza, PaginatedResponse } from '../../types/types';
 import dayjs from 'dayjs';
 
 const ProtestaStats: React.FC = () => {
@@ -38,8 +38,8 @@ const ProtestaStats: React.FC = () => {
 
       const protestas = protestaResponse.items;
       const totalProtestas = protestaResponse.total;
-      
-      const protestasEsteMes = protestas.filter(p => 
+
+      const protestasEsteMes = protestas.filter(p =>
         dayjs(p.fecha_evento).isSame(dayjs(), 'month')
       ).length;
 
@@ -49,7 +49,7 @@ const ProtestaStats: React.FC = () => {
         protestas.forEach(p => {
           naturalezaCount[p.naturaleza_id] = (naturalezaCount[p.naturaleza_id] || 0) + 1;
         });
-        
+
         const naturalezaMasComunId = Object.entries(naturalezaCount).reduce((a, b) => a[1] > b[1] ? a : b, ['', 0])[0];
         naturalezaMasComun = naturalezas.find(n => n.id === naturalezaMasComunId)?.nombre || 'Desconocida';
       }
@@ -72,7 +72,7 @@ const ProtestaStats: React.FC = () => {
   };
 
   if (loading) return <p>Cargando estadísticas...</p>;
-  
+
   if (error || errorDetails) {
     return (
       <Alert

@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
-import { api } from '../services/api';
+import { api } from '../services/apiService';
 import { AxiosError } from 'axios';
 import { logError } from '../services/loggingService';
 import { cacheService } from '../services/cacheService';

@@ -4,7 +4,7 @@ import { TextField, Button, Box, Typography, Popover } from '@mui/material';
 import { HexColorPicker, HexColorInput } from "react-colorful";
 import { message } from 'antd';
 import { useApi } from '../../hooks/useApi';
-import { Naturaleza, CrearNaturaleza } from '../../types';
+import { Naturaleza, CrearNaturaleza } from '../../types/types';
 import IconSelector from '../../utils/IconSelector';
 import * as IconoirIcons from 'iconoir-react';
 

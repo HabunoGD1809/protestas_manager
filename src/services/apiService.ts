@@ -11,7 +11,7 @@ import {
   ResumenPrincipal,
   User,
   Token,
-} from "../types";
+} from "../types/types";
 import { FilterValues } from "../components/Protesta/ProtestaFilter";
 import { NaturalezaFilters } from "../components/Naturaleza/NaturalezaFilter";
 import { cacheService } from "./cacheService";
@@ -320,9 +320,63 @@ class ProtestaService extends BaseService<Protesta, CrearProtesta> {
     ) : {};
     return super.getAll(page, pageSize, cleanFilters);
   }
+
+  async fetchProtestas(page: number, pageSize: number, filters: FilterValues): Promise<PaginatedResponse<Protesta>> {
+    try {
+      console.log('Fetching protestas with filters:', filters);
+      const data = await this.getAll(page, pageSize, filters);
+      console.log('Protestas received:', data);
+      return data;
+    } catch (err) {
+      console.error('Error fetching protestas:', err);
+      throw new Error('Error al cargar la lista de protestas');
+    }
+  }
+
+  async fetchNaturalezasYProvincias(): Promise<[Naturaleza[], Provincia[]]> {
+    try {
+      console.log('Iniciando fetchNaturalezasYProvincias');
+      const [naturalezasData, provinciasData] = await Promise.all([
+        naturalezaService.getAll(),
+        provinciaService.getAll()
+      ]);
+      console.log('Naturalezas recibidas:', naturalezasData);
+      console.log('Provincias recibidas:', provinciasData);
+
+      // Asegurarnos de que naturalezasData sea un array
+      const naturalezas = Array.isArray(naturalezasData) ? naturalezasData : naturalezasData.items || [];
+      const provincias = Array.isArray(provinciasData) ? provinciasData : provinciasData.items || [];
+
+      return [naturalezas, provincias];
+    } catch (error) {
+      console.error('Error en fetchNaturalezasYProvincias:', error);
+      throw new Error('Error al cargar naturalezas y provincias');
+    }
+  }
+
+  async getNaturalezas(): Promise<Naturaleza[]> {
+    try {
+      const response = await naturalezaService.getAll();
+      return Array.isArray(response) ? response : response.items || [];
+    } catch (error) {
+      console.error('Error al obtener naturalezas:', error);
+      throw new Error('Error al cargar naturalezas');
+    }
+  }
+
+  async getProvincias(): Promise<Provincia[]> {
+    try {
+      const response = await provinciaService.getAll();
+      return Array.isArray(response) ? response : response.items || [];
+    } catch (error) {
+      console.error('Error al obtener provincias:', error);
+      throw new Error('Error al cargar provincias');
+    }
+  }
 }
 
 export const protestaService = new ProtestaService();
+
 
 // Cabecilla service
 class CabecillaService extends BaseService<Cabecilla, FormData> {

@@ -1,5 +1,5 @@
-import { PaginatedResponse } from '../types';
-import { api } from './api';
+import { PaginatedResponse } from '../types/types';
+import { api } from './apiService';
 import { logError, logInfo } from './loggingService';
 import * as lzstring from 'lz-string';
 

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Protesta, CrearProtesta } from '../types';
+import { Protesta, CrearProtesta } from '../types/types';
 import { useApi } from '../hooks/useApi';
 import { message } from 'antd';
 import ProtestaForm from '../components/Protesta/ProtestaForm';
@@ -28,24 +28,24 @@ const ProtestaFormPage: React.FC = () => {
   };
 
   const handleSubmit = async (values: CrearProtesta) => {
-  try {
-    if (id) {
-      await request<Protesta>('put', `/protestas/${id}`, values);
-      message.success(`Protesta "${values.nombre}" actualizada con éxito`);
-    } else {
-      await request<Protesta>('post', '/protestas', values);
-      message.success(`Protesta "${values.nombre}" creada con éxito`);
+    try {
+      if (id) {
+        await request<Protesta>('put', `/protestas/${id}`, values);
+        message.success(`Protesta "${values.nombre}" actualizada con éxito`);
+      } else {
+        await request<Protesta>('post', '/protestas', values);
+        message.success(`Protesta "${values.nombre}" creada con éxito`);
+      }
+      navigate('/protestas');
+    } catch (error) {
+      console.error('Error al guardar la protesta:', error);
+      if (error instanceof Error) {
+        message.error(`Error al guardar la protesta: ${error.message}`);
+      } else {
+        message.error('Error al guardar la protesta');
+      }
     }
-    navigate('/protestas');
-  } catch (error) {
-    console.error('Error al guardar la protesta:', error);
-    if (error instanceof Error) {
-      message.error(`Error al guardar la protesta: ${error.message}`);
-    } else {
-      message.error('Error al guardar la protesta');
-    }
-  }
-};
+  };
 
   if (loading) return <p>Cargando...</p>;
   if (error) return <p>Error: {error}</p>;

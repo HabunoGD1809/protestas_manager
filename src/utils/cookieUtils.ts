@@ -1,5 +1,5 @@
 import Cookies from 'js-cookie';
-import { User } from '../types/index';
+import { User } from '../types/types';
 
 export const getCookie = (name: string): string | undefined => {
   return Cookies.get(name);

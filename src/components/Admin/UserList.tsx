@@ -11,10 +11,10 @@ import {
   Chip,
   Box
 } from '@mui/material';
-import { User } from '../../types';
+import { User } from '../../types/types';
 import ChangeUserRole from './ChangeUserRole';
 import Pagination from '../Common/Pagination';
-import { userService, getFullImageUrl } from '../../services/api';
+import { userService, getFullImageUrl } from '../../services/apiService';
 import CreateUserForm from './CreateUserForm';
 import { message } from 'antd';
 import DeleteConfirmationDialog from '../Common/DeleteConfirmationDialog';

@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Protesta, Naturaleza, Provincia } from '../../types';
+import { Protesta, Naturaleza, Provincia } from '../../types/types';
 import { useApi } from '../../hooks/useApi';
 import { useAuth } from '../../hooks/useAuth';
 import { Card, Descriptions, Button, Space, message, Tag, Modal, Avatar } from 'antd';
 import { EditOutlined, DeleteOutlined, ArrowLeftOutlined, ExclamationCircleOutlined, UserOutlined, MailOutlined } from '@ant-design/icons';
-import { getFullImageUrl } from '../../services/api';
+import { getFullImageUrl } from '../../services/apiService';
 import { cacheService } from '../../services/cacheService';
 // import { versionCheckService } from '../../services/versionCheckService';
 

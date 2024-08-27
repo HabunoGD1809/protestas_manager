@@ -3,8 +3,8 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { TextField, Button, Box, Avatar, CircularProgress } from '@mui/material';
 import { message } from 'antd';
 import { useApi } from '../../hooks/useApi';
-import { CrearCabecilla, Cabecilla } from '../../types';
-import { getFullImageUrl } from '../../services/api';
+import { CrearCabecilla, Cabecilla } from '../../types/types';
+import { getFullImageUrl } from '../../services/apiService';
 import { AxiosError } from 'axios';
 
 interface ApiErrorData {
