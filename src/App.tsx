@@ -1,12 +1,13 @@
 import React, { useEffect, lazy, Suspense } from 'react';
 import { Routes, Route, useNavigate } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
-import Layout from './components/Layout/Layout';
+import LayoutWrapper from './components/Layout/LayoutWrapper';
+import AuthLayoutWrapper from './components/Layout/AuthLayoutWrapper';
 import PrivateRoute from './components/Common/PrivateRoute';
 import AdminRoute from './components/Common/AdminRoute';
 import LoadingSpinner from './components/Common/LoadingSpinner';
 import PublicOnlyRoute from './components/Common/PublicOnlyRoute';
-// import { versionCheckService } from './services/versionCheckService';
+import CabecillaForm from './components/Cabecilla/CabecillaForm';
 
 const HomePage = lazy(() => import('./pages/HomePage'));
 const LoginPage = lazy(() => import('./pages/LoginPage'));
@@ -21,10 +22,6 @@ const UserListPage = lazy(() => import('./pages/UserListPage'));
 const AdminDashboardPage = lazy(() => import('./pages/AdminDashboardPage'));
 const UserProfilePage = lazy(() => import('./pages/UserProfilePage'));
 const RegisterPage = lazy(() => import('./pages/RegisterPage'));
-const CabecillaList = lazy(() => import('./components/Cabecilla/CabecillaList'));
-const CabecillaForm = lazy(() => import('./components/Cabecilla/CabecillaForm'));
-const NaturalezaList = lazy(() => import('./components/Naturaleza/NaturalezaList'));
-const NaturalezaForm = lazy(() => import('./components/Naturaleza/NaturalezaForm'));
 const NotFoundPage = lazy(() => import('./pages/NotFoundPage'));
 
 const App: React.FC = () => {
@@ -38,8 +35,6 @@ const App: React.FC = () => {
 
     window.addEventListener('auth-error', handleAuthError as EventListener);
 
-    // versionCheckService.startVersionCheck();
-
     return () => {
       window.removeEventListener('auth-error', handleAuthError as EventListener);
     };
@@ -47,36 +42,29 @@ const App: React.FC = () => {
 
   return (
     <AuthProvider>
-      <Layout>
-        <Suspense fallback={<LoadingSpinner />}>
-          <Routes>
-            <Route path="/" element={<HomePage />} />
-            <Route path="/login" element={<PublicOnlyRoute><LoginPage /></PublicOnlyRoute>} />
-            <Route path="/register" element={<PublicOnlyRoute><RegisterPage /></PublicOnlyRoute>} />
-            <Route path="/perfil" element={<PrivateRoute><UserProfilePage /></PrivateRoute>} />
-            <Route path="/protestas" element={<PrivateRoute><ProtestaListPage /></PrivateRoute>} />
-            <Route path="/usuarios" element={<AdminRoute><UserListPage /></AdminRoute>} />
-            <Route path="/protestas/crear" element={<PrivateRoute><ProtestaFormPage /></PrivateRoute>} />
-            <Route path="/protestas/:id" element={<PrivateRoute><ProtestaDetailPage /></PrivateRoute>} />
-            <Route path="/protestas/editar/:id" element={<PrivateRoute><ProtestaFormPage /></PrivateRoute>} />
-            <Route path="/cabecillas/:id" element={<PrivateRoute><CabecillaFormPage /></PrivateRoute>} />
-            <Route path="/cabecillas/new" element={<PrivateRoute><CabecillaFormPage /></PrivateRoute>} />
-            <Route path="/cabecillas/new" element={<PrivateRoute><CabecillaForm /></PrivateRoute>} />
-            <Route path="/cabecillas" element={<PrivateRoute><CabecillaList /></PrivateRoute>} />
-            <Route path="/cabecillas" element={<PrivateRoute><CabecillaListPage /></PrivateRoute>} />
-            <Route path="/cabecillas/edit/:id" element={<PrivateRoute><CabecillaForm /></PrivateRoute>} />
-            <Route path="/naturalezas/:id" element={<PrivateRoute><NaturalezaFormPage /></PrivateRoute>} />
-            <Route path="/naturalezas" element={<PrivateRoute><NaturalezaList /></PrivateRoute>} />
-            <Route path="/naturalezas" element={<PrivateRoute><NaturalezaListPage /></PrivateRoute>} />
-            <Route path="/naturalezas/new" element={<PrivateRoute><NaturalezaForm /></PrivateRoute>} />
-            <Route path="/naturalezas/new" element={<PrivateRoute><NaturalezaFormPage /></PrivateRoute>} />
-            <Route path="/naturalezas/edit/:id" element={<PrivateRoute><NaturalezaForm /></PrivateRoute>} />
-            <Route path="/naturalezas/edit/:id" element={<PrivateRoute><NaturalezaFormPage /></PrivateRoute>} />
-            <Route path="/admin/dashboard" element={<AdminRoute><AdminDashboardPage /></AdminRoute>} />
-            <Route path="*" element={<NotFoundPage />} />
-          </Routes>
-        </Suspense>
-      </Layout>
+      <Suspense fallback={<LoadingSpinner />}>
+        <Routes>
+          <Route path="/" element={<LayoutWrapper><HomePage /></LayoutWrapper>} />
+          <Route path="/login" element={<AuthLayoutWrapper><PublicOnlyRoute><LoginPage /></PublicOnlyRoute></AuthLayoutWrapper>} />
+          <Route path="/register" element={<AuthLayoutWrapper><PublicOnlyRoute><RegisterPage /></PublicOnlyRoute></AuthLayoutWrapper>} />
+          <Route path="/perfil" element={<LayoutWrapper><PrivateRoute><UserProfilePage /></PrivateRoute></LayoutWrapper>} />
+          <Route path="/protestas" element={<LayoutWrapper><PrivateRoute><ProtestaListPage /></PrivateRoute></LayoutWrapper>} />
+          <Route path="/usuarios" element={<LayoutWrapper><AdminRoute><UserListPage /></AdminRoute></LayoutWrapper>} />
+          <Route path="/protestas/crear" element={<LayoutWrapper><PrivateRoute><ProtestaFormPage /></PrivateRoute></LayoutWrapper>} />
+          <Route path="/protestas/:id" element={<LayoutWrapper><PrivateRoute><ProtestaDetailPage /></PrivateRoute></LayoutWrapper>} />
+          <Route path="/protestas/editar/:id" element={<LayoutWrapper><PrivateRoute><ProtestaFormPage /></PrivateRoute></LayoutWrapper>} />
+          <Route path="/cabecillas/:id" element={<LayoutWrapper><PrivateRoute><CabecillaFormPage /></PrivateRoute></LayoutWrapper>} />
+          <Route path="/cabecillas/new" element={<LayoutWrapper><PrivateRoute><CabecillaFormPage /></PrivateRoute></LayoutWrapper>} />
+          <Route path="/cabecillas" element={<LayoutWrapper><PrivateRoute><CabecillaListPage /></PrivateRoute></LayoutWrapper>} />
+          <Route path="/cabecillas/edit/:id" element={<LayoutWrapper><PrivateRoute><CabecillaForm /></PrivateRoute></LayoutWrapper>} />
+          <Route path="/naturalezas/:id" element={<LayoutWrapper><PrivateRoute><NaturalezaFormPage /></PrivateRoute></LayoutWrapper>} />
+          <Route path="/naturalezas" element={<LayoutWrapper><PrivateRoute><NaturalezaListPage /></PrivateRoute></LayoutWrapper>} />
+          <Route path="/naturalezas/new" element={<LayoutWrapper><PrivateRoute><NaturalezaFormPage /></PrivateRoute></LayoutWrapper>} />
+          <Route path="/naturalezas/edit/:id" element={<LayoutWrapper><PrivateRoute><NaturalezaFormPage /></PrivateRoute></LayoutWrapper>} />
+          <Route path="/admin/dashboard" element={<LayoutWrapper><AdminRoute><AdminDashboardPage /></AdminRoute></LayoutWrapper>} />
+          <Route path="*" element={<LayoutWrapper><NotFoundPage /></LayoutWrapper>} />
+        </Routes>
+      </Suspense>
     </AuthProvider>
   );
 };

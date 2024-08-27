@@ -323,9 +323,7 @@ class ProtestaService extends BaseService<Protesta, CrearProtesta> {
 
   async fetchProtestas(page: number, pageSize: number, filters: FilterValues): Promise<PaginatedResponse<Protesta>> {
     try {
-      console.log('Fetching protestas with filters:', filters);
       const data = await this.getAll(page, pageSize, filters);
-      console.log('Protestas received:', data);
       return data;
     } catch (err) {
       console.error('Error fetching protestas:', err);
@@ -340,8 +338,6 @@ class ProtestaService extends BaseService<Protesta, CrearProtesta> {
         naturalezaService.getAll(),
         provinciaService.getAll()
       ]);
-      console.log('Naturalezas recibidas:', naturalezasData);
-      console.log('Provincias recibidas:', provinciasData);
 
       // Asegurarnos de que naturalezasData sea un array
       const naturalezas = Array.isArray(naturalezasData) ? naturalezasData : naturalezasData.items || [];
