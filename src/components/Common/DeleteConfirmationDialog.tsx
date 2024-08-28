@@ -18,7 +18,7 @@ const DeleteConfirmationDialog: React.FC<DeleteConfirmationDialogProps> = ({
    const handleConfirm = async () => {
       try {
          await onConfirm();
-         message.success(`${itemName} eliminado exitosamente`);
+         message.success(`${itemName} eliminado exitosamente`); //necesita modificacion
          onClose();
       } catch (error) {
          if (error instanceof Error) {

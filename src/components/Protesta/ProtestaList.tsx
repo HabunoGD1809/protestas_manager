@@ -95,7 +95,7 @@ const ProtestaList: React.FC = () => {
         setProtestas(prevProtestas => prevProtestas.filter(p => p.id !== protestaToDelete.id));
         setDeleteDialogOpen(false);
         setProtestaToDelete(null);
-        message.success('Protesta eliminada exitosamente');
+        message.success('Protesta eliminada exitosamente'); //necesita modificacion
       } catch (error) {
         logError('Error deleting protesta', error as Error);
         message.error('Error al eliminar la protesta');

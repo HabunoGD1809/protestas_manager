@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useContext, useState, useCallback, memo } from 'react';
 import { Link as RouterLink, useNavigate } from 'react-router-dom';
 import { AppBar, Toolbar, Typography, Button, Box, Avatar, Menu, MenuItem, IconButton, Tooltip, Container } from '@mui/material';
 import MenuIcon from '@mui/icons-material/Menu';
@@ -10,34 +10,35 @@ import AccountCircleIcon from '@mui/icons-material/AccountCircle';
 import PeopleIcon from '@mui/icons-material/People';
 import AnalyticsIcon from '@mui/icons-material/Analytics';
 import CampaignIcon from '@mui/icons-material/Campaign';
-import { useAuth } from '../../hooks/useAuth';
+import { AuthContext } from '../../contexts/AuthContext';
 
-const Header: React.FC = () => {
-  const { user, logout, isAdmin } = useAuth();
+const Header: React.FC = memo(() => {
+  const { user, logout, isAdmin } = useContext(AuthContext);
   const [anchorElNav, setAnchorElNav] = useState<null | HTMLElement>(null);
   const [anchorElUser, setAnchorElUser] = useState<null | HTMLElement>(null);
   const navigate = useNavigate();
 
-  const handleOpenNavMenu = (event: React.MouseEvent<HTMLElement>) => {
+  const handleOpenNavMenu = useCallback((event: React.MouseEvent<HTMLElement>) => {
     setAnchorElNav(event.currentTarget);
-  };
-  const handleOpenUserMenu = (event: React.MouseEvent<HTMLElement>) => {
+  }, []);
+
+  const handleOpenUserMenu = useCallback((event: React.MouseEvent<HTMLElement>) => {
     setAnchorElUser(event.currentTarget);
-  };
+  }, []);
 
-  const handleCloseNavMenu = () => {
+  const handleCloseNavMenu = useCallback(() => {
     setAnchorElNav(null);
-  };
+  }, []);
 
-  const handleCloseUserMenu = () => {
+  const handleCloseUserMenu = useCallback(() => {
     setAnchorElUser(null);
-  };
+  }, []);
 
-  const handleLogout = () => {
+  const handleLogout = useCallback(() => {
     logout();
     handleCloseUserMenu();
     navigate('/');
-  };
+  }, [handleCloseUserMenu, logout, navigate]);
 
   const menuItems = user ? [
     { text: 'Inicio', path: '/', icon: <HomeIcon /> },
@@ -72,7 +73,6 @@ const Header: React.FC = () => {
             <CampaignIcon sx={{ mr: 1 }} />
             PROTESTAS
           </Typography>
-
 
           {user && (
             <Box sx={{ flexGrow: 1, display: { xs: 'flex', md: 'none' } }}>
@@ -203,36 +203,36 @@ const Header: React.FC = () => {
                 </Menu>
               </>
             ) : (
-                <Button
-                  color="primary"
-                  component={RouterLink}
-                  to="/login"
-                  sx={{
-                    mr: 1,
-                    backgroundColor: 'primary.main',
-                    color: 'white',
-                    borderRadius: 2,
-                    padding: '8px 16px',
-                    boxShadow: 3,
-                    transition: 'all 0.3s ease-in-out',
-                    '&:hover': {
-                      backgroundColor: '#1565C0', // Azul más oscuro para hover
-                      transform: 'translateY(-2px)',
-                    },
-                    '&:active': {
-                      backgroundColor: '#0D47A1', // Azul aún más oscuro para active
-                      transform: 'translateY(1px)',
-                    },
-                  }}
-                >
-                  Iniciar sesión
-                </Button>
+              <Button
+                color="primary"
+                component={RouterLink}
+                to="/login"
+                sx={{
+                  mr: 1,
+                  backgroundColor: 'primary.main',
+                  color: 'white',
+                  borderRadius: 2,
+                  padding: '8px 16px',
+                  boxShadow: 3,
+                  transition: 'all 0.3s ease-in-out',
+                  '&:hover': {
+                    backgroundColor: '#1565C0',
+                    transform: 'translateY(-2px)',
+                  },
+                  '&:active': {
+                    backgroundColor: '#0D47A1',
+                    transform: 'translateY(1px)',
+                  },
+                }}
+              >
+                Iniciar sesión
+              </Button>
             )}
           </Box>
         </Toolbar>
       </Container>
     </AppBar>
   );
-};
+});
 
 export default Header;

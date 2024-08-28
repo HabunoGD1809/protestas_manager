@@ -1,4 +1,4 @@
-import React, { createContext, useState, useEffect, useCallback, useRef, ReactNode } from 'react';
+import React, { createContext, useState, useEffect, useCallback, useRef, ReactNode, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { User } from '../types/types';
 import { getCookie, setCookie, removeCookie, getStoredUser, setStoredUser, removeStoredUser } from '../utils/cookieUtils';
@@ -65,7 +65,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     removeCookie('token');
     removeCookie('refreshToken');
     removeStoredUser();
-    cacheService.clear(); // Limpiar todo el caché al cerrar sesión
+    cacheService.clear();
     if (inactivityTimerRef.current) clearTimeout(inactivityTimerRef.current);
     if (refreshTimerRef.current) clearInterval(refreshTimerRef.current);
 
@@ -109,7 +109,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         setCookie('token', newTokens.token_acceso, { path: '/', secure: true, sameSite: 'strict' });
         setCookie('refreshToken', newTokens.token_actualizacion, { path: '/', secure: true, sameSite: 'strict' });
         logInfo('Token renovado exitosamente');
-        cacheService.markAllAsStale(); // Invalidar todo el caché después de renovar el token
+        cacheService.markAllAsStale();
         return true;
       } catch (error) {
         logError('Error al renovar el token', error);
@@ -237,7 +237,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     };
   }, [isAuthenticated, startInactivityTimer]);
 
-  const handleLogin = async (email: string, password: string) => {
+  const handleLogin = useCallback(async (email: string, password: string) => {
     try {
       logInfo('Verificando si el usuario existe');
       const userExists = await checkUserExists(email);
@@ -255,7 +255,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setUser(userData);
       setIsAuthenticated(true);
       setStoredUser(userData);
-      cacheService.set('current_user', userData); // Cachear el usuario actual
+      cacheService.set('current_user', userData);
       logInfo('Inicio de sesión exitoso');
     } catch (error) {
       logError('Error durante el inicio de sesión', error);
@@ -270,9 +270,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       }
       throw error;
     }
-  };
+  }, []);
 
-  const handleRegister = async (userData: FormData) => {
+  const handleRegister = useCallback(async (userData: FormData) => {
     try {
       logInfo('Intentando registrar usuario');
       const user = await authService.register(userData);
@@ -288,24 +288,24 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       logError('Error durante el registro', error);
       throw error;
     }
-  };
+  }, []);
 
   const isAdmin = useCallback(() => {
     return user?.rol === 'admin';
   }, [user]);
 
+  const authContextValue = useMemo(() => ({
+    user,
+    login: handleLogin,
+    register: handleRegister,
+    logout: () => handleLogout('manual'),
+    isAdmin,
+    refreshUserToken,
+    checkUserExists,
+  }), [user, handleLogin, handleRegister, handleLogout, isAdmin, refreshUserToken]);
+
   return (
-    <AuthContext.Provider
-      value={{
-        user,
-        login: handleLogin,
-        register: handleRegister,
-        logout: () => handleLogout('manual'),
-        isAdmin,
-        refreshUserToken,
-        checkUserExists,
-      }}
-    >
+    <AuthContext.Provider value={authContextValue}>
       {children}
       <InactivityDialog
         open={dialogState.open}

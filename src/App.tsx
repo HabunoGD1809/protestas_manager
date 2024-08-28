@@ -1,4 +1,4 @@
-import React, { useEffect, lazy, Suspense } from 'react';
+import React, { useEffect, lazy, Suspense, useCallback } from 'react';
 import { Routes, Route, useNavigate } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
 import LayoutWrapper from './components/Layout/LayoutWrapper';
@@ -27,18 +27,18 @@ const NotFoundPage = lazy(() => import('./pages/NotFoundPage'));
 const App: React.FC = () => {
   const navigate = useNavigate();
 
-  useEffect(() => {
-    const handleAuthError = (event: CustomEvent<string>) => {
-      console.error('Auth error:', event.detail);
-      navigate('/login');
-    };
+  const handleAuthError = useCallback((event: CustomEvent<string>) => {
+    console.error('Auth error:', event.detail);
+    navigate('/login');
+  }, [navigate]);
 
+  useEffect(() => {
     window.addEventListener('auth-error', handleAuthError as EventListener);
 
     return () => {
       window.removeEventListener('auth-error', handleAuthError as EventListener);
     };
-  }, [navigate]);
+  }, [handleAuthError]);
 
   return (
     <AuthProvider>
@@ -48,8 +48,8 @@ const App: React.FC = () => {
           <Route path="/login" element={<AuthLayoutWrapper><PublicOnlyRoute><LoginPage /></PublicOnlyRoute></AuthLayoutWrapper>} />
           <Route path="/register" element={<AuthLayoutWrapper><PublicOnlyRoute><RegisterPage /></PublicOnlyRoute></AuthLayoutWrapper>} />
           <Route path="/perfil" element={<LayoutWrapper><PrivateRoute><UserProfilePage /></PrivateRoute></LayoutWrapper>} />
-          <Route path="/protestas" element={<LayoutWrapper><PrivateRoute><ProtestaListPage /></PrivateRoute></LayoutWrapper>} />
           <Route path="/usuarios" element={<LayoutWrapper><AdminRoute><UserListPage /></AdminRoute></LayoutWrapper>} />
+          <Route path="/protestas" element={<LayoutWrapper><PrivateRoute><ProtestaListPage /></PrivateRoute></LayoutWrapper>} />
           <Route path="/protestas/crear" element={<LayoutWrapper><PrivateRoute><ProtestaFormPage /></PrivateRoute></LayoutWrapper>} />
           <Route path="/protestas/:id" element={<LayoutWrapper><PrivateRoute><ProtestaDetailPage /></PrivateRoute></LayoutWrapper>} />
           <Route path="/protestas/editar/:id" element={<LayoutWrapper><PrivateRoute><ProtestaFormPage /></PrivateRoute></LayoutWrapper>} />
