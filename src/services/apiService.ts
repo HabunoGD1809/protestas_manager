@@ -333,40 +333,58 @@ class ProtestaService extends BaseService<Protesta, CrearProtesta> {
 
   async fetchNaturalezasYProvincias(): Promise<[Naturaleza[], Provincia[]]> {
     try {
-      console.log('Iniciando fetchNaturalezasYProvincias');
-      const [naturalezasData, provinciasData] = await Promise.all([
-        naturalezaService.getAll(),
-        provinciaService.getAll()
-      ]);
+      // console.log('Iniciando fetchNaturalezasYProvincias');
 
-      // Asegurarnos de que naturalezasData sea un array
-      const naturalezas = Array.isArray(naturalezasData) ? naturalezasData : naturalezasData.items || [];
-      const provincias = Array.isArray(provinciasData) ? provinciasData : provinciasData.items || [];
+      let naturalezas: Naturaleza[];
+      try {
+        naturalezas = await naturalezaService.getAll();
+        // console.log('Naturalezas obtenidas:', naturalezas);
+      } catch (error) {
+        console.error('Error al obtener naturalezas:', error);
+        naturalezas = [];
+      }
+
+      let provincias: Provincia[];
+      try {
+        provincias = await provinciaService.getAll();
+        // console.log('Provincias obtenidas:', provincias);
+      } catch (error) {
+        console.error('Error al obtener provincias:', error);
+        provincias = [];
+      }
+
+      if (naturalezas.length === 0) {
+        console.warn('No se obtuvieron naturalezas');
+      }
+      if (provincias.length === 0) {
+        console.warn('No se obtuvieron provincias');
+      }
 
       return [naturalezas, provincias];
     } catch (error) {
-      console.error('Error en fetchNaturalezasYProvincias:', error);
+      console.error('Error general en fetchNaturalezasYProvincias:', error);
       throw new Error('Error al cargar naturalezas y provincias');
-    }
-  }
-
-  async getNaturalezas(): Promise<Naturaleza[]> {
-    try {
-      const response = await naturalezaService.getAll();
-      return Array.isArray(response) ? response : response.items || [];
-    } catch (error) {
-      console.error('Error al obtener naturalezas:', error);
-      throw new Error('Error al cargar naturalezas');
     }
   }
 
   async getProvincias(): Promise<Provincia[]> {
     try {
-      const response = await provinciaService.getAll();
-      return Array.isArray(response) ? response : response.items || [];
+      return await provinciaService.getAll();
     } catch (error) {
       console.error('Error al obtener provincias:', error);
       throw new Error('Error al cargar provincias');
+    }
+  }
+
+  async getNaturalezas(): Promise<Naturaleza[]> {
+    try {
+      console.log('Iniciando getNaturalezas');
+      const response = await naturalezaService.getAll();
+      console.log('Naturalezas obtenidas en getNaturalezas:', response);
+      return response;
+    } catch (error) {
+      console.error('Error al obtener naturalezas:', error);
+      throw new Error('Error al cargar naturalezas');
     }
   }
 }
@@ -476,8 +494,22 @@ class NaturalezaService extends BaseService<Naturaleza, CrearNaturaleza> {
     super("/naturalezas");
   }
 
-  async getAll(page: number = 1, pageSize: number = 10, filters?: NaturalezaFilters): Promise<PaginatedResponse<Naturaleza>> {
-    return super.getAll(page, pageSize, filters as Record<string, unknown>);
+  async getAll(): Promise<Naturaleza[]>;
+  async getAll(page: number, pageSize: number, filters?: NaturalezaFilters): Promise<PaginatedResponse<Naturaleza>>;
+  async getAll(page?: number, pageSize?: number, filters?: NaturalezaFilters): Promise<Naturaleza[] | PaginatedResponse<Naturaleza>> {
+    // console.log('NaturalezaService.getAll called with:', { page, pageSize, filters });
+    if (page === undefined && pageSize === undefined) {
+      try {
+        const response = await api.get<PaginatedResponse<Naturaleza>>(this.endpoint);
+        // console.log('NaturalezaService.getAll response:', response.data);
+        return response.data.items; // Devuelve solo el array de items
+      } catch (error) {
+        console.error('Error en NaturalezaService.getAll:', error);
+        throw error;
+      }
+    } else {
+      return super.getAll(page!, pageSize!, filters as Record<string, unknown>);
+    }
   }
 }
 
@@ -491,7 +523,7 @@ class ProvinciaService extends BaseService<Provincia> {
 
   // Sobrescribimos el método getAll de la clase base
   async getAll(): Promise<Provincia[]>;
-  async getAll(page?: number, pageSize?: number, filters?: Record<string, unknown>): Promise<PaginatedResponse<Provincia>>;
+  async getAll(page: number, pageSize: number, filters?: Record<string, unknown>): Promise<PaginatedResponse<Provincia>>;
   async getAll(page?: number, pageSize?: number, filters?: Record<string, unknown>): Promise<Provincia[] | PaginatedResponse<Provincia>> {
     if (page === undefined && pageSize === undefined && filters === undefined) {
       const cacheKey = `${this.endpoint}_all`;

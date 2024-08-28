@@ -7,7 +7,6 @@ import { Card, Descriptions, Button, Space, message, Tag, Modal, Avatar } from '
 import { EditOutlined, DeleteOutlined, ArrowLeftOutlined, ExclamationCircleOutlined, UserOutlined, MailOutlined } from '@ant-design/icons';
 import { getFullImageUrl } from '../../services/apiService';
 import { cacheService } from '../../services/cacheService';
-// import { versionCheckService } from '../../services/versionCheckService';
 
 const ProtestaDetail: React.FC = () => {
   const [protesta, setProtesta] = useState<Protesta | null>(null);
@@ -16,7 +15,6 @@ const ProtestaDetail: React.FC = () => {
   const { request, loading, error } = useApi();
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-
   const { isAdmin } = useAuth();
 
   const fetchProtesta = useCallback(async (protestaId: string) => {
@@ -35,6 +33,22 @@ const ProtestaDetail: React.FC = () => {
       if (cachedProtesta.provincia_id) {
         fetchProvincia(cachedProtesta.provincia_id);
       }
+
+      // Actualizar en segundo plano
+      request<Protesta>('get', `/protestas/${protestaId}`)
+        .then(freshData => {
+          if (JSON.stringify(freshData) !== JSON.stringify(cachedProtesta)) {
+            setProtesta(freshData);
+            cacheService.set(cacheKey, freshData);
+            if (freshData.naturaleza_id) {
+              fetchNaturaleza(freshData.naturaleza_id);
+            }
+            if (freshData.provincia_id) {
+              fetchProvincia(freshData.provincia_id);
+            }
+          }
+        })
+        .catch(console.error);
     } else {
       try {
         const data = await request<Protesta>('get', `/protestas/${protestaId}`);
@@ -53,18 +67,21 @@ const ProtestaDetail: React.FC = () => {
     }
   }, [request, navigate]);
 
-  useEffect(() => {
-    if (id && id !== 'crear') {
-      fetchProtesta(id);
-    }
-  }, [id, fetchProtesta]);
-
-  const fetchNaturaleza = async (naturalezaId: string) => {
+  const fetchNaturaleza = useCallback(async (naturalezaId: string) => {
     const cacheKey = `naturaleza_${naturalezaId}`;
     const cachedNaturaleza = cacheService.get<Naturaleza>(cacheKey);
 
     if (cachedNaturaleza) {
       setNaturaleza(cachedNaturaleza);
+      // Actualizar en segundo plano
+      request<Naturaleza>('get', `/naturalezas/${naturalezaId}`)
+        .then(freshData => {
+          if (JSON.stringify(freshData) !== JSON.stringify(cachedNaturaleza)) {
+            setNaturaleza(freshData);
+            cacheService.set(cacheKey, freshData);
+          }
+        })
+        .catch(console.error);
     } else {
       try {
         const data = await request<Naturaleza>('get', `/naturalezas/${naturalezaId}`);
@@ -74,14 +91,23 @@ const ProtestaDetail: React.FC = () => {
         console.error('Error al cargar los detalles de la naturaleza:', error);
       }
     }
-  };
+  }, [request]);
 
-  const fetchProvincia = async (provinciaId: string) => {
+  const fetchProvincia = useCallback(async (provinciaId: string) => {
     const cacheKey = `provincia_${provinciaId}`;
     const cachedProvincia = cacheService.get<Provincia>(cacheKey);
 
     if (cachedProvincia) {
       setProvincia(cachedProvincia);
+      // Actualizar en segundo plano
+      request<Provincia>('get', `/provincias/${provinciaId}`)
+        .then(freshData => {
+          if (JSON.stringify(freshData) !== JSON.stringify(cachedProvincia)) {
+            setProvincia(freshData);
+            cacheService.set(cacheKey, freshData);
+          }
+        })
+        .catch(console.error);
     } else {
       try {
         const data = await request<Provincia>('get', `/provincias/${provinciaId}`);
@@ -91,7 +117,13 @@ const ProtestaDetail: React.FC = () => {
         console.error('Error al cargar los detalles de la provincia:', error);
       }
     }
-  };
+  }, [request]);
+
+  useEffect(() => {
+    if (id && id !== 'crear') {
+      fetchProtesta(id);
+    }
+  }, [id, fetchProtesta]);
 
   useEffect(() => {
     const handlePotentialDataUpdate = () => {
@@ -122,6 +154,7 @@ const ProtestaDetail: React.FC = () => {
             await request('delete', `/protestas/${id}`);
             message.success(`Protesta "${protesta.nombre}" eliminada con éxito`);
             cacheService.remove(`protesta_${id}`);
+            cacheService.invalidateRelatedCache('protesta_');
             navigate('/protestas');
           } catch (error) {
             console.error('Error al eliminar la protesta:', error);

@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Typography, Button, message, Tooltip } from 'antd';
-import { PlusOutlined } from '@ant-design/icons';
+import { Typography, Button, message, Tooltip, Modal } from 'antd';
+import { PlusOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
 import { useApi } from '../../hooks/useApi';
 import { Naturaleza } from '../../types/types';
 import { naturalezaService } from '../../services/apiService';
@@ -10,19 +10,26 @@ import LoadingSpinner from '../Common/LoadingSpinner';
 import ErrorMessage from '../Common/ErrorMessage';
 import { useAuth } from '../../hooks/useAuth';
 import CommonTable from '../Common/CommonTable';
-import DeleteConfirmationDialog from '../Common/DeleteConfirmationDialog';
 import * as IconoirIcons from 'iconoir-react';
 
 const { Title } = Typography;
+const { confirm } = Modal;
 
 interface IconoirIconComponent extends React.FC<React.SVGProps<SVGSVGElement>> { }
+
+interface ApiError {
+  response?: {
+    status: number;
+    data?: {
+      detail?: string;
+    };
+  };
+}
 
 const NaturalezaList: React.FC = () => {
   const [naturalezas, setNaturalezas] = useState<Naturaleza[]>([]);
   const [pagination, setPagination] = useState({ current: 1, pageSize: 10, total: 0 });
   const [filters, setFilters] = useState<NaturalezaFilters>({});
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [naturalezaToDelete, setNaturalezaToDelete] = useState<Naturaleza | null>(null);
   const { loading, error } = useApi();
   const { isAdmin } = useAuth();
   const navigate = useNavigate();
@@ -60,24 +67,34 @@ const NaturalezaList: React.FC = () => {
   }, [navigate]);
 
   const handleDeleteClick = useCallback((naturaleza: Naturaleza) => {
-    setNaturalezaToDelete(naturaleza);
-    setDeleteDialogOpen(true);
+    confirm({
+      title: '¿Estás seguro de que quieres eliminar esta naturaleza?',
+      icon: <ExclamationCircleOutlined />,
+      content: `Se eliminará la naturaleza "${naturaleza.nombre}"`,
+      okText: 'Sí',
+      okType: 'danger',
+      cancelText: 'No',
+      onOk: async () => {
+        try {
+          await naturalezaService.delete(naturaleza.id);
+          setNaturalezas(prevNaturalezas => prevNaturalezas.filter(n => n.id !== naturaleza.id));
+          message.success('Naturaleza eliminada exitosamente');
+        } catch (error) {
+          console.error('Error al eliminar la naturaleza:', error);
+          const apiError = error as ApiError;
+          if (apiError.response?.status === 400 && apiError.response.data?.detail) {
+            message.error(
+              <div style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+                {`Error al eliminar la naturaleza:\n${apiError.response.data.detail}`}
+              </div>
+            );
+          } else {
+            message.error('Error al eliminar la naturaleza');
+          }
+        }
+      },
+    });
   }, []);
-
-  const handleDeleteConfirm = useCallback(async () => {
-    if (naturalezaToDelete) {
-      try {
-        await naturalezaService.delete(naturalezaToDelete.id);
-        setNaturalezas(prevNaturalezas => prevNaturalezas.filter(n => n.id !== naturalezaToDelete.id));
-        setDeleteDialogOpen(false);
-        setNaturalezaToDelete(null);
-        message.success('Naturaleza eliminada exitosamente');
-      } catch (error) {
-        console.error('Error al eliminar la naturaleza:', error);
-        message.error('Error al eliminar la naturaleza');
-      }
-    }
-  }, [naturalezaToDelete]);
 
   useEffect(() => {
     const handlePotentialDataUpdate = () => {
@@ -146,12 +163,6 @@ const NaturalezaList: React.FC = () => {
         onEdit={handleEdit}
         onDelete={handleDeleteClick}
         isAdmin={isAdmin()}
-      />
-      <DeleteConfirmationDialog
-        isOpen={deleteDialogOpen}
-        onClose={() => setDeleteDialogOpen(false)}
-        onConfirm={handleDeleteConfirm}
-        itemName={naturalezaToDelete ? naturalezaToDelete.nombre : ''}
       />
     </div>
   );

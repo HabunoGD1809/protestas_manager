@@ -5,6 +5,7 @@ import { Box, Avatar, Typography, Container, CircularProgress, Alert, Button, In
 import CameraAltIcon from '@mui/icons-material/CameraAlt';
 import { message } from 'antd';
 import '../styles/UserProfilePage.css';
+import { cacheService } from '../services/cacheService';
 
 const UserProfilePage: React.FC = () => {
    const [user, setUser] = useState<User | null>(null);
@@ -20,30 +21,40 @@ const UserProfilePage: React.FC = () => {
    }, []);
 
    const fetchUserProfile = async () => {
+      setLoading(true);
       try {
-         const userData = await authService.obtenerUsuarioActual();
-         setUser(userData);
-         setPhotoUrl(userData.foto || null);
-         setLoading(false);
+         const cachedUser = cacheService.get<User>('currentUser');
+         if (cachedUser) {
+            setUser(cachedUser);
+            setPhotoUrl(cachedUser.foto || null);
+            setLoading(false);
+         } else {
+            const userData = await authService.obtenerUsuarioActual();
+            setUser(userData);
+            setPhotoUrl(userData.foto || null);
+            cacheService.set('currentUser', userData);
+         }
       } catch (err) {
          setError('Error al cargar el perfil de usuario');
+      } finally {
          setLoading(false);
       }
    };
-
 
    const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
       const file = event.target.files?.[0];
       if (file) {
          setUploading(true);
          try {
-            // Crear una URL temporal para la vista previa inmediata
             const tempUrl = URL.createObjectURL(file);
             setTempPhotoUrl(tempUrl);
 
             const updatedUser = await authService.actualizarFotoUsuario(file);
             setUser(updatedUser);
             setPhotoUrl(updatedUser.foto || null);
+
+            cacheService.set('currentUser', updatedUser);
+
             message.success('Foto actualizada. Actualiza la página para ver los cambios permanentes.', 5);
          } catch (err) {
             if (err instanceof Error) {

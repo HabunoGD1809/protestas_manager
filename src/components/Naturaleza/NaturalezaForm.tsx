@@ -48,9 +48,8 @@ const NaturalezaForm: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    if (!formData.nombre || !formData.color) {
-      message.error('El nombre y el color son obligatorios');
+    if (!formData.nombre || !formData.color || !formData.icono) {
+      message.error('El nombre, el color y el icono son obligatorios');
       return;
     }
 
@@ -69,6 +68,7 @@ const NaturalezaForm: React.FC = () => {
     }
   };
 
+
   const handleIconSelect = (iconName: string) => {
     setFormData(prev => ({ ...prev, icono: iconName }));
   };
@@ -83,9 +83,6 @@ const NaturalezaForm: React.FC = () => {
 
   return (
     <Box component="form" onSubmit={handleSubmit} sx={{ mt: 1 }}>
-      <Typography variant="h6" sx={{ mb: 2 }}>
-        {id ? 'Editar' : 'Crear'} Naturaleza
-      </Typography>
       <TextField
         margin="normal"
         required

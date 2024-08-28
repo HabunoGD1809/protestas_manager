@@ -40,9 +40,12 @@ const ProtestaForm: React.FC<ProtestaFormProps> = ({ initialData, onSubmit }) =>
           cabecillaService.getAllNoPagination()
         ]);
 
-        setNaturalezas(naturalezasResponse.items || []);
+        setNaturalezas(Array.isArray(naturalezasResponse) ? naturalezasResponse : []);
         setProvincias(provinciasResponse); // Ahora provinciasResponse es directamente un array de Provincia
-        setCabecillas(cabecillasResponse);
+        setCabecillas(cabecillasResponse); 
+
+        // setProvincias(Array.isArray(provinciasResponse) ? provinciasResponse : []);
+        // setCabecillas(Array.isArray(cabecillasResponse) ? cabecillasResponse : []);
 
         if (initialData) {
           form.setFieldsValue({
@@ -91,11 +94,15 @@ const ProtestaForm: React.FC<ProtestaFormProps> = ({ initialData, onSubmit }) =>
           suffixIcon={<SearchOutlined />}
           placeholder="Buscar y seleccionar naturaleza"
         >
-          {naturalezas.map((naturaleza) => (
-            <Option key={naturaleza.id} value={naturaleza.id} label={naturaleza.nombre}>
-              {naturaleza.nombre}
-            </Option>
-          ))}
+          {naturalezas.length > 0 ? (
+            naturalezas.map((naturaleza) => (
+              <Option key={naturaleza.id} value={naturaleza.id} label={naturaleza.nombre}>
+                {naturaleza.nombre}
+              </Option>
+            ))
+          ) : (
+            <Option disabled>No hay naturalezas disponibles</Option>
+          )}
         </Select>
       </Form.Item>
       <Form.Item name="provincia_id" label="Provincia" rules={[{ required: true }]}>

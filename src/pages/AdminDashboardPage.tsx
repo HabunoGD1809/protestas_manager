@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Link as RouterLink } from 'react-router-dom';
 import {
   Typography, Grid, Paper, Box, Button, useTheme,
@@ -9,6 +9,7 @@ import {
   Nature as NatureIcon,
   Flag as FlagIcon,
   List as ListIcon,
+  Refresh as RefreshIcon
 } from '@mui/icons-material';
 import { DataGrid, GridColDef } from '@mui/x-data-grid';
 import {
@@ -19,31 +20,48 @@ import { useApi } from '../hooks/useApi';
 import { ResumenPrincipal } from '../types/types';
 import { resumenService } from '../services/apiService';
 import { cacheService } from '../services/cacheService';
+import { useSnackbar } from 'notistack';
+
+const CACHE_KEY = 'resumen_principal';
+const CACHE_DURATION = 5 * 60 * 1000; // 5 minutos
 
 const AdminDashboardPage: React.FC = () => {
   const theme = useTheme();
   const { loading, error } = useApi();
   const [dashboardData, setDashboardData] = useState<ResumenPrincipal | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
+  const { enqueueSnackbar } = useSnackbar();
 
-  const fetchData = useCallback(async () => {
+  const fetchData = useCallback(async (force = false) => {
     try {
-      const cachedData = cacheService.get<ResumenPrincipal>('resumen_principal');
-      if (cachedData) {
-        setDashboardData(cachedData);
-        // Actualizar en segundo plano
-        resumenService.getPaginaPrincipal().then(newData => {
-          setDashboardData(newData);
-          cacheService.set('resumen_principal', newData);
-        }).catch(console.error);
-      } else {
-        const data = await resumenService.getPaginaPrincipal();
-        setDashboardData(data);
-        cacheService.set('resumen_principal', data);
+      if (!force) {
+        const cachedData = cacheService.get<ResumenPrincipal>(CACHE_KEY);
+        if (cachedData) {
+          setDashboardData(cachedData);
+          return;
+        }
+      }
+
+      setRefreshing(true);
+      const newData = await resumenService.getPaginaPrincipal();
+      setDashboardData(newData);
+
+      cacheService.setConfig({ cacheDuration: CACHE_DURATION });
+      cacheService.set(CACHE_KEY, newData);
+
+      setRefreshing(false);
+
+      if (force) {
+        enqueueSnackbar('Datos actualizados correctamente', { variant: 'success' });
       }
     } catch (err) {
       console.error('Error fetching dashboard data:', err);
+      setRefreshing(false);
+      if (force) {
+        enqueueSnackbar('Error al actualizar los datos', { variant: 'error' });
+      }
     }
-  }, []);
+  }, [enqueueSnackbar]);
 
   useEffect(() => {
     fetchData();
@@ -51,7 +69,7 @@ const AdminDashboardPage: React.FC = () => {
 
   useEffect(() => {
     const handlePotentialDataUpdate = () => {
-      fetchData();
+      fetchData(true);
     };
 
     window.addEventListener('potentialDataUpdate', handlePotentialDataUpdate);
@@ -61,7 +79,7 @@ const AdminDashboardPage: React.FC = () => {
     };
   }, [fetchData]);
 
-  const protestasRecentesColumns: GridColDef[] = [
+  const protestasRecentesColumns: GridColDef[] = useMemo(() => [
     { field: 'id', headerName: 'ID', width: 220 },
     { field: 'nombre', headerName: 'Nombre', width: 200 },
     { field: 'fecha_evento', headerName: 'Fecha Evento', width: 130 },
@@ -81,44 +99,26 @@ const AdminDashboardPage: React.FC = () => {
         </Button>
       ),
     },
-  ];
+  ], []);
 
-  if (loading) {
-    return (
-      <Box display="flex" justifyContent="center" alignItems="center" height="100vh">
-        <CircularProgress />
-      </Box>
-    );
-  }
+  const statCards = useMemo(() => [
+    { icon: <FlagIcon fontSize="large" sx={{ color: theme.palette.secondary.main }} />, count: dashboardData?.totales.protestas, label: 'Protestas', link: '/protestas' },
+    { icon: <PersonIcon fontSize="large" sx={{ color: theme.palette.primary.main }} />, count: dashboardData?.totales.usuarios, label: 'Usuarios', link: '/usuarios' },
+    { icon: <NatureIcon fontSize="large" sx={{ color: theme.palette.success.main }} />, count: dashboardData?.totales.naturalezas, label: 'Naturalezas', link: '/naturalezas' },
+    { icon: <PersonIcon fontSize="large" sx={{ color: theme.palette.error.main }} />, count: dashboardData?.totales.cabecillas, label: 'Cabecillas', link: '/cabecillas' },
+  ], [theme, dashboardData]);
 
-  if (error) {
-    return (
-      <Box m={2}>
-        <Alert severity="error">{error}</Alert>
-        <Button onClick={fetchData} sx={{ mt: 2 }}>Reintentar</Button>
-      </Box>
-    );
-  }
+  const protestasPorNaturalezaData = useMemo(() =>
+    dashboardData ? Object.entries(dashboardData.protestas_por_naturaleza).map(([name, value]) => ({ name, value })) : [],
+    [dashboardData]);
 
-  if (!dashboardData) {
-    return (
-      <Box m={2}>
-        <Alert severity="info">No se pudo cargar la información del dashboard.</Alert>
-        <Button onClick={fetchData} sx={{ mt: 2 }}>Reintentar</Button>
-      </Box>
-    );
-  }
+  const protestasPorProvinciaData = useMemo(() =>
+    dashboardData ? Object.entries(dashboardData.protestas_por_provincia).map(([name, value]) => ({ name, value })) : [],
+    [dashboardData]);
 
-  const statCards = [
-    { icon: <FlagIcon fontSize="large" sx={{ color: theme.palette.secondary.main }} />, count: dashboardData.totales.protestas, label: 'Protestas', link: '/protestas' },
-    { icon: <PersonIcon fontSize="large" sx={{ color: theme.palette.primary.main }} />, count: dashboardData.totales.usuarios, label: 'Usuarios', link: '/usuarios' },
-    { icon: <NatureIcon fontSize="large" sx={{ color: theme.palette.success.main }} />, count: dashboardData.totales.naturalezas, label: 'Naturalezas', link: '/naturalezas' },
-    { icon: <PersonIcon fontSize="large" sx={{ color: theme.palette.error.main }} />, count: dashboardData.totales.cabecillas, label: 'Cabecillas', link: '/cabecillas' },
-  ];
-
-  const protestasPorNaturalezaData = Object.entries(dashboardData.protestas_por_naturaleza).map(([name, value]) => ({ name, value }));
-  const protestasPorProvinciaData = Object.entries(dashboardData.protestas_por_provincia).map(([name, value]) => ({ name, value }));
-  const protestasUltimos30DiasData = Object.entries(dashboardData.protestas_ultimos_30_dias).map(([date, count]) => ({ date, count: Number(count) }));
+  const protestasUltimos30DiasData = useMemo(() =>
+    dashboardData ? Object.entries(dashboardData.protestas_ultimos_30_dias).map(([date, count]) => ({ date, count: Number(count) })) : [],
+    [dashboardData]);
 
   const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8'];
 
@@ -131,11 +131,46 @@ const AdminDashboardPage: React.FC = () => {
     />
   );
 
+  if (loading && !dashboardData) {
+    return (
+      <Box display="flex" justifyContent="center" alignItems="center" height="100vh">
+        <CircularProgress />
+      </Box>
+    );
+  }
+
+  if (error && !dashboardData) {
+    return (
+      <Box m={2}>
+        <Alert severity="error">{error}</Alert>
+        <Button onClick={() => fetchData(true)} sx={{ mt: 2 }}>Reintentar</Button>
+      </Box>
+    );
+  }
+
+  if (!dashboardData) {
+    return (
+      <Box m={2}>
+        <Alert severity="info">No se pudo cargar la información del dashboard.</Alert>
+        <Button onClick={() => fetchData(true)} sx={{ mt: 2 }}>Reintentar</Button>
+      </Box>
+    );
+  }
+
   return (
     <Box sx={{ flexGrow: 1, p: 3 }}>
-      <Typography variant="h4" gutterBottom>
-        Panel de Administración
-      </Typography>
+      <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+        <Typography variant="h4">
+          Panel de Administración
+        </Typography>
+        <Button
+          onClick={() => fetchData(true)}
+          startIcon={<RefreshIcon />}
+          disabled={refreshing}
+        >
+          {refreshing ? 'Actualizando...' : 'Actualizar datos'}
+        </Button>
+      </Box>
 
       <Grid container spacing={3}>
         {statCards.map((card, index) => (
@@ -260,6 +295,7 @@ const AdminDashboardPage: React.FC = () => {
           </Paper>
         </Grid>
       </Grid>
+
       <Box sx={{ mt: 4 }}>
         <Typography variant="h5" gutterBottom>
           Protestas Recientes

@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Typography, Button, message, Avatar } from 'antd';
-import { PlusOutlined } from '@ant-design/icons';
+import { Typography, Button, message, Avatar, Modal } from 'antd';
+import { PlusOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
 import { useApi } from '../../hooks/useApi';
 import { Cabecilla } from '../../types/types';
 import { cabecillaService } from '../../services/apiService';
@@ -11,16 +11,23 @@ import ErrorMessage from '../Common/ErrorMessage';
 import { useAuth } from '../../hooks/useAuth';
 import { getFullImageUrl } from '../../services/apiService';
 import CommonTable from '../Common/CommonTable';
-import DeleteConfirmationDialog from '../Common/DeleteConfirmationDialog';
 
 const { Title } = Typography;
+const { confirm } = Modal;
+
+interface ApiError {
+  response?: {
+    status: number;
+    data?: {
+      detail?: string;
+    };
+  };
+}
 
 const CabecillaList: React.FC = () => {
   const [cabecillas, setCabecillas] = useState<Cabecilla[]>([]);
   const [pagination, setPagination] = useState({ current: 1, pageSize: 10, total: 0 });
   const [filters, setFilters] = useState<CabecillaFilterValues>({});
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [cabecillaToDelete, setCabecillaToDelete] = useState<Cabecilla | null>(null);
   const { loading, error } = useApi();
   const { isAdmin } = useAuth();
   const navigate = useNavigate();
@@ -65,24 +72,34 @@ const CabecillaList: React.FC = () => {
   }, [navigate]);
 
   const handleDeleteClick = useCallback((cabecilla: Cabecilla) => {
-    setCabecillaToDelete(cabecilla);
-    setDeleteDialogOpen(true);
+    confirm({
+      title: '¿Estás seguro de que quieres eliminar este cabecilla?',
+      icon: <ExclamationCircleOutlined />,
+      content: `Se eliminará el cabecilla "${cabecilla.nombre} ${cabecilla.apellido}"`,
+      okText: 'Sí',
+      okType: 'danger',
+      cancelText: 'No',
+      onOk: async () => {
+        try {
+          await cabecillaService.delete(cabecilla.id);
+          setCabecillas(prevCabecillas => prevCabecillas.filter(c => c.id !== cabecilla.id));
+          message.success('Cabecilla eliminado exitosamente');
+        } catch (error) {
+          console.error('Error al eliminar el cabecilla:', error);
+          const apiError = error as ApiError;
+          if (apiError.response?.status === 400 && apiError.response.data?.detail) {
+            message.error(
+              <div style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+                {`Error al eliminar el cabecilla:\n${apiError.response.data.detail}`}
+              </div>
+            );
+          } else {
+            message.error('Error al eliminar el cabecilla');
+          }
+        }
+      },
+    });
   }, []);
-
-  const handleDeleteConfirm = useCallback(async () => {
-    if (cabecillaToDelete) {
-      try {
-        await cabecillaService.delete(cabecillaToDelete.id);
-        setCabecillas(prevCabecillas => prevCabecillas.filter(c => c.id !== cabecillaToDelete.id));
-        setDeleteDialogOpen(false);
-        setCabecillaToDelete(null);
-        message.success('Cabecilla eliminado exitosamente');
-      } catch (error) {
-        console.error('Error al eliminar el cabecilla:', error);
-        message.error('Error al eliminar el cabecilla');
-      }
-    }
-  }, [cabecillaToDelete]);
 
   useEffect(() => {
     const handlePotentialDataUpdate = () => {
@@ -136,12 +153,6 @@ const CabecillaList: React.FC = () => {
         onEdit={handleEdit}
         onDelete={handleDeleteClick}
         isAdmin={isAdmin()}
-      />
-      <DeleteConfirmationDialog
-        isOpen={deleteDialogOpen}
-        onClose={() => setDeleteDialogOpen(false)}
-        onConfirm={handleDeleteConfirm}
-        itemName={cabecillaToDelete ? `${cabecillaToDelete.nombre} ${cabecillaToDelete.apellido}` : ''}
       />
     </div>
   );

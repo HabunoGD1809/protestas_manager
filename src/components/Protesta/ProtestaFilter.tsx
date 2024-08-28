@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { Form, Input, Select, DatePicker, Button, Space, Row, Col } from 'antd';
 import { Naturaleza, Provincia } from '../../types/types';
 import { Moment } from 'moment';
 import '../../styles/commonFilter.css';
+import moment from 'moment';
 
 const { RangePicker } = DatePicker;
 const { Option } = Select;
@@ -26,21 +27,53 @@ interface ProtestaFilterProps {
   naturalezas: Naturaleza[];
   provincias: Provincia[];
   onFilter: (filters: Filters) => void;
+  initialFilters?: Filters; // Add this line
 }
 
-const ProtestaFilter: React.FC<ProtestaFilterProps> = ({ naturalezas, provincias, onFilter }) => {
+const ProtestaFilter: React.FC<ProtestaFilterProps> = ({ naturalezas, provincias, onFilter, initialFilters }) => {
   const [form] = Form.useForm<FilterValues>();
+  const [prevFilters, setPrevFilters] = useState<Filters>(initialFilters || {});
 
-  const handleFilter = (values: FilterValues) => {
-    const filters: Filters = {
-      nombre: values.nombre,
+  useEffect(() => {
+    if (initialFilters) {
+      form.setFieldsValue({
+        nombre: initialFilters.nombre,
+        naturaleza_id: initialFilters.naturaleza_id,
+        provincia_id: initialFilters.provincia_id,
+        fecha_rango: initialFilters.fecha_desde && initialFilters.fecha_hasta
+          ? [moment(initialFilters.fecha_desde), moment(initialFilters.fecha_hasta)]
+          : undefined,
+      });
+    }
+  }, [form, initialFilters]);
+
+  const handleFilter = useCallback((values: FilterValues) => {
+    const newFilters: Filters = {
+      nombre: values.nombre?.trim() || undefined,
       naturaleza_id: values.naturaleza_id,
       provincia_id: values.provincia_id,
       fecha_desde: values.fecha_rango?.[0]?.format('YYYY-MM-DD'),
       fecha_hasta: values.fecha_rango?.[1]?.format('YYYY-MM-DD'),
     };
-    onFilter(filters);
-  };
+
+    // Comparar los nuevos filtros con los anteriores
+    const hasChanged = Object.keys(newFilters).some(key => {
+      return newFilters[key as keyof Filters] !== prevFilters[key as keyof Filters];
+    });
+
+    if (hasChanged) {
+      onFilter(newFilters);
+      setPrevFilters(newFilters);
+    }
+  }, [onFilter, prevFilters]);
+
+  const handleReset = useCallback(() => {
+    form.resetFields();
+    if (Object.keys(prevFilters).length > 0) {
+      onFilter({});
+      setPrevFilters({});
+    }
+  }, [form, onFilter, prevFilters]);
 
   return (
     <Form form={form} layout="vertical" onFinish={handleFilter} className="filter-form">
@@ -87,10 +120,7 @@ const ProtestaFilter: React.FC<ProtestaFilterProps> = ({ naturalezas, provincias
           <Button type="primary" htmlType="submit">
             Filtrar
           </Button>
-          <Button onClick={() => {
-            form.resetFields();
-            onFilter({});
-          }}>
+          <Button onClick={handleReset}>
             Limpiar
           </Button>
         </Space>

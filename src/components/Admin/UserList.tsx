@@ -11,13 +11,14 @@ import {
   Chip,
   Box
 } from '@mui/material';
+import { Modal, message } from 'antd';
+import { ExclamationCircleOutlined } from '@ant-design/icons';
 import { User } from '../../types/types';
 import ChangeUserRole from './ChangeUserRole';
 import Pagination from '../Common/Pagination';
 import { userService, getFullImageUrl } from '../../services/apiService';
 import CreateUserForm from './CreateUserForm';
-import { message } from 'antd';
-import DeleteConfirmationDialog from '../Common/DeleteConfirmationDialog';
+import { cacheService } from '../../services/cacheService';
 import {
   StyledBox,
   StyledErrorAlert,
@@ -34,6 +35,8 @@ import {
   StyledCurrentUserChip
 } from '../../styles/UserListStyles';
 
+const { confirm } = Modal;
+
 const handleError = (error: unknown, setError: React.Dispatch<React.SetStateAction<string | null>>) => {
   const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
   console.error('Error:', errorMessage);
@@ -49,8 +52,6 @@ const UserList: React.FC = () => {
   const [pagination, setPagination] = useState({ current: 1, pageSize: 12, total: 0 });
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [userToDelete, setUserToDelete] = useState<User | null>(null);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
 
   const fetchCurrentUser = useCallback(async () => {
@@ -65,32 +66,73 @@ const UserList: React.FC = () => {
   const fetchUsers = useCallback(async (page: number, pageSize: number) => {
     setIsLoading(true);
     setError(null);
+    const cacheKey = `users_${page}_${pageSize}`;
+
     try {
-      const response = await userService.getAll(page, pageSize);
-      let usersData: User[] = [];
-      let paginationData = { current: page, pageSize: pageSize, total: 0 };
+      // Intentar obtener datos del caché
+      const cachedData = cacheService.get<{ users: User[], pagination: typeof pagination }>(cacheKey);
 
-      if (Array.isArray(response)) {
-        usersData = response;
-        paginationData.total = response.length;
-      } else if (response && 'items' in response && Array.isArray(response.items)) {
-        usersData = response.items;
-        paginationData = {
-          current: response.page,
-          pageSize: response.page_size,
-          total: response.total
-        };
+      if (cachedData) {
+        setUsers(cachedData.users);
+        setPagination(cachedData.pagination);
+        setIsLoading(false);
+
+        // Actualizar en segundo plano
+        userService.getAll(page, pageSize).then(response => {
+          let usersData: User[] = [];
+          let paginationData = { current: page, pageSize: pageSize, total: 0 };
+
+          if (Array.isArray(response)) {
+            usersData = response;
+            paginationData.total = response.length;
+          } else if (response && 'items' in response && Array.isArray(response.items)) {
+            usersData = response.items;
+            paginationData = {
+              current: response.page,
+              pageSize: response.page_size,
+              total: response.total
+            };
+          }
+
+          const usersWithFullImageUrls = usersData.map(user => ({
+            ...user,
+            foto: getFullImageUrl(user.foto)
+          }));
+
+          setUsers(usersWithFullImageUrls);
+          setPagination(paginationData);
+          cacheService.set(cacheKey, { users: usersWithFullImageUrls, pagination: paginationData });
+        }).catch(err => {
+          console.error('Error actualizando datos en segundo plano:', err);
+        });
       } else {
-        throw new Error('Formato de respuesta inesperado');
+        const response = await userService.getAll(page, pageSize);
+        let usersData: User[] = [];
+        let paginationData = { current: page, pageSize: pageSize, total: 0 };
+
+        if (Array.isArray(response)) {
+          usersData = response;
+          paginationData.total = response.length;
+        } else if (response && 'items' in response && Array.isArray(response.items)) {
+          usersData = response.items;
+          paginationData = {
+            current: response.page,
+            pageSize: response.page_size,
+            total: response.total
+          };
+        } else {
+          throw new Error('Formato de respuesta inesperado');
+        }
+
+        const usersWithFullImageUrls = usersData.map(user => ({
+          ...user,
+          foto: getFullImageUrl(user.foto)
+        }));
+
+        setUsers(usersWithFullImageUrls);
+        setPagination(paginationData);
+        cacheService.set(cacheKey, { users: usersWithFullImageUrls, pagination: paginationData });
       }
-
-      const usersWithFullImageUrls = usersData.map(user => ({
-        ...user,
-        foto: getFullImageUrl(user.foto)
-      }));
-
-      setUsers(usersWithFullImageUrls);
-      setPagination(paginationData);
     } catch (err) {
       handleError(err, setError);
       setUsers([]);
@@ -106,6 +148,7 @@ const UserList: React.FC = () => {
         user.id === userId ? { ...user, rol: newRole } : user
       ));
       message.success(`Rol de usuario actualizado a ${newRole}`);
+      cacheService.invalidateRelatedCache('users_');
     } catch (error) {
       handleError(error, setError);
     }
@@ -115,23 +158,30 @@ const UserList: React.FC = () => {
     setPagination(prev => ({ ...prev, current: page, pageSize: pageSize || prev.pageSize }));
   }, []);
 
-  const handleDeleteUser = useCallback(async () => {
-    if (userToDelete) {
-      try {
-        if (currentUser && currentUser.id === userToDelete.id) {
-          throw new Error('No puedes eliminar tu propia cuenta.');
-        }
+  const handleDeleteUser = useCallback((user: User) => {
+    confirm({
+      title: '¿Estás seguro de que quieres eliminar este usuario?',
+      icon: <ExclamationCircleOutlined />,
+      content: `Se eliminará el usuario "${user.nombre} ${user.apellidos}"`,
+      okText: 'Sí',
+      okType: 'danger',
+      cancelText: 'No',
+      onOk: async () => {
+        try {
+          if (currentUser && currentUser.id === user.id) {
+            throw new Error('No puedes eliminar tu propia cuenta.');
+          }
 
-        await userService.delete(userToDelete.id);
-        setUsers(prevUsers => prevUsers.filter(user => user.id !== userToDelete.id));
-        setDeleteDialogOpen(false);
-        setUserToDelete(null);
-        message.success('Usuario eliminado exitosamente');
-      } catch (error) {
-        handleError(error, setError);
-      }
-    }
-  }, [userToDelete, currentUser]);
+          await userService.delete(user.id);
+          setUsers(prevUsers => prevUsers.filter(u => u.id !== user.id));
+          message.success('Usuario eliminado exitosamente');
+          cacheService.invalidateRelatedCache('users_');
+        } catch (error) {
+          handleError(error, setError);
+        }
+      },
+    });
+  }, [currentUser]);
 
   const handleCreateUser = useCallback(async (userData: FormData) => {
     try {
@@ -139,6 +189,7 @@ const UserList: React.FC = () => {
       setUsers(prevUsers => [...prevUsers, newUser]);
       setCreateDialogOpen(false);
       message.success('Usuario creado exitosamente');
+      cacheService.invalidateRelatedCache('users_');
     } catch (error) {
       handleError(error, setError);
     }
@@ -162,7 +213,7 @@ const UserList: React.FC = () => {
     return () => {
       window.removeEventListener('potentialDataUpdate', handlePotentialDataUpdate);
     };
-  }, [fetchUsers, pagination.current, pagination.pageSize]);
+  }, [fetchUsers, pagination, pagination.pageSize]);
 
   if (isLoading) {
     return (
@@ -205,7 +256,7 @@ const UserList: React.FC = () => {
                     )}
                   </StyledUserName>
                   <StyledUserInfo variant="body2" color="text.secondary">
-                    Email: {user.email}
+                    Correo: {user.email}
                   </StyledUserInfo>
                   <Box sx={{
                     marginBottom: theme.spacing(1),
@@ -227,10 +278,7 @@ const UserList: React.FC = () => {
                     size="small"
                     color="secondary"
                     fullWidth={isSmallScreen}
-                    onClick={() => {
-                      setUserToDelete(user);
-                      setDeleteDialogOpen(true);
-                    }}
+                    onClick={() => handleDeleteUser(user)}
                     disabled={currentUser?.id === user.id}
                   >
                     Eliminar
@@ -253,13 +301,6 @@ const UserList: React.FC = () => {
           onChange={handlePaginationChange}
         />
       </StyledPaginationContainer>
-
-      <DeleteConfirmationDialog
-        isOpen={deleteDialogOpen}
-        onClose={() => setDeleteDialogOpen(false)}
-        onConfirm={handleDeleteUser}
-        itemName={userToDelete ? `${userToDelete.nombre} ${userToDelete.apellidos}` : ''}
-      />
 
       <Dialog
         open={createDialogOpen}
