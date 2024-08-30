@@ -1,31 +1,43 @@
 import React from 'react';
-import { Modal } from 'antd';
+import { Modal, message } from 'antd';
 import { ExclamationCircleOutlined } from '@ant-design/icons';
+
+const { confirm } = Modal;
 
 interface DeleteConfirmationProps {
   title: string;
   content: string;
-  onConfirm: () => void;
+  onDelete: () => Promise<void>;
 }
 
-const DeleteConfirmation: React.FC<DeleteConfirmationProps> = ({ title, content, onConfirm }) => {
-  const showConfirm = () => {
-    Modal.confirm({
-      title: title,
+const DeleteConfirmation: React.FC<DeleteConfirmationProps> = ({ title, content, onDelete }) => {
+  const showDeleteConfirm = () => {
+    confirm({
+      title,
       icon: <ExclamationCircleOutlined />,
-      content: content,
+      content,
       okText: 'Sí',
       okType: 'danger',
       cancelText: 'No',
-      onOk() {
-        onConfirm();
+      onOk: async () => {
+        try {
+          await onDelete();
+          message.success('Elemento eliminado exitosamente');
+        } catch (error) {
+          console.error('Error al eliminar:', error);
+          if (error instanceof Error) {
+            message.error(`Error al eliminar: ${error.message}`);
+          } else {
+            message.error('Error al eliminar');
+          }
+        }
       },
     });
   };
 
   return (
-    <span onClick={showConfirm}>
-      Confirmar eliminación
+    <span onClick={showDeleteConfirm}>
+      Eliminar
     </span>
   );
 };
