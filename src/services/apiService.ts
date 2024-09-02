@@ -18,7 +18,7 @@ import { cacheService } from "./cacheService";
 import { versionCheckService } from "./versionCheckService";
 import { logError, logInfo } from './loggingService';
 
-const BASE_URL = import.meta.env.VITE_API_URL || "/api";
+const BASE_URL = import.meta.env.BASE_URL || "http://10.5.5.18:8000";
 
 export const api: AxiosInstance = axios.create({
   baseURL: BASE_URL,
