@@ -15,7 +15,7 @@ interface AuthChannelMessage {
 
 export interface AuthContextType {
   user: User | null;
-  login: (email: string, password: string) => Promise<void>;
+  login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
   register: (userData: FormData) => Promise<User>;
   logout: () => void;
   isAdmin: () => boolean;
@@ -25,7 +25,7 @@ export interface AuthContextType {
 
 export const AuthContext = createContext<AuthContextType>({
   user: null,
-  login: async () => { },
+  login: async () => ({ success: false, error: 'Not implemented' }),
   register: async () => ({} as User),
   logout: () => { },
   isAdmin: () => false,
@@ -237,38 +237,37 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     };
   }, [isAuthenticated, startInactivityTimer]);
 
-  const handleLogin = useCallback(async (email: string, password: string) => {
+  const handleLogin = useCallback(async (email: string, password: string): Promise<{ success: boolean; error?: string }> => {
     try {
-      logInfo('Verificando si el usuario existe');
-      const userExists = await checkUserExists(email);
-      if (!userExists) {
-        throw new Error('USER_NOT_REGISTERED');
-      }
-
-      logInfo('Intentando iniciar sesión');
       const { token_acceso, token_actualizacion } = await authService.login(email, password);
       setCookie('token', token_acceso, { path: '/', secure: true, sameSite: 'strict' });
       setCookie('refreshToken', token_actualizacion, { path: '/', secure: true, sameSite: 'strict' });
-      logInfo('Tokens almacenados');
 
       const userData = await authService.obtenerUsuarioActual();
       setUser(userData);
       setIsAuthenticated(true);
       setStoredUser(userData);
       cacheService.set('current_user', userData);
-      logInfo('Inicio de sesión exitoso');
+      return { success: true };
     } catch (error) {
       logError('Error durante el inicio de sesión', error);
-      if (error instanceof AxiosError) {
-        if (error.code === 'ECONNABORTED') {
-          throw new Error('CONNECTION_TIMEOUT');
-        } else if (!error.response) {
-          throw new Error('NO_SERVER_RESPONSE');
-        } else if (error.response.status === 401) {
-          throw new Error('INVALID_CREDENTIALS');
+      if (error instanceof Error) {
+        switch (error.message) {
+          case 'INVALID_CREDENTIALS':
+            return { success: false, error: 'INVALID_CREDENTIALS' };
+          case 'USER_NOT_FOUND':
+            return { success: false, error: 'USER_NOT_FOUND' };
+          case 'CONNECTION_TIMEOUT':
+            return { success: false, error: 'CONNECTION_TIMEOUT' };
+          case 'NO_SERVER_RESPONSE':
+            return { success: false, error: 'NO_SERVER_RESPONSE' };
+          default:
+            console.error('Error inesperado:', error);
+            return { success: false, error: 'UNEXPECTED_ERROR' };
         }
       }
-      throw error;
+      console.error('Error no manejado:', error);
+      return { success: false, error: 'UNEXPECTED_ERROR' };
     }
   }, []);
 
@@ -294,7 +293,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     return user?.rol === 'admin';
   }, [user]);
 
-  const authContextValue = useMemo(() => ({
+  const authContextValue: AuthContextType = useMemo(() => ({
     user,
     login: handleLogin,
     register: handleRegister,

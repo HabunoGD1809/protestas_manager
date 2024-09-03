@@ -237,8 +237,19 @@ export const authService = {
       logInfo('Inicio de sesión exitoso', { email });
       return response.data;
     } catch (error) {
+      if (axios.isAxiosError(error)) {
+        if (error.response?.status === 401) {
+          throw new Error('INVALID_CREDENTIALS');
+        } else if (error.response?.status === 404) {
+          throw new Error('USER_NOT_FOUND');
+        } else if (error.code === 'ECONNABORTED') {
+          throw new Error('CONNECTION_TIMEOUT');
+        } else if (!error.response) {
+          throw new Error('NO_SERVER_RESPONSE');
+        }
+      }
       logError('Error en el inicio de sesión', error as Error);
-      throw error;
+      throw new Error('UNEXPECTED_ERROR');
     }
   },
 

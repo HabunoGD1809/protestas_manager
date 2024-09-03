@@ -35,16 +35,11 @@ const Login: React.FC = () => {
     }
 
     try {
-      await login(email, password);
-      console.log('Inicio de sesión exitoso');
-      navigate('/');
-    } catch (err) {
-      console.error('Error durante el proceso de inicio de sesión:', err);
-      if (err instanceof Error) {
-        switch (err.message) {
-          case 'USER_NOT_REGISTERED':
-            setError('El usuario no está registrado en la base de datos.');
-            break;
+      const result = await login(email, password);
+      if (result.success) {
+        navigate('/');
+      } else {
+        switch (result.error) {
           case 'CONNECTION_TIMEOUT':
             setError('La conexión al servidor ha excedido el tiempo de espera. Por favor, intenta de nuevo.');
             break;
@@ -54,12 +49,16 @@ const Login: React.FC = () => {
           case 'INVALID_CREDENTIALS':
             setError('Credenciales inválidas. Por favor, verifica tu email y contraseña.');
             break;
+          case 'USER_NOT_FOUND':
+            setError('El usuario no existe. Por favor, verifica tu email o regístrate si aún no tienes una cuenta.');
+            break;
           default:
-            setError(`Error de autenticación: ${err.message}`);
+            setError('Ha ocurrido un error inesperado. Por favor, intenta de nuevo.');
         }
-      } else {
-        setError('Ocurrió un error inesperado. Por favor, intenta de nuevo.');
       }
+    } catch (error) {
+      console.error('Error no manejado en el inicio de sesión:', error);
+      setError('Ha ocurrido un error inesperado. Por favor, intenta de nuevo.');
     }
   };
 

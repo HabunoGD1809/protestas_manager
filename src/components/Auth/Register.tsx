@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { TextField, Button, Typography, Box, Avatar, Snackbar } from '@mui/material';
 import MuiAlert, { AlertProps } from '@mui/material/Alert';
 import { useAuth } from '../../hooks/useAuth';
+import axios from 'axios';
 
 const Alert = React.forwardRef<HTMLDivElement, AlertProps>(function Alert(
   props,
@@ -59,10 +60,22 @@ const Register: React.FC = () => {
       }, 3000);
     } catch (err) {
       console.error('Error en el registro:', err);
-      if (err instanceof Error) {
-        setError(`Registro fallido: ${err.message}`);
+      if (axios.isAxiosError(err)) {
+        if (err.response) {
+          if (err.response.status === 400) {
+            setError(`Error de validación: ${err.response.data.detail || 'Los datos proporcionados no son válidos.'}`);
+          } else if (err.response.status === 409) {
+            setError('El usuario ya existe. Por favor, intenta con un correo electrónico diferente.');
+          } else {
+            setError(`Error del servidor: ${err.response.data.detail || err.message}`);
+          }
+        } else if (err.request) {
+          setError('No se recibió respuesta del servidor. Por favor, intenta de nuevo más tarde.');
+        } else {
+          setError(`Error de configuración: ${err.message}`);
+        }
       } else {
-        setError('Registro fallido. Por favor, inténtelo de nuevo.');
+        setError('Ocurrió un error inesperado durante el registro. Por favor, inténtalo de nuevo.');
       }
     }
   };
