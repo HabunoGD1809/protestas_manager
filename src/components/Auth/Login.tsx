@@ -3,9 +3,22 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { TextField, Button, Typography, Box, Alert } from '@mui/material';
 import { useAuth } from '../../hooks/useAuth';
 
+const validateEmail = (email: string): boolean => {
+  const re = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+  return re.test(email);
+};
+
+const ERROR_MESSAGES = {
+  INVALID_EMAIL: 'Por favor, introduce un email válido.',
+  CONNECTION_TIMEOUT: 'La conexión al servidor ha excedido el tiempo de espera. Por favor, intenta de nuevo.',
+  NO_SERVER_RESPONSE: 'No se pudo conectar con el servidor. Por favor, verifica tu conexión a internet e intenta de nuevo.',
+  INVALID_CREDENTIALS: 'Credenciales inválidas. Por favor, verifica tu email y contraseña.',
+  USER_NOT_FOUND: 'El usuario no existe. Por favor, verifica tu email o regístrate si aún no tienes una cuenta.',
+  UNEXPECTED: 'Ha ocurrido un error inesperado. Por favor, intenta de nuevo.'
+};
+
 const Login: React.FC = () => {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [formData, setFormData] = useState({ email: '', password: '' });
   const [error, setError] = useState('');
   const [inactivityMessage, setInactivityMessage] = useState('');
   const { login } = useAuth();
@@ -14,51 +27,35 @@ const Login: React.FC = () => {
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
-    const inactivity = params.get('inactivity');
-    if (inactivity === 'true') {
+    if (params.get('inactivity') === 'true') {
       setInactivityMessage('Sesión cerrada por inactividad.');
     }
   }, [location]);
 
-  const validateEmail = (email: string): boolean => {
-    const re = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
-    return re.test(email);
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
 
-    if (!validateEmail(email)) {
-      setError('Por favor, introduce un email válido.');
+    if (!validateEmail(formData.email)) {
+      setError(ERROR_MESSAGES.INVALID_EMAIL);
       return;
     }
 
     try {
-      const result = await login(email, password);
+      const result = await login(formData.email, formData.password);
       if (result.success) {
         navigate('/');
       } else {
-        switch (result.error) {
-          case 'CONNECTION_TIMEOUT':
-            setError('La conexión al servidor ha excedido el tiempo de espera. Por favor, intenta de nuevo.');
-            break;
-          case 'NO_SERVER_RESPONSE':
-            setError('No se pudo conectar con el servidor. Por favor, verifica tu conexión a internet e intenta de nuevo.');
-            break;
-          case 'INVALID_CREDENTIALS':
-            setError('Credenciales inválidas. Por favor, verifica tu email y contraseña.');
-            break;
-          case 'USER_NOT_FOUND':
-            setError('El usuario no existe. Por favor, verifica tu email o regístrate si aún no tienes una cuenta.');
-            break;
-          default:
-            setError('Ha ocurrido un error inesperado. Por favor, intenta de nuevo.');
-        }
+        setError(ERROR_MESSAGES[result.error as keyof typeof ERROR_MESSAGES] || ERROR_MESSAGES.UNEXPECTED);
       }
     } catch (error) {
       console.error('Error no manejado en el inicio de sesión:', error);
-      setError('Ha ocurrido un error inesperado. Por favor, intenta de nuevo.');
+      setError(ERROR_MESSAGES.UNEXPECTED);
     }
   };
 
@@ -78,8 +75,8 @@ const Login: React.FC = () => {
         name="email"
         autoComplete="email"
         autoFocus
-        value={email}
-        onChange={(e) => setEmail(e.target.value)}
+        value={formData.email}
+        onChange={handleChange}
         error={!!error && error.includes('email')}
         helperText={error && error.includes('email') ? error : ''}
         inputProps={{
@@ -95,8 +92,8 @@ const Login: React.FC = () => {
         type="password"
         id="password"
         autoComplete="current-password"
-        value={password}
-        onChange={(e) => setPassword(e.target.value)}
+        value={formData.password}
+        onChange={handleChange}
         inputProps={{
           'aria-label': 'Contraseña',
         }}

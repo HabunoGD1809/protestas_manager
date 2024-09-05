@@ -18,8 +18,9 @@ import { cacheService } from "./cacheService";
 import { versionCheckService } from "./versionCheckService";
 import { logError, logInfo } from './loggingService';
 
-const BASE_URL = "http://10.5.5.18:8000";
+const BASE_URL = import.meta.env.VITE_API_URL || "http://10.5.5.18:8000";
 
+// API instance configuration
 export const api: AxiosInstance = axios.create({
   baseURL: BASE_URL,
   headers: {
@@ -99,6 +100,7 @@ api.interceptors.response.use(
   }
 );
 
+// Utility functions
 export const getFullImageUrl = (path: string | undefined) => {
   if (path) {
     return path.startsWith('http://') || path.startsWith('https://') ? path : `${BASE_URL}${path}`;
@@ -344,25 +346,8 @@ class ProtestaService extends BaseService<Protesta, CrearProtesta> {
 
   async fetchNaturalezasYProvincias(): Promise<[Naturaleza[], Provincia[]]> {
     try {
-      // console.log('Iniciando fetchNaturalezasYProvincias');
-
-      let naturalezas: Naturaleza[];
-      try {
-        naturalezas = await naturalezaService.getAll();
-        // console.log('Naturalezas obtenidas:', naturalezas);
-      } catch (error) {
-        console.error('Error al obtener naturalezas:', error);
-        naturalezas = [];
-      }
-
-      let provincias: Provincia[];
-      try {
-        provincias = await provinciaService.getAll();
-        // console.log('Provincias obtenidas:', provincias);
-      } catch (error) {
-        console.error('Error al obtener provincias:', error);
-        provincias = [];
-      }
+      const naturalezas = await naturalezaService.getAll();
+      const provincias = await provinciaService.getAll();
 
       if (naturalezas.length === 0) {
         console.warn('No se obtuvieron naturalezas');
@@ -389,9 +374,7 @@ class ProtestaService extends BaseService<Protesta, CrearProtesta> {
 
   async getNaturalezas(): Promise<Naturaleza[]> {
     try {
-      console.log('Iniciando getNaturalezas');
       const response = await naturalezaService.getAll();
-      console.log('Naturalezas obtenidas en getNaturalezas:', response);
       return response;
     } catch (error) {
       console.error('Error al obtener naturalezas:', error);
@@ -401,7 +384,6 @@ class ProtestaService extends BaseService<Protesta, CrearProtesta> {
 }
 
 export const protestaService = new ProtestaService();
-
 
 // Cabecilla service
 class CabecillaService extends BaseService<Cabecilla, FormData> {
@@ -508,12 +490,10 @@ class NaturalezaService extends BaseService<Naturaleza, CrearNaturaleza> {
   async getAll(): Promise<Naturaleza[]>;
   async getAll(page: number, pageSize: number, filters?: NaturalezaFilters): Promise<PaginatedResponse<Naturaleza>>;
   async getAll(page?: number, pageSize?: number, filters?: NaturalezaFilters): Promise<Naturaleza[] | PaginatedResponse<Naturaleza>> {
-    // console.log('NaturalezaService.getAll called with:', { page, pageSize, filters });
     if (page === undefined && pageSize === undefined) {
       try {
         const response = await api.get<PaginatedResponse<Naturaleza>>(this.endpoint);
-        // console.log('NaturalezaService.getAll response:', response.data);
-        return response.data.items; // Devuelve solo el array de items
+        return response.data.items;
       } catch (error) {
         console.error('Error en NaturalezaService.getAll:', error);
         throw error;
@@ -532,7 +512,6 @@ class ProvinciaService extends BaseService<Provincia> {
     super("/provincias");
   }
 
-  // Sobrescribimos el método getAll de la clase base
   async getAll(): Promise<Provincia[]>;
   async getAll(page: number, pageSize: number, filters?: Record<string, unknown>): Promise<PaginatedResponse<Provincia>>;
   async getAll(page?: number, pageSize?: number, filters?: Record<string, unknown>): Promise<Provincia[] | PaginatedResponse<Provincia>> {
@@ -554,7 +533,7 @@ class ProvinciaService extends BaseService<Provincia> {
         throw error;
       }
     } else {
-      return super.getAll(page, pageSize, filters);
+      return super.getAll(page!, pageSize!, filters);
     }
   }
 

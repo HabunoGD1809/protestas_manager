@@ -5,8 +5,15 @@ export const getCookie = (name: string): string | undefined => {
   return Cookies.get(name);
 };
 
+const isProduction = process.env.NODE_ENV === 'production';
+
 export const setCookie = (name: string, value: string, options?: Cookies.CookieAttributes): void => {
-  Cookies.set(name, value, { ...options, secure: true, sameSite: 'strict' });
+  Cookies.set(name, value, {
+    ...options,
+    secure: isProduction,
+    sameSite: 'lax',
+    domain: window.location.hostname
+  });
 };
 
 export const removeCookie = (name: string): void => {

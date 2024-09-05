@@ -102,6 +102,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     logInfo('Iniciando proceso de renovación de token');
 
     const refreshTokenValue = getCookie('refreshToken');
+    console.log('Valor del refreshToken:', refreshTokenValue ? 'Presente' : 'Ausente');
 
     if (refreshTokenValue) {
       try {
@@ -118,6 +119,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         setIsRefreshing(false);
       }
     } else {
+      console.log('Cookies actuales:', document.cookie);
       logError('No hay token de actualización disponible', new Error('No refresh token'));
       setIsRefreshing(false);
       return false;
