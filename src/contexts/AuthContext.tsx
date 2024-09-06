@@ -41,6 +41,8 @@ const INACTIVITY_TIMEOUT = 5 * 60 * 1000; // 5 minutos
 const TOKEN_REFRESH_INTERVAL = 14 * 60 * 1000; // 14 minutos
 const COUNTDOWN_DURATION = 60; // 60 segundos para el contador de inactividad
 
+const isProduction = process.env.NODE_ENV === 'production';
+
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(getStoredUser());
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -59,22 +61,35 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const handleLogout = useCallback((reason?: 'inactivity' | 'manual' | 'error' | 'sync') => {
     logInfo('Cerrando sesión del usuario', { reason });
-    authService.logout();
-    setUser(null);
-    setIsAuthenticated(false);
+
+    // Limpiar cookies
     removeCookie('token');
     removeCookie('refreshToken');
     removeStoredUser();
+
+    // Limpiar localStorage y sessionStorage
+    localStorage.removeItem('user');
+    sessionStorage.removeItem('user');
+
+    // Limpiar estado
+    setUser(null);
+    setIsAuthenticated(false);
+
+    // Limpiar caché
     cacheService.clear();
+
+    // Limpiar timers
     if (inactivityTimerRef.current) clearTimeout(inactivityTimerRef.current);
     if (refreshTimerRef.current) clearInterval(refreshTimerRef.current);
 
+    // Enviar mensaje de cierre de sesión a otras pestañas
     if (reason !== 'sync' && authChannel.current) {
       authChannel.current.postMessage({ type: 'logout' }).catch(error => {
         logError('Error al enviar mensaje de cierre de sesión', error);
       });
     }
 
+    // Redirigir al usuario
     navigate(reason === 'inactivity' ? '/login?inactivity=true' : '/login');
   }, [navigate]);
 
@@ -107,8 +122,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     if (refreshTokenValue) {
       try {
         const newTokens = await authService.refreshToken(refreshTokenValue);
-        setCookie('token', newTokens.token_acceso, { path: '/', secure: true, sameSite: 'strict' });
-        setCookie('refreshToken', newTokens.token_actualizacion, { path: '/', secure: true, sameSite: 'strict' });
+        setCookie('token', newTokens.token_acceso, { path: '/', secure: isProduction, sameSite: 'lax' });
+        setCookie('refreshToken', newTokens.token_actualizacion, { path: '/', secure: isProduction, sameSite: 'lax' });
         logInfo('Token renovado exitosamente');
         cacheService.markAllAsStale();
         return true;
@@ -242,8 +257,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const handleLogin = useCallback(async (email: string, password: string): Promise<{ success: boolean; error?: string }> => {
     try {
       const { token_acceso, token_actualizacion } = await authService.login(email, password);
-      setCookie('token', token_acceso, { path: '/', secure: true, sameSite: 'strict' });
-      setCookie('refreshToken', token_actualizacion, { path: '/', secure: true, sameSite: 'strict' });
+      setCookie('token', token_acceso, { path: '/', secure: isProduction, sameSite: 'lax' });
+      setCookie('refreshToken', token_actualizacion, { path: '/', secure: isProduction, sameSite: 'lax' });
 
       const userData = await authService.obtenerUsuarioActual();
       setUser(userData);
