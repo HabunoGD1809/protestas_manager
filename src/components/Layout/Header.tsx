@@ -1,5 +1,5 @@
-import React, { useContext, useState, useCallback, memo, useEffect } from 'react';
-import { Link as RouterLink, useLocation } from 'react-router-dom';
+import React, { useContext, useState, useCallback, memo } from 'react';
+import { Link as RouterLink, useLocation, useNavigate } from 'react-router-dom';
 import { AppBar, Toolbar, Typography, Button, Box, Avatar, Menu, MenuItem, IconButton, Tooltip, Container } from '@mui/material';
 import MenuIcon from '@mui/icons-material/Menu';
 import HomeIcon from '@mui/icons-material/Home';
@@ -17,6 +17,7 @@ const Header: React.FC = memo(() => {
   const [anchorElNav, setAnchorElNav] = useState<null | HTMLElement>(null);
   const [anchorElUser, setAnchorElUser] = useState<null | HTMLElement>(null);
   const location = useLocation();
+  const navigate = useNavigate();
 
   const handleOpenNavMenu = useCallback((event: React.MouseEvent<HTMLElement>) => {
     setAnchorElNav(event.currentTarget);
@@ -34,17 +35,17 @@ const Header: React.FC = memo(() => {
     setAnchorElUser(null);
   }, []);
 
-  useEffect(() => {
-    handleCloseNavMenu();
-    handleCloseUserMenu();
-  }, [handleCloseNavMenu, handleCloseUserMenu, location]);
-
   const handleLogout = useCallback(() => {
     logout();
     handleCloseUserMenu();
   }, [logout, handleCloseUserMenu]);
 
-  const menuItems = user ? [
+  const handleProfileClick = useCallback(() => {
+    handleCloseUserMenu();
+    navigate('/perfil');
+  }, [handleCloseUserMenu, navigate]);
+
+  const menuItems = React.useMemo(() => user ? [
     { text: 'Inicio', path: '/', icon: <HomeIcon /> },
     { text: 'Protestas', path: '/protestas', icon: <FlagIcon /> },
     { text: 'Cabecillas', path: '/cabecillas', icon: <GroupIcon /> },
@@ -53,7 +54,12 @@ const Header: React.FC = memo(() => {
       { text: 'Usuarios', path: '/usuarios', icon: <PeopleIcon /> },
       { text: 'Dashboard Admin', path: '/admin/dashboard', icon: <AnalyticsIcon /> }
     ] : []),
-  ] : [];
+  ] : [], [user, isAdmin]);
+
+  React.useEffect(() => {
+    handleCloseNavMenu();
+    handleCloseUserMenu();
+  }, [handleCloseNavMenu, handleCloseUserMenu, location]);
 
   return (
     <AppBar position="sticky">
@@ -197,12 +203,7 @@ const Header: React.FC = memo(() => {
                   open={Boolean(anchorElUser)}
                   onClose={handleCloseUserMenu}
                 >
-                  <MenuItem onClick={() => {
-                    handleCloseUserMenu();
-                    setTimeout(() => {
-                      window.location.href = '/perfil';
-                    }, 100);
-                  }}>
+                  <MenuItem onClick={handleProfileClick}>
                     <AccountCircleIcon sx={{ mr: 1 }} />
                     <Typography textAlign="center">Perfil</Typography>
                   </MenuItem>
