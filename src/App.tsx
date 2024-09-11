@@ -22,7 +22,7 @@ const NaturalezaFormPage = lazy(() => import('./pages/NaturalezaFormPage'));
 const UserListPage = lazy(() => import('./pages/UserListPage'));
 const AdminDashboardPage = lazy(() => import('./pages/AdminDashboardPage'));
 const UserProfilePage = lazy(() => import('./pages/UserProfilePage'));
-const RegisterPage = lazy(() => import('./pages/RegisterPage'));
+// const RegisterPage = lazy(() => import('./pages/RegisterPage'));
 const NotFoundPage = lazy(() => import('./pages/NotFoundPage'));
 
 const App: React.FC = () => {
@@ -47,7 +47,7 @@ const App: React.FC = () => {
         <Routes>
           <Route path="/" element={<LayoutWrapper><HomePage /></LayoutWrapper>} />
           <Route path="/login" element={<AuthLayoutWrapper><PublicOnlyRoute><LoginPage /></PublicOnlyRoute></AuthLayoutWrapper>} />
-          <Route path="/register" element={<AuthLayoutWrapper><PublicOnlyRoute><RegisterPage /></PublicOnlyRoute></AuthLayoutWrapper>} />
+          {/* <Route path="/register" element={<AuthLayoutWrapper><PublicOnlyRoute><RegisterPage /></PublicOnlyRoute></AuthLayoutWrapper>} /> */}
           <Route path="/perfil" element={<LayoutWrapper><PrivateRoute><UserProfilePage /></PrivateRoute></LayoutWrapper>} />
           <Route path="/usuarios" element={<LayoutWrapper><AdminRoute><UserListPage /></AdminRoute></LayoutWrapper>} />
           <Route path="/protestas" element={<LayoutWrapper><PrivateRoute><ProtestaListPage /></PrivateRoute></LayoutWrapper>} />
