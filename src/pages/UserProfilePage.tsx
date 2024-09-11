@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { User } from '../types/types';
 import { authService } from '../services/apiService';
 import { Box, Avatar, Typography, Container, CircularProgress, Alert, Button, Input } from '@mui/material';
@@ -16,30 +16,27 @@ const UserProfilePage: React.FC = () => {
    const [tempPhotoUrl, setTempPhotoUrl] = useState<string | null>(null);
    const fileInputRef = useRef<HTMLInputElement>(null);
 
-   useEffect(() => {
-      fetchUserProfile();
-   }, []);
-
-   const fetchUserProfile = async () => {
+   const fetchUserProfile = useCallback(async () => {
       setLoading(true);
       try {
-         const cachedUser = cacheService.get<User>('currentUser');
-         if (cachedUser) {
-            setUser(cachedUser);
-            setPhotoUrl(cachedUser.foto || null);
-            setLoading(false);
-         } else {
-            const userData = await authService.obtenerUsuarioActual();
-            setUser(userData);
-            setPhotoUrl(userData.foto || null);
-            cacheService.set('currentUser', userData);
-         }
+         const userData = await authService.obtenerUsuarioActual();
+         setUser(userData);
+         setPhotoUrl(userData.foto || null);
+         cacheService.set('currentUser', userData);
       } catch (err) {
          setError('Error al cargar el perfil de usuario');
       } finally {
          setLoading(false);
       }
-   };
+   }, []);
+
+   useEffect(() => {
+      fetchUserProfile();
+
+      return () => {
+         // Limpieza: cancelar cualquier solicitud pendiente si es necesario
+      };
+   }, [fetchUserProfile]);
 
    const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
       const file = event.target.files?.[0];

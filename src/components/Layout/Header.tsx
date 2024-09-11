@@ -1,5 +1,5 @@
-import React, { useContext, useState, useCallback, memo } from 'react';
-import { Link as RouterLink } from 'react-router-dom';
+import React, { useContext, useState, useCallback, memo, useEffect } from 'react';
+import { Link as RouterLink, useLocation } from 'react-router-dom';
 import { AppBar, Toolbar, Typography, Button, Box, Avatar, Menu, MenuItem, IconButton, Tooltip, Container } from '@mui/material';
 import MenuIcon from '@mui/icons-material/Menu';
 import HomeIcon from '@mui/icons-material/Home';
@@ -16,6 +16,7 @@ const Header: React.FC = memo(() => {
   const { user, logout, isAdmin } = useContext(AuthContext);
   const [anchorElNav, setAnchorElNav] = useState<null | HTMLElement>(null);
   const [anchorElUser, setAnchorElUser] = useState<null | HTMLElement>(null);
+  const location = useLocation();
 
   const handleOpenNavMenu = useCallback((event: React.MouseEvent<HTMLElement>) => {
     setAnchorElNav(event.currentTarget);
@@ -33,10 +34,14 @@ const Header: React.FC = memo(() => {
     setAnchorElUser(null);
   }, []);
 
+  useEffect(() => {
+    handleCloseNavMenu();
+    handleCloseUserMenu();
+  }, [handleCloseNavMenu, handleCloseUserMenu, location]);
+
   const handleLogout = useCallback(() => {
     logout();
     handleCloseUserMenu();
-    // Removed the navigate call here as it's now handled in the AuthContext
   }, [logout, handleCloseUserMenu]);
 
   const menuItems = user ? [
@@ -51,7 +56,7 @@ const Header: React.FC = memo(() => {
   ] : [];
 
   return (
-    <AppBar position="static">
+    <AppBar position="sticky">
       <Container maxWidth="xl">
         <Toolbar disableGutters>
           <Typography
@@ -192,7 +197,12 @@ const Header: React.FC = memo(() => {
                   open={Boolean(anchorElUser)}
                   onClose={handleCloseUserMenu}
                 >
-                  <MenuItem onClick={handleCloseUserMenu} component={RouterLink} to="/perfil">
+                  <MenuItem onClick={() => {
+                    handleCloseUserMenu();
+                    setTimeout(() => {
+                      window.location.href = '/perfil';
+                    }, 100);
+                  }}>
                     <AccountCircleIcon sx={{ mr: 1 }} />
                     <Typography textAlign="center">Perfil</Typography>
                   </MenuItem>

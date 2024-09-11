@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { Protesta, Naturaleza, Provincia } from '../../types/types';
 import { useApi } from '../../hooks/useApi';
 import { useAuth } from '../../hooks/useAuth';
-import { Card, Descriptions, Button, Space, message, Tag, Modal, Avatar } from 'antd';
+import { Card, Descriptions, Button, Space, message, Tag, Modal, Avatar, Alert } from 'antd';
 import { EditOutlined, DeleteOutlined, ArrowLeftOutlined, ExclamationCircleOutlined, UserOutlined, MailOutlined } from '@ant-design/icons';
 import { getFullImageUrl } from '../../services/apiService';
 import { cacheService } from '../../services/cacheService';
@@ -15,7 +15,7 @@ const ProtestaDetail: React.FC = () => {
   const { request, loading, error } = useApi();
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { isAdmin } = useAuth();
+  const { isAdmin, canEdit } = useAuth();
 
   const fetchProtesta = useCallback(async (protestaId: string) => {
     if (protestaId === 'crear') {
@@ -173,6 +173,8 @@ const ProtestaDetail: React.FC = () => {
   if (error) return <p>Error: {error}</p>;
   if (!protesta) return <p>No se encontró la protesta</p>;
 
+  const userCanEdit = canEdit(protesta.creado_por);
+
   return (
     <Card
       title={
@@ -185,12 +187,14 @@ const ProtestaDetail: React.FC = () => {
       }
       extra={
         <Space>
-          <Button
-            icon={<EditOutlined />}
-            onClick={() => navigate(`/protestas/editar/${id}`)}
-          >
-            Editar
-          </Button>
+          {userCanEdit && (
+            <Button
+              icon={<EditOutlined />}
+              onClick={() => navigate(`/protestas/editar/${id}`)}
+            >
+              Editar
+            </Button>
+          )}
           {isAdmin() && (
             <Button
               icon={<DeleteOutlined />}
@@ -203,34 +207,46 @@ const ProtestaDetail: React.FC = () => {
         </Space>
       }
     >
-      <Descriptions column={2}>
-        <Descriptions.Item label="Naturaleza">
+      {!userCanEdit && (
+        <Alert
+          message="No tienes permiso para editar esta protesta"
+          type="info"
+          showIcon
+          style={{ marginBottom: '16px' }}
+        />
+      )}
+      <Descriptions column={2} bordered>
+        <Descriptions.Item label="Naturaleza" span={2}>
           {naturaleza && (
             <Tag color={naturaleza.color}>
               {naturaleza.nombre}
             </Tag>
           )}
         </Descriptions.Item>
-        <Descriptions.Item label="Provincia">{provincia?.nombre}</Descriptions.Item>
-        <Descriptions.Item label="Fecha del Evento">{protesta.fecha_evento}</Descriptions.Item>
-        <Descriptions.Item label="Fecha de Creación">{protesta.fecha_creacion}</Descriptions.Item>
-        <Descriptions.Item label="Creado por">
+        <Descriptions.Item label="Provincia" span={2}>{provincia?.nombre}</Descriptions.Item>
+        <Descriptions.Item label="Fecha del Evento" span={2}>{protesta.fecha_evento}</Descriptions.Item>
+        <Descriptions.Item label="Fecha de Creación" span={2}>{protesta.fecha_creacion}</Descriptions.Item>
+        <Descriptions.Item label="Creado por" span={2}>
           <Space>
             <UserOutlined />
             {protesta.creador_nombre || 'No disponible'}
           </Space>
         </Descriptions.Item>
-        <Descriptions.Item label="Email del Creador">
+        <Descriptions.Item label="Email del Creador" span={2}>
           <Space>
             <MailOutlined />
             {protesta.creador_email || 'No disponible'}
           </Space>
         </Descriptions.Item>
       </Descriptions>
-      <Descriptions column={1}>
-        <Descriptions.Item label="Resumen">{protesta.resumen}</Descriptions.Item>
+      <Descriptions column={1} style={{ marginTop: '16px' }}>
+        <Descriptions.Item
+          label={<span style={{ fontSize: '18px', fontWeight: 'bold' }}>Resumen</span>}
+        >
+          {protesta.resumen}
+        </Descriptions.Item>
       </Descriptions>
-      <Descriptions title="Cabecillas" column={1}>
+      <Descriptions title="Cabecillas" column={1} style={{ marginTop: '16px' }}>
         {protesta.cabecillas && protesta.cabecillas.map(c => (
           <Descriptions.Item key={c.id}>
             <Space>

@@ -91,9 +91,11 @@ export interface ResumenPrincipal {
   protestas_recientes: ProtestasRecientes[];
   protestas_por_naturaleza: Record<string, number>;
   protestas_por_provincia: Record<string, number>;
-  protestas_ultimos_30_dias: Record<string, string>;
+  protestas_por_dia: Record<string, string>;
   top_cabecillas: TopCabecilla[];
   usuarios_activos: UsuarioActivo[];
+  fecha_inicio: string;
+  fecha_fin: string;
 }
 
 export interface ProtestasRecientes {

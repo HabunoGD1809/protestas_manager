@@ -16,6 +16,10 @@ interface CacheConfig {
 type CachePolicy = 'LRU' | 'LFU';
 
 class CacheService {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  removeByPrefix(_arg0: string) {
+    throw new Error("Method not implemented.");
+  }
   private memoryCache: { [key: string]: CacheItem<unknown> } = {};
   private cacheKeys: string[] = [];
   private config: CacheConfig;

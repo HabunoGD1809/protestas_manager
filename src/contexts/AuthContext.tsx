@@ -19,6 +19,7 @@ export interface AuthContextType {
   register: (userData: FormData) => Promise<User>;
   logout: () => void;
   isAdmin: () => boolean;
+  canEdit: (creatorId: string) => boolean;  // Modificado para aceptar creatorId
   refreshUserToken: () => Promise<boolean>;
   checkUserExists: (email: string) => Promise<boolean>;
 }
@@ -29,6 +30,7 @@ export const AuthContext = createContext<AuthContextType>({
   register: async () => ({} as User),
   logout: () => { },
   isAdmin: () => false,
+  canEdit: () => false,
   refreshUserToken: async () => false,
   checkUserExists: async () => false,
 });
@@ -310,15 +312,22 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     return user?.rol === 'admin';
   }, [user]);
 
+  const canEdit = useCallback((creatorId: string) => {
+    if (!user) return false;
+    return user.rol === 'admin' || user.id === creatorId;
+  }, [user]);
+
+
   const authContextValue: AuthContextType = useMemo(() => ({
     user,
     login: handleLogin,
     register: handleRegister,
     logout: () => handleLogout('manual'),
     isAdmin,
+    canEdit,
     refreshUserToken,
     checkUserExists,
-  }), [user, handleLogin, handleRegister, handleLogout, isAdmin, refreshUserToken]);
+  }), [user, handleLogin, handleRegister, handleLogout, isAdmin, canEdit, refreshUserToken]);
 
   return (
     <AuthContext.Provider value={authContextValue}>

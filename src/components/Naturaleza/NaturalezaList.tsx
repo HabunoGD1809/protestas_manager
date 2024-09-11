@@ -163,6 +163,8 @@ const NaturalezaList: React.FC = () => {
         onEdit={handleEdit}
         onDelete={handleDeleteClick}
         isAdmin={isAdmin()}
+        editIcon="edit"  
+        editTooltip="Editar" 
       />
     </div>
   );

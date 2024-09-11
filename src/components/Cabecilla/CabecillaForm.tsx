@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { TextField, Button, Box, Avatar, CircularProgress } from '@mui/material';
 import { message } from 'antd';
@@ -6,6 +6,7 @@ import { useApi } from '../../hooks/useApi';
 import { CrearCabecilla, Cabecilla } from '../../types/types';
 import { getFullImageUrl } from '../../services/apiService';
 import { AxiosError } from 'axios';
+import { SxProps, Theme } from '@mui/material/styles';
 
 interface ApiErrorData {
   detail?: string;
@@ -51,7 +52,7 @@ const CabecillaForm: React.FC = () => {
             setPreviewUrl(getFullImageUrl(data.foto) || null);
           }
         } catch (err) {
-          console.error('Error fetching cabecilla:', err);
+          console.error('Error al cargar los datos del cabecilla:', err);
           message.error('Error al cargar los datos del cabecilla');
         } finally {
           setIsLoading(false);
@@ -61,7 +62,17 @@ const CabecillaForm: React.FC = () => {
     }
   }, [id, request]);
 
-  const validateForm = (): boolean => {
+  const validateCedula = useCallback((value: string): boolean => {
+    const cedulaRegex = /^\d{3}-\d{7}-\d{1}$/;
+    return cedulaRegex.test(value);
+  }, []);
+
+  const validateTelefono = useCallback((value: string): boolean => {
+    const telefonoRegex = /^\d{3}-\d{3}-\d{4}$/;
+    return telefonoRegex.test(value);
+  }, []);
+
+  const validateForm = useCallback((): boolean => {
     const newErrors: FormErrors = {};
     let isValid = true;
 
@@ -73,13 +84,11 @@ const CabecillaForm: React.FC = () => {
       newErrors.apellido = 'El apellido es requerido';
       isValid = false;
     }
-    const cedulaRegex = /^\d{3}-\d{7}-\d{1}$/;
-    if (!cedulaRegex.test(formData.cedula)) {
+    if (!validateCedula(formData.cedula)) {
       newErrors.cedula = 'La cédula debe tener el formato xxx-xxxxxxx-x';
       isValid = false;
     }
-    const telefonoRegex = /^\d{3}-\d{3}-\d{4}$/;
-    if (formData.telefono && !telefonoRegex.test(formData.telefono)) {
+    if (formData.telefono && !validateTelefono(formData.telefono)) {
       newErrors.telefono = 'El teléfono debe tener el formato xxx-xxx-xxxx';
       isValid = false;
     }
@@ -90,25 +99,42 @@ const CabecillaForm: React.FC = () => {
 
     setErrors(newErrors);
     return isValid;
-  };
+  }, [formData, validateCedula, validateTelefono]);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData(prevData => ({ ...prevData, [name]: value }));
-    if (errors[name as keyof FormErrors]) {
-      setErrors(prevErrors => ({ ...prevErrors, [name]: undefined }));
-    }
-  };
+    setErrors(prevErrors => ({ ...prevErrors, [name]: undefined }));
+  }, []);
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const applyMask = useCallback((value: string, pattern: string): string => {
+    let i = 0;
+    return pattern.replace(/9/g, () => value[i++] || '');
+  }, []);
+
+  const handleCedulaChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value.replace(/\D/g, '');
+    const formattedValue = applyMask(value, '999-9999999-9');
+    setFormData(prevData => ({ ...prevData, cedula: formattedValue }));
+    setErrors(prevErrors => ({ ...prevErrors, cedula: undefined }));
+  }, [applyMask]);
+
+  const handleTelefonoChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value.replace(/\D/g, '');
+    const formattedValue = applyMask(value, '999-999-9999');
+    setFormData(prevData => ({ ...prevData, telefono: formattedValue }));
+    setErrors(prevErrors => ({ ...prevErrors, telefono: undefined }));
+  }, [applyMask]);
+
+  const handleFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
       setFoto(file);
       setPreviewUrl(URL.createObjectURL(file));
     }
-  };
+  }, []);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
     if (!validateForm()) return;
 
@@ -133,7 +159,7 @@ const CabecillaForm: React.FC = () => {
       message.success(id ? 'Cabecilla actualizado exitosamente' : 'Cabecilla creado exitosamente');
       navigate('/cabecillas');
     } catch (err: unknown) {
-      console.error('Error saving cabecilla:', err);
+      console.error('Error al guardar el cabecilla:', err);
       if (err instanceof AxiosError) {
         const apiError: ApiError = err;
         if (apiError.response && apiError.response.status === 400) {
@@ -153,22 +179,32 @@ const CabecillaForm: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [formData, foto, id, navigate, request, validateForm]);
 
-  const applyMask = (value: string, pattern: string): string => {
-    let i = 0;
-    return pattern.replace(/9/g, () => value[i++] || '');
-  };
+  const getFieldStyle = useCallback((field: 'cedula' | 'telefono'): SxProps<Theme> => {
+    const value = formData[field];
+    if (!value) return {};
 
-  const handleCedulaChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value.replace(/\D/g, '');
-    setFormData(prevData => ({ ...prevData, cedula: applyMask(value, '999-9999999-9') }));
-  };
+    const isValid = field === 'cedula' ? validateCedula(value) : validateTelefono(value);
+    const borderColor = isValid ? 'green' : 'red';
 
-  const handleTelefonoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value.replace(/\D/g, '');
-    setFormData(prevData => ({ ...prevData, telefono: applyMask(value, '999-999-9999') }));
-  };
+    return {
+      '& .MuiOutlinedInput-root': {
+        '& fieldset': {
+          borderColor: borderColor,
+          borderWidth: '2px',
+        },
+        '&:hover fieldset': {
+          borderColor: borderColor,
+          borderWidth: '2px',
+        },
+        '&.Mui-focused fieldset': {
+          borderColor: borderColor,
+          borderWidth: '2px',
+        },
+      },
+    };
+  }, [formData, validateCedula, validateTelefono]);
 
   if (isLoading) {
     return <CircularProgress />;
@@ -224,6 +260,7 @@ const CabecillaForm: React.FC = () => {
         error={!!errors.cedula}
         helperText={errors.cedula || 'Formato: xxx-xxxxxxx-x'}
         inputProps={{ maxLength: 13 }}
+        sx={getFieldStyle('cedula')}
       />
       <TextField
         margin="normal"
@@ -237,6 +274,7 @@ const CabecillaForm: React.FC = () => {
         error={!!errors.telefono}
         helperText={errors.telefono || 'Formato: xxx-xxx-xxxx'}
         inputProps={{ maxLength: 12 }}
+        sx={getFieldStyle('telefono')}
       />
       <TextField
         margin="normal"

@@ -20,6 +20,8 @@ import { logError, logInfo } from './loggingService';
 
 const BASE_URL = import.meta.env.VITE_API_URL || "http://10.5.5.18:8000";
 
+// const BASE_URL = "http://localhost:8000";
+
 // API instance configuration
 export const api: AxiosInstance = axios.create({
   baseURL: BASE_URL,
@@ -552,17 +554,21 @@ export const provinciaService = new ProvinciaService();
 
 // Resumen service
 export const resumenService = {
-  getPaginaPrincipal: async (): Promise<ResumenPrincipal> => {
-    const cacheKey = "resumen_principal";
+  getPaginaPrincipal: async (fechaInicio?: string, fechaFin?: string): Promise<ResumenPrincipal> => {
+    const cacheKey = `resumen_principal_${fechaInicio || 'default'}_${fechaFin || 'default'}`;
     const cachedData = cacheService.get<ResumenPrincipal>(cacheKey);
 
     if (cachedData) {
-      resumenService.backgroundRefresh();
+      resumenService.backgroundRefresh(fechaInicio, fechaFin);
       return cachedData;
     }
 
     try {
-      const response = await api.get<ResumenPrincipal>("/pagina-principal");
+      const params = new URLSearchParams();
+      if (fechaInicio) params.append('fecha_inicio', fechaInicio);
+      if (fechaFin) params.append('fecha_fin', fechaFin);
+
+      const response = await api.get<ResumenPrincipal>("/pagina-principal", { params });
       cacheService.set(cacheKey, response.data);
       return response.data;
     } catch (error) {
@@ -571,10 +577,15 @@ export const resumenService = {
     }
   },
 
-  backgroundRefresh: async (): Promise<void> => {
+  backgroundRefresh: async (fechaInicio?: string, fechaFin?: string): Promise<void> => {
     try {
-      const response = await api.get<ResumenPrincipal>("/pagina-principal");
-      cacheService.set("resumen_principal", response.data);
+      const params = new URLSearchParams();
+      if (fechaInicio) params.append('fecha_inicio', fechaInicio);
+      if (fechaFin) params.append('fecha_fin', fechaFin);
+
+      const response = await api.get<ResumenPrincipal>("/pagina-principal", { params });
+      const cacheKey = `resumen_principal_${fechaInicio || 'default'}_${fechaFin || 'default'}`;
+      cacheService.set(cacheKey, response.data);
       logInfo("Actualización en segundo plano completada para el resumen principal");
     } catch (error) {
       logError("Error en la actualización en segundo plano del resumen principal", error as Error);

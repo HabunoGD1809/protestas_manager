@@ -15,15 +15,6 @@ import { logError } from "../../services/loggingService";
 const { Title } = Typography;
 const { confirm } = Modal;
 
-interface ApiError {
-  response?: {
-    status: number;
-    data?: {
-      detail?: string;
-    };
-  };
-}
-
 const ProtestaList: React.FC = () => {
   const [protestas, setProtestas] = useState<Protesta[]>([]);
   const [naturalezas, setNaturalezas] = useState<Naturaleza[]>([]);
@@ -43,9 +34,7 @@ const ProtestaList: React.FC = () => {
     async (page: number, pageSize: number, currentFilters: FilterValues) => {
       setLoading(true);
       setError(null);
-      const cacheKey = `protestas_${page}_${pageSize}_${JSON.stringify(
-        currentFilters
-      )}`;
+      const cacheKey = `protestas_${page}_${pageSize}_${JSON.stringify(currentFilters)}`;
 
       try {
         const cachedData = cacheService.get<{
@@ -82,11 +71,7 @@ const ProtestaList: React.FC = () => {
               logError("Error actualizando protestas en segundo plano", error)
             );
         } else {
-          const data = await protestaService.fetchProtestas(
-            page,
-            pageSize,
-            currentFilters
-          );
+          const data = await protestaService.fetchProtestas(page, pageSize, currentFilters);
           setProtestas(data.items);
           setPagination({
             current: data.page,
@@ -108,8 +93,6 @@ const ProtestaList: React.FC = () => {
   const fetchNaturalezasYProvincias = useCallback(async () => {
     try {
       const [naturalezasData, provinciasData] = await protestaService.fetchNaturalezasYProvincias();
-      // console.log('Naturalezas obtenidas en ProtestaList:', naturalezasData);
-      // console.log('Provincias obtenidas en ProtestaList:', provinciasData);
       setNaturalezas(naturalezasData);
       setProvincias(provinciasData);
     } catch (error) {
@@ -136,14 +119,11 @@ const ProtestaList: React.FC = () => {
     window.addEventListener("potentialDataUpdate", handlePotentialDataUpdate);
 
     return () => {
-      window.removeEventListener(
-        "potentialDataUpdate",
-        handlePotentialDataUpdate
-      );
+      window.removeEventListener("potentialDataUpdate", handlePotentialDataUpdate);
     };
   }, [fetchProtestas, fetchNaturalezasYProvincias, pagination, filters]);
 
-  const handleEdit = useCallback(
+  const handleViewDetails = useCallback(
     (protesta: Protesta) => {
       navigate(`/protestas/${protesta.id}`);
     },
@@ -168,17 +148,7 @@ const ProtestaList: React.FC = () => {
           cacheService.invalidateRelatedCache("protestas_");
         } catch (error) {
           console.error("Error al eliminar la protesta:", error);
-          const apiError = error as ApiError;
-          if (
-            apiError.response?.status === 400 &&
-            apiError.response.data?.detail
-          ) {
-            message.error(
-              `Error al eliminar la protesta: ${apiError.response.data.detail}`
-            );
-          } else {
-            message.error("Error al eliminar la protesta");
-          }
+          message.error("Error al eliminar la protesta");
         }
       },
     });
@@ -188,30 +158,6 @@ const ProtestaList: React.FC = () => {
     setFilters(newFilters);
     setPagination((prev) => ({ ...prev, current: 1 }));
   }, []);
-
-  const handlePaginationChange = useCallback(
-    (page: number, pageSize: number) => {
-      setPagination((prev) => ({ ...prev, current: page, pageSize }));
-    },
-    []
-  );
-
-  const renderCabecillas = useCallback(
-    (cabecillas: Cabecilla[]): React.ReactNode => {
-      if (cabecillas.length === 0) return <span>Ninguno</span>;
-      const names = cabecillas
-        .map((c) => `${c.nombre} ${c.apellido}`)
-        .join(", ");
-      return (
-        <Tooltip title={names}>
-          <span>{`${cabecillas.length} cabecilla${
-            cabecillas.length > 1 ? "s" : ""
-          }`}</span>
-        </Tooltip>
-      );
-    },
-    []
-  );
 
   const columns = useMemo(
     () => [
@@ -225,10 +171,6 @@ const ProtestaList: React.FC = () => {
         dataIndex: "naturaleza_id",
         key: "naturaleza_id",
         render: (value: string) => {
-          if (!Array.isArray(naturalezas) || naturalezas.length === 0) {
-            console.warn('Naturalezas no disponibles en el renderizado');
-            return <span>Cargando...</span>;
-          }
           const naturaleza = naturalezas.find((n) => n.id === value);
           return <span>{naturaleza ? naturaleza.nombre : "N/A"}</span>;
         },
@@ -238,9 +180,6 @@ const ProtestaList: React.FC = () => {
         dataIndex: "provincia_id",
         key: "provincia_id",
         render: (value: string) => {
-          if (!Array.isArray(provincias)) {
-            return <span>Cargando...</span>;
-          }
           const provincia = provincias.find((p) => p.id === value);
           return <span>{provincia ? provincia.nombre : "N/A"}</span>;
         },
@@ -254,7 +193,11 @@ const ProtestaList: React.FC = () => {
         title: "Cabecillas",
         dataIndex: "cabecillas",
         key: "cabecillas",
-        render: renderCabecillas,
+        render: (cabecillas: Cabecilla[]) => (
+          <Tooltip title={cabecillas.map(c => `${c.nombre} ${c.apellido}`).join(", ")}>
+            <span>{`${cabecillas.length} cabecilla${cabecillas.length !== 1 ? "s" : ""}`}</span>
+          </Tooltip>
+        ),
       },
       {
         title: "Creador",
@@ -267,19 +210,7 @@ const ProtestaList: React.FC = () => {
         ),
       },
     ],
-    [naturalezas, provincias, renderCabecillas]
-  );
-
-  const memoizedProtestaFilter = useMemo(
-    () => (
-      <ProtestaFilter
-        naturalezas={naturalezas}
-        provincias={provincias}
-        onFilter={handleFilter}
-        initialFilters={filters}
-      />
-    ),
-    [naturalezas, provincias, handleFilter, filters]
+    [naturalezas, provincias]
   );
 
   if (loading && protestas.length === 0) return <LoadingSpinner />;
@@ -288,7 +219,12 @@ const ProtestaList: React.FC = () => {
   return (
     <div>
       <Title level={2}>Lista de Protestas</Title>
-      {memoizedProtestaFilter}
+      <ProtestaFilter
+        naturalezas={naturalezas}
+        provincias={provincias}
+        onFilter={handleFilter}
+        initialFilters={filters}
+      />
       <Button
         type="primary"
         icon={<PlusOutlined />}
@@ -302,12 +238,15 @@ const ProtestaList: React.FC = () => {
         columns={columns}
         pagination={{
           ...pagination,
-          onChange: handlePaginationChange,
+          onChange: (page, pageSize) =>
+            setPagination(prev => ({ ...prev, current: page, pageSize })),
         }}
         loading={loading}
-        onEdit={handleEdit}
+        onEdit={handleViewDetails}
         onDelete={handleDeleteClick}
         isAdmin={isAdmin()}
+        editIcon="eye" 
+        editTooltip="Ver detalles"  
       />
     </div>
   );

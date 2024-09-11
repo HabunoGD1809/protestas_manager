@@ -3,11 +3,17 @@ import { Container, Box, CssBaseline, useMediaQuery, useTheme } from '@mui/mater
 import Header from './Header';
 import Footer from './Footer';
 
-interface AuthLayoutProps {
+interface FlexibleLayoutProps {
    children: ReactNode;
+   maxWidth?: 'xs' | 'sm' | 'md' | 'lg' | 'xl';
+   containerMaxWidth?: number | string;
 }
 
-const AuthLayout: React.FC<AuthLayoutProps> = ({ children }) => {
+const FlexibleLayout: React.FC<FlexibleLayoutProps> = ({
+   children,
+   maxWidth = 'sm',
+   containerMaxWidth = '500px'
+}) => {
    const theme = useTheme();
    const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
    const isTablet = useMediaQuery(theme.breakpoints.between('sm', 'md'));
@@ -15,7 +21,7 @@ const AuthLayout: React.FC<AuthLayoutProps> = ({ children }) => {
    const getMaxWidth = () => {
       if (isMobile) return 'sm';
       if (isTablet) return 'md';
-      return 'md';
+      return maxWidth;
    };
 
    return (
@@ -41,7 +47,7 @@ const AuthLayout: React.FC<AuthLayoutProps> = ({ children }) => {
                   padding: { xs: 2, sm: 3 },
                   boxShadow: 1,
                   width: '100%',
-                  maxWidth: '500px', // Ajusta el ancho máximo del contenedor
+                  maxWidth: containerMaxWidth,
                   overflowX: 'hidden',
                }}
             >
@@ -53,4 +59,4 @@ const AuthLayout: React.FC<AuthLayoutProps> = ({ children }) => {
    );
 };
 
-export default AuthLayout;
+export default FlexibleLayout;

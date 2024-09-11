@@ -1,5 +1,5 @@
 import { Table, Button, Tooltip, Space } from 'antd';
-import { EditOutlined, DeleteOutlined } from '@ant-design/icons';
+import { EditOutlined, DeleteOutlined, EyeOutlined } from '@ant-design/icons';
 import { TablePaginationConfig } from 'antd/es/table';
 import { ColumnsType } from 'antd/es/table';
 
@@ -11,6 +11,8 @@ interface CommonTableProps<T> {
    onEdit?: (record: T) => void;
    onDelete?: (record: T) => void;
    isAdmin?: boolean;
+   editIcon?: 'edit' | 'eye'; 
+   editTooltip?: string;  
 }
 
 const CommonTable = <T extends { id: string | number }>({
@@ -20,17 +22,29 @@ const CommonTable = <T extends { id: string | number }>({
    loading,
    onEdit,
    onDelete,
-   isAdmin
+   isAdmin,
+   editIcon = 'edit',  
+   editTooltip = 'Editar' 
 }: CommonTableProps<T>) => {
+   const getEditIcon = () => {
+      switch (editIcon) {
+         case 'eye':
+            return <EyeOutlined />;
+         case 'edit':
+         default:
+            return <EditOutlined />;
+      }
+   };
+
    const actionsColumn: ColumnsType<T>[number] = {
       title: 'Acciones',
       key: 'actions',
       render: (_text: string, record: T) => (
          <Space size="middle">
             {onEdit && (
-               <Tooltip title="Editar">
+               <Tooltip title={editTooltip}>
                   <Button
-                     icon={<EditOutlined />}
+                     icon={getEditIcon()}
                      onClick={() => onEdit(record)}
                      type="link"
                   />

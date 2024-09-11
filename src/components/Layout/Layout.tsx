@@ -40,7 +40,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
             borderRadius: 2,
             padding: { xs: 2, sm: 3 },
             boxShadow: 1,
-            width: '110%',
+            width: '120%',
             maxWidth: '1000px',
             overflowX: 'hidden',
           }}
