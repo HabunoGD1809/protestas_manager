@@ -18,9 +18,9 @@ import { cacheService } from "./cacheService";
 import { versionCheckService } from "./versionCheckService";
 import { logError, logInfo } from './loggingService';
 
-const BASE_URL = import.meta.env.VITE_API_URL || "http://10.5.5.18:8000";
+// const BASE_URL = import.meta.env.VITE_API_URL || "http://10.5.5.18:8000";
 
-// const BASE_URL = "http://localhost:8000";
+const BASE_URL = "http://localhost:8000";
 
 // API instance configuration
 export const api: AxiosInstance = axios.create({
@@ -333,6 +333,11 @@ class ProtestaService extends BaseService<Protesta, CrearProtesta> {
     const cleanFilters = filters ? Object.fromEntries(
       Object.entries(filters).filter(([, value]) => value !== undefined && value !== '')
     ) : {};
+
+    // Manejar el filtro de cabecillas
+    if (cleanFilters.cabecilla_ids && Array.isArray(cleanFilters.cabecilla_ids)) {
+      cleanFilters.cabecilla_ids = cleanFilters.cabecilla_ids.join(',');
+    }
     return super.getAll(page, pageSize, cleanFilters);
   }
 
@@ -346,10 +351,11 @@ class ProtestaService extends BaseService<Protesta, CrearProtesta> {
     }
   }
 
-  async fetchNaturalezasYProvincias(): Promise<[Naturaleza[], Provincia[]]> {
+  async fetchNaturalezasYProvinciasYCabecillas(): Promise<[Naturaleza[], Provincia[], Cabecilla[]]> {
     try {
       const naturalezas = await naturalezaService.getAll();
       const provincias = await provinciaService.getAll();
+      const cabecillas = await cabecillaService.getAllNoPagination();
 
       if (naturalezas.length === 0) {
         console.warn('No se obtuvieron naturalezas');
@@ -357,11 +363,14 @@ class ProtestaService extends BaseService<Protesta, CrearProtesta> {
       if (provincias.length === 0) {
         console.warn('No se obtuvieron provincias');
       }
+      if (cabecillas.length === 0) {
+        console.warn('No se obtuvieron cabecillas');
+      }
 
-      return [naturalezas, provincias];
+      return [naturalezas, provincias, cabecillas];
     } catch (error) {
-      console.error('Error general en fetchNaturalezasYProvincias:', error);
-      throw new Error('Error al cargar naturalezas y provincias');
+      console.error('Error general en fetchNaturalezasYProvinciasYCabecillas:', error);
+      throw new Error('Error al cargar naturalezas, provincias y cabecillas');
     }
   }
 
@@ -381,6 +390,15 @@ class ProtestaService extends BaseService<Protesta, CrearProtesta> {
     } catch (error) {
       console.error('Error al obtener naturalezas:', error);
       throw new Error('Error al cargar naturalezas');
+    }
+  }
+
+  async getCabecillas(): Promise<Cabecilla[]> {
+    try {
+      return await cabecillaService.getAllNoPagination();
+    } catch (error) {
+      console.error('Error al obtener cabecillas:', error);
+      throw new Error('Error al cargar cabecillas');
     }
   }
 }

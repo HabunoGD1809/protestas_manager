@@ -5,7 +5,7 @@ import { useAuth } from "../../hooks/useAuth";
 import { Typography, Button, Tooltip, message, Modal } from "antd";
 import { PlusOutlined, ExclamationCircleOutlined } from "@ant-design/icons";
 import ProtestaFilter, { FilterValues } from "./ProtestaFilter";
-import { protestaService } from "../../services/apiService";
+import { protestaService, cabecillaService } from "../../services/apiService";
 import LoadingSpinner from "../Common/LoadingSpinner";
 import ErrorMessage from "../Common/ErrorMessage";
 import CommonTable from "../Common/CommonTable";
@@ -19,6 +19,7 @@ const ProtestaList: React.FC = () => {
   const [protestas, setProtestas] = useState<Protesta[]>([]);
   const [naturalezas, setNaturalezas] = useState<Naturaleza[]>([]);
   const [provincias, setProvincias] = useState<Provincia[]>([]);
+  const [cabecillas, setCabecillas] = useState<Cabecilla[]>([]);
   const [pagination, setPagination] = useState({
     current: 1,
     pageSize: 10,
@@ -37,12 +38,7 @@ const ProtestaList: React.FC = () => {
       const cacheKey = `protestas_${page}_${pageSize}_${JSON.stringify(currentFilters)}`;
 
       try {
-        const cachedData = cacheService.get<{
-          items: Protesta[];
-          page: number;
-          page_size: number;
-          total: number;
-        }>(cacheKey);
+        const cachedData = cacheService.getPaginated<Protesta>(cacheKey, page, pageSize);
 
         if (cachedData) {
           setProtestas(cachedData.items);
@@ -64,7 +60,7 @@ const ProtestaList: React.FC = () => {
                   pageSize: freshData.page_size,
                   total: freshData.total,
                 });
-                cacheService.set(cacheKey, freshData);
+                cacheService.setPaginated(cacheKey, freshData, page, pageSize);
               }
             })
             .catch((error) =>
@@ -78,7 +74,7 @@ const ProtestaList: React.FC = () => {
             pageSize: data.page_size,
             total: data.total,
           });
-          cacheService.set(cacheKey, data);
+          cacheService.setPaginated(cacheKey, data, page, pageSize);
         }
       } catch (error) {
         logError("Error fetching protestas", error as Error);
@@ -92,7 +88,7 @@ const ProtestaList: React.FC = () => {
 
   const fetchNaturalezasYProvincias = useCallback(async () => {
     try {
-      const [naturalezasData, provinciasData] = await protestaService.fetchNaturalezasYProvincias();
+      const [naturalezasData, provinciasData] = await protestaService.fetchNaturalezasYProvinciasYCabecillas();
       setNaturalezas(naturalezasData);
       setProvincias(provinciasData);
     } catch (error) {
@@ -101,19 +97,32 @@ const ProtestaList: React.FC = () => {
     }
   }, []);
 
+  const fetchCabecillas = useCallback(async () => {
+    try {
+      const cabecillasData = await cabecillaService.getAllNoPagination();
+      setCabecillas(cabecillasData);
+    } catch (error) {
+      console.error('Error al obtener cabecillas:', error);
+      setError("Error al cargar cabecillas");
+    }
+  }, []);
+
   useEffect(() => {
+    console.log("Efecto disparado. Filtros actuales:", filters);
     fetchProtestas(pagination.current, pagination.pageSize, filters);
   }, [fetchProtestas, pagination.current, pagination.pageSize, filters]);
 
   useEffect(() => {
     fetchNaturalezasYProvincias();
-  }, [fetchNaturalezasYProvincias]);
+    fetchCabecillas(); 
+  }, [fetchNaturalezasYProvincias, fetchCabecillas]);
 
   useEffect(() => {
     const handlePotentialDataUpdate = () => {
       cacheService.markAllAsStale();
       fetchProtestas(pagination.current, pagination.pageSize, filters);
       fetchNaturalezasYProvincias();
+      fetchCabecillas(); 
     };
 
     window.addEventListener("potentialDataUpdate", handlePotentialDataUpdate);
@@ -121,7 +130,7 @@ const ProtestaList: React.FC = () => {
     return () => {
       window.removeEventListener("potentialDataUpdate", handlePotentialDataUpdate);
     };
-  }, [fetchProtestas, fetchNaturalezasYProvincias, pagination, filters]);
+  }, [fetchProtestas, fetchNaturalezasYProvincias, fetchCabecillas, pagination, filters]);
 
   const handleViewDetails = useCallback(
     (protesta: Protesta) => {
@@ -222,6 +231,7 @@ const ProtestaList: React.FC = () => {
       <ProtestaFilter
         naturalezas={naturalezas}
         provincias={provincias}
+        cabecillas={cabecillas}
         onFilter={handleFilter}
         initialFilters={filters}
       />
@@ -245,8 +255,8 @@ const ProtestaList: React.FC = () => {
         onEdit={handleViewDetails}
         onDelete={handleDeleteClick}
         isAdmin={isAdmin()}
-        editIcon="eye" 
-        editTooltip="Ver detalles"  
+        editIcon="eye"
+        editTooltip="Ver detalles"
       />
     </div>
   );

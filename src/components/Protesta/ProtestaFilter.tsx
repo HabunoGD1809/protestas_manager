@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { Form, Input, Select, DatePicker, Button, Space, Row, Col } from 'antd';
-import { Naturaleza, Provincia } from '../../types/types';
+import { Naturaleza, Provincia, Cabecilla } from '../../types/types';
 import { Moment } from 'moment';
 import '../../styles/commonFilter.css';
 import moment from 'moment';
@@ -13,6 +13,7 @@ export interface FilterValues {
   naturaleza_id?: string;
   provincia_id?: string;
   fecha_rango?: [Moment, Moment];
+  cabecilla_ids?: string[];
 }
 
 interface Filters {
@@ -21,16 +22,24 @@ interface Filters {
   provincia_id?: string;
   fecha_desde?: string;
   fecha_hasta?: string;
+  cabecilla_ids?: string[];
 }
 
 interface ProtestaFilterProps {
   naturalezas: Naturaleza[];
   provincias: Provincia[];
+  cabecillas: Cabecilla[];
   onFilter: (filters: Filters) => void;
-  initialFilters?: Filters; // Add this line
+  initialFilters?: Filters;
 }
 
-const ProtestaFilter: React.FC<ProtestaFilterProps> = ({ naturalezas, provincias, onFilter, initialFilters }) => {
+const ProtestaFilter: React.FC<ProtestaFilterProps> = ({
+  naturalezas,
+  provincias,
+  cabecillas,
+  onFilter,
+  initialFilters
+}) => {
   const [form] = Form.useForm<FilterValues>();
   const [prevFilters, setPrevFilters] = useState<Filters>(initialFilters || {});
 
@@ -40,6 +49,7 @@ const ProtestaFilter: React.FC<ProtestaFilterProps> = ({ naturalezas, provincias
         nombre: initialFilters.nombre,
         naturaleza_id: initialFilters.naturaleza_id,
         provincia_id: initialFilters.provincia_id,
+        cabecilla_ids: initialFilters.cabecilla_ids,
         fecha_rango: initialFilters.fecha_desde && initialFilters.fecha_hasta
           ? [moment(initialFilters.fecha_desde), moment(initialFilters.fecha_hasta)]
           : undefined,
@@ -52,6 +62,7 @@ const ProtestaFilter: React.FC<ProtestaFilterProps> = ({ naturalezas, provincias
       nombre: values.nombre?.trim() || undefined,
       naturaleza_id: values.naturaleza_id,
       provincia_id: values.provincia_id,
+      cabecilla_ids: values.cabecilla_ids && values.cabecilla_ids.length > 0 ? values.cabecilla_ids : undefined,
       fecha_desde: values.fecha_rango?.[0]?.format('YYYY-MM-DD'),
       fecha_hasta: values.fecha_rango?.[1]?.format('YYYY-MM-DD'),
     };
@@ -105,6 +116,27 @@ const ProtestaFilter: React.FC<ProtestaFilterProps> = ({ naturalezas, provincias
                 ))
               ) : (
                 <Option value="">No hay provincias disponibles</Option>
+              )}
+            </Select>
+          </Form.Item>
+        </Col>
+        <Col xs={24} sm={12} md={6}>
+          <Form.Item name="cabecilla_ids" label="Cabecillas">
+            <Select
+              mode="multiple"
+              placeholder="Seleccione cabecillas"
+              allowClear
+              showSearch
+              filterOption={(input, option) =>
+                (option?.children as unknown as string).toLowerCase().indexOf(input.toLowerCase()) >= 0
+              }
+            >
+              {cabecillas && cabecillas.length > 0 ? (
+                cabecillas.map(c => (
+                  <Option key={c.id} value={c.id}>{`${c.nombre} ${c.apellido}`}</Option>
+                ))
+              ) : (
+                <Option value="">No hay cabecillas disponibles</Option>
               )}
             </Select>
           </Form.Item>

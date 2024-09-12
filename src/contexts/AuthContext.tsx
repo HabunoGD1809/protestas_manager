@@ -39,7 +39,7 @@ interface AuthProviderProps {
   children: ReactNode;
 }
 
-const INACTIVITY_TIMEOUT = 2 * 60 * 1000; // 5 minutos
+const INACTIVITY_TIMEOUT = 5 * 60 * 1000; // 5 minutos
 const TOKEN_REFRESH_INTERVAL = 14 * 60 * 1000; // 14 minutos
 const COUNTDOWN_DURATION = 60; // 60 segundos para el contador de inactividad
 
