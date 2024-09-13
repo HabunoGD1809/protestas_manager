@@ -669,6 +669,38 @@ class UserService extends BaseService<User, FormData> {
     }
   }
 
+  async changePassword(userId: string, currentPassword: string, newPassword: string): Promise<void> {
+    try {
+      await api.put(`/usuarios/${userId}/cambiar-contrasena`, {
+        contrasena_actual: currentPassword,
+        nueva_contrasena: newPassword,
+        confirmar_contrasena: newPassword
+      });
+      logInfo('Contraseña cambiada exitosamente', { userId });
+    } catch (error) {
+      logError('Error al cambiar la contraseña', error as Error);
+      throw error;
+    }
+  }
+
+  async resetPassword(userId: string, newPassword: string): Promise<void> {
+    try {
+      await api.put(`/admin/usuarios/${userId}/restablecer-contrasena`, {
+        nueva_contrasena: newPassword
+      });
+      logInfo('Contraseña restablecida exitosamente por admin', { userId });
+    } catch (error) {
+      if (axios.isAxiosError(error) && error.response) {
+        const errorDetail = error.response.data.detail;
+        const errorMessage = Array.isArray(errorDetail) ? errorDetail.map(err => err.msg).join(', ') : errorDetail || "Error al restablecer la contraseña";
+        logError('Error al restablecer la contraseña', new Error(errorMessage));
+        throw new Error(errorMessage);
+      }
+      logError('Error inesperado al restablecer la contraseña', error as Error);
+      throw new Error("Ocurrió un error inesperado al restablecer la contraseña");
+    }
+  }
+
   getCurrentUser = authService.obtenerUsuarioActual;
 }
 

@@ -9,12 +9,30 @@ import {
   useMediaQuery,
   CircularProgress,
   Chip,
-  Box
+  Box,
+  TextField,
+  DialogActions,
+  Button,
+  CardContent,
+  Card,
+  Avatar,
+  Typography,
+  IconButton,
+  Menu,
+  MenuItem,
+  ListItemIcon,
+  ListItemText,
+  InputAdornment
 } from '@mui/material';
 import { Modal, message } from 'antd';
 import { ExclamationCircleOutlined } from '@ant-design/icons';
+import MoreVertIcon from '@mui/icons-material/MoreVert';
+import DeleteIcon from '@mui/icons-material/Delete';
+import LockResetIcon from '@mui/icons-material/LockReset';
+import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
+import Visibility from '@mui/icons-material/Visibility';
+import VisibilityOff from '@mui/icons-material/VisibilityOff';
 import { User } from '../../types/types';
-import ChangeUserRole from './ChangeUserRole';
 import Pagination from '../Common/Pagination';
 import { userService, getFullImageUrl } from '../../services/apiService';
 import CreateUserForm from './CreateUserForm';
@@ -23,12 +41,6 @@ import {
   StyledBox,
   StyledErrorAlert,
   StyledCreateButton,
-  StyledCard,
-  StyledCardContent,
-  StyledAvatar,
-  StyledUserName,
-  StyledUserInfo,
-  StyledCardActions,
   StyledPaginationContainer,
   StyledNoUsersText,
   StyledLoadingContainer,
@@ -53,6 +65,15 @@ const UserList: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [resetPasswordDialogOpen, setResetPasswordDialogOpen] = useState(false);
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [passwordError, setPasswordError] = useState<string>('');
+  const [confirmPasswordError, setConfirmPasswordError] = useState<string>('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  const [menuUser, setMenuUser] = useState<User | null>(null);
 
   const fetchCurrentUser = useCallback(async () => {
     try {
@@ -69,7 +90,6 @@ const UserList: React.FC = () => {
     const cacheKey = `users_${page}_${pageSize}`;
 
     try {
-      // Intentar obtener datos del caché
       const cachedData = cacheService.get<{ users: User[], pagination: typeof pagination }>(cacheKey);
 
       if (cachedData) {
@@ -77,7 +97,6 @@ const UserList: React.FC = () => {
         setPagination(cachedData.pagination);
         setIsLoading(false);
 
-        // Actualizar en segundo plano
         userService.getAll(page, pageSize).then(response => {
           let usersData: User[] = [];
           let paginationData = { current: page, pageSize: pageSize, total: 0 };
@@ -195,6 +214,74 @@ const UserList: React.FC = () => {
     }
   }, []);
 
+  const validatePassword = (password: string): string => {
+    if (password.length < 8) {
+      return 'La contraseña debe tener al menos 8 caracteres';
+    }
+    if (!/[A-Z]/.test(password)) {
+      return 'La contraseña debe contener al menos una letra mayúscula';
+    }
+    if (!/[a-z]/.test(password)) {
+      return 'La contraseña debe contener al menos una letra minúscula';
+    }
+    if (!/[0-9]/.test(password)) {
+      return 'La contraseña debe contener al menos un número';
+    }
+    return '';
+  };
+
+  const handleResetPassword = (userId: string) => {
+    setSelectedUserId(userId);
+    setNewPassword('');
+    setConfirmPassword('');
+    setPasswordError('');
+    setConfirmPasswordError('');
+    setResetPasswordDialogOpen(true);
+  };
+
+  const handleConfirmResetPassword = async () => {
+    if (selectedUserId && newPassword) {
+      const validationError = validatePassword(newPassword);
+      if (validationError) {
+        setPasswordError(validationError);
+        return;
+      }
+      if (newPassword !== confirmPassword) {
+        setConfirmPasswordError('Las contraseñas no coinciden');
+        return;
+      }
+      try {
+        await userService.resetPassword(selectedUserId, newPassword);
+        message.success('Contraseña restablecida exitosamente');
+        setResetPasswordDialogOpen(false);
+        setNewPassword('');
+        setConfirmPassword('');
+        setPasswordError('');
+        setConfirmPasswordError('');
+      } catch (error) {
+        if (error instanceof Error) {
+          setPasswordError(error.message);
+        } else {
+          handleError(error, setError);
+        }
+      }
+    }
+  };
+
+  const handleMenuOpen = (event: React.MouseEvent<HTMLButtonElement>, user: User) => {
+    setAnchorEl(event.currentTarget);
+    setMenuUser(user);
+  };
+
+  const handleMenuClose = () => {
+    setAnchorEl(null);
+    setMenuUser(null);
+  };
+
+  const handleTogglePasswordVisibility = () => {
+    setShowPassword(!showPassword);
+  };
+
   useEffect(() => {
     fetchCurrentUser();
   }, [fetchCurrentUser]);
@@ -243,48 +330,34 @@ const UserList: React.FC = () => {
         <Grid container spacing={isSmallScreen ? 2 : 3}>
           {users.map((user) => (
             <Grid item xs={12} sm={6} md={4} lg={3} key={user.id}>
-              <StyledCard elevation={3} isCurrentUser={currentUser?.id === user.id}>
-                <StyledCardContent>
-                  <StyledAvatar
+              <Card elevation={3} sx={{ position: 'relative', height: '100%' }}>
+                <IconButton
+                  aria-label="settings"
+                  sx={{ position: 'absolute', top: 8, right: 8 }}
+                  onClick={(event) => handleMenuOpen(event, user)}
+                >
+                  <MoreVertIcon />
+                </IconButton>
+                <CardContent sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', pt: 4 }}>
+                  <Avatar
                     src={user.foto || undefined}
                     alt={`${user.nombre} ${user.apellidos}`}
+                    sx={{ width: 80, height: 80, mb: 2 }}
                   />
-                  <StyledUserName variant={isSmallScreen ? "subtitle1" : "h6"}>
+                  <Typography variant={isSmallScreen ? "subtitle1" : "h6"} align="center">
                     {user.nombre} {user.apellidos}
                     {currentUser?.id === user.id && (
                       <StyledCurrentUserChip label="Tú" color="primary" size="small" />
                     )}
-                  </StyledUserName>
-                  <StyledUserInfo variant="body2" color="text.secondary">
-                    Correo: {user.email}
-                  </StyledUserInfo>
-                  <Box sx={{
-                    marginBottom: theme.spacing(1),
-                    textAlign: 'center',
-                    ...theme.typography.body2,
-                    color: theme.palette.text.secondary
-                  }}>
-                    Rol: <Chip label={user.rol} color={user.rol === 'admin' ? 'secondary' : 'default'} size="small" />
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary" align="center">
+                    {user.email}
+                  </Typography>
+                  <Box mt={1}>
+                    <Chip label={user.rol} color={user.rol === 'admin' ? 'secondary' : 'default'} size="small" />
                   </Box>
-                </StyledCardContent>
-                <StyledCardActions>
-                  <ChangeUserRole
-                    userId={user.id}
-                    currentRole={user.rol}
-                    onRoleChange={(newRole) => handleRoleChange(user.id, newRole)}
-                    disabled={currentUser?.id === user.id}
-                  />
-                  <StyledCreateButton
-                    size="small"
-                    color="secondary"
-                    fullWidth={isSmallScreen}
-                    onClick={() => handleDeleteUser(user)}
-                    disabled={currentUser?.id === user.id}
-                  >
-                    Eliminar
-                  </StyledCreateButton>
-                </StyledCardActions>
-              </StyledCard>
+                </CardContent>
+              </Card>
             </Grid>
           ))}
         </Grid>
@@ -302,6 +375,51 @@ const UserList: React.FC = () => {
         />
       </StyledPaginationContainer>
 
+      <Menu
+        anchorEl={anchorEl}
+        open={Boolean(anchorEl)}
+        onClose={handleMenuClose}
+      >
+        <MenuItem
+          onClick={() => {
+            handleRoleChange(menuUser!.id, menuUser!.rol === 'admin' ? 'usuario' : 'admin');
+            handleMenuClose();
+          }}
+          disabled={currentUser?.id === menuUser?.id}
+        >
+          <ListItemIcon>
+            <AdminPanelSettingsIcon fontSize="small" />
+          </ListItemIcon>
+          <ListItemText>
+            Cambiar a {menuUser?.rol === 'admin' ? 'Usuario' : 'Admin'}
+          </ListItemText>
+        </MenuItem>
+        <MenuItem
+          onClick={() => {
+            handleResetPassword(menuUser!.id);
+            handleMenuClose();
+          }}
+          disabled={currentUser?.id === menuUser?.id}
+        >
+          <ListItemIcon>
+            <LockResetIcon fontSize="small" />
+          </ListItemIcon>
+          <ListItemText>Restablecer Contraseña</ListItemText>
+        </MenuItem>
+        <MenuItem
+          onClick={() => {
+            handleDeleteUser(menuUser!);
+            handleMenuClose();
+          }}
+          disabled={currentUser?.id === menuUser?.id}
+        >
+          <ListItemIcon>
+            <DeleteIcon fontSize="small" />
+          </ListItemIcon>
+          <ListItemText>Eliminar Usuario</ListItemText>
+        </MenuItem>
+      </Menu>
+
       <Dialog
         open={createDialogOpen}
         onClose={() => setCreateDialogOpen(false)}
@@ -310,6 +428,80 @@ const UserList: React.FC = () => {
         <DialogContent>
           <CreateUserForm onSubmit={handleCreateUser} onCancel={() => setCreateDialogOpen(false)} />
         </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={resetPasswordDialogOpen}
+        onClose={() => setResetPasswordDialogOpen(false)}
+        PaperProps={{
+          style: {
+            borderRadius: '12px',
+            padding: '16px',
+          },
+        }}
+      >
+        <DialogTitle sx={{ borderBottom: '1px solid #e0e0e0', pb: 2 }}>
+          Restablecer Contraseña
+        </DialogTitle>
+        <DialogContent sx={{ pt: 2 }}>
+          <TextField
+            autoFocus
+            margin="dense"
+            label="Nueva Contraseña"
+            type={showPassword ? "text" : "password"}
+            fullWidth
+            value={newPassword}
+            onChange={(e) => {
+              setNewPassword(e.target.value);
+              setPasswordError(validatePassword(e.target.value));
+            }}
+            variant="outlined"
+            error={!!passwordError}
+            helperText={passwordError}
+            sx={{ mb: 1 }}
+            InputProps={{
+              endAdornment: (
+                <InputAdornment position="end">
+                  <IconButton
+                    aria-label="toggle password visibility"
+                    onClick={handleTogglePasswordVisibility}
+                    edge="end"
+                  >
+                    {showPassword ? <VisibilityOff /> : <Visibility />}
+                  </IconButton>
+                </InputAdornment>
+              ),
+            }}
+          />
+          <TextField
+            margin="dense"
+            label="Confirmar Nueva Contraseña"
+            type="password"
+            fullWidth
+            value={confirmPassword}
+            onChange={(e) => {
+              setConfirmPassword(e.target.value);
+              setConfirmPasswordError(e.target.value !== newPassword ? 'Las contraseñas no coinciden' : '');
+            }}
+            variant="outlined"
+            error={!!confirmPasswordError}
+            helperText={confirmPasswordError}
+            sx={{ mb: 2 }}
+          />
+        </DialogContent>
+        <DialogActions sx={{ borderTop: '1px solid #e0e0e0', pt: 1 }}>
+          <Button onClick={() => setResetPasswordDialogOpen(false)} color="primary">
+            Cancelar
+          </Button>
+          <Button
+            onClick={handleConfirmResetPassword}
+            color="primary"
+            variant="contained"
+            disabled={!newPassword || !!passwordError || !confirmPassword || !!confirmPasswordError}
+          >
+            Confirmar
+          </Button>
+        </DialogActions>
       </Dialog>
     </StyledBox>
   );
