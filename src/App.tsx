@@ -1,5 +1,5 @@
-import React, { useEffect, lazy, Suspense, useCallback } from 'react';
-import { Routes, Route, useNavigate } from 'react-router-dom';
+import React, { useEffect, lazy, Suspense } from 'react';
+import { Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
 import LayoutWrapper from './components/Layout/LayoutWrapper';
 import AuthLayoutWrapper from './components/Layout/FlexibleLayoutWrapper';
@@ -9,6 +9,7 @@ import LoadingSpinner from './components/Common/LoadingSpinner';
 import PublicOnlyRoute from './components/Common/PublicOnlyRoute';
 import CabecillaForm from './components/Cabecilla/CabecillaForm';
 import FlexibleLayoutWrapper from './components/Layout/FlexibleLayoutWrapper';
+import { useAuthErrorHandler } from './hooks/useAuthErrorHandler';
 
 const HomePage = lazy(() => import('./pages/HomePage'));
 const LoginPage = lazy(() => import('./pages/LoginPage'));
@@ -22,22 +23,20 @@ const NaturalezaFormPage = lazy(() => import('./pages/NaturalezaFormPage'));
 const UserListPage = lazy(() => import('./pages/UserListPage'));
 const AdminDashboardPage = lazy(() => import('./pages/AdminDashboardPage'));
 const UserProfilePage = lazy(() => import('./pages/UserProfilePage'));
-// const RegisterPage = lazy(() => import('./pages/RegisterPage'));
 const NotFoundPage = lazy(() => import('./pages/NotFoundPage'));
 
 const App: React.FC = () => {
-  const navigate = useNavigate();
-
-  const handleAuthError = useCallback((event: CustomEvent<string>) => {
-    console.error('Auth error:', event.detail);
-    navigate('/login');
-  }, [navigate]);
+  const handleAuthError = useAuthErrorHandler();
 
   useEffect(() => {
-    window.addEventListener('auth-error', handleAuthError as EventListener);
+    const handler = (event: CustomEvent<string>) => {
+      handleAuthError(event);
+    };
+
+    window.addEventListener('auth-error', handler as EventListener);
 
     return () => {
-      window.removeEventListener('auth-error', handleAuthError as EventListener);
+      window.removeEventListener('auth-error', handler as EventListener);
     };
   }, [handleAuthError]);
 
@@ -47,7 +46,6 @@ const App: React.FC = () => {
         <Routes>
           <Route path="/" element={<LayoutWrapper><HomePage /></LayoutWrapper>} />
           <Route path="/login" element={<AuthLayoutWrapper><PublicOnlyRoute><LoginPage /></PublicOnlyRoute></AuthLayoutWrapper>} />
-          {/* <Route path="/register" element={<AuthLayoutWrapper><PublicOnlyRoute><RegisterPage /></PublicOnlyRoute></AuthLayoutWrapper>} /> */}
           <Route path="/perfil" element={<LayoutWrapper><PrivateRoute><UserProfilePage /></PrivateRoute></LayoutWrapper>} />
           <Route path="/usuarios" element={<LayoutWrapper><AdminRoute><UserListPage /></AdminRoute></LayoutWrapper>} />
           <Route path="/protestas" element={<LayoutWrapper><PrivateRoute><ProtestaListPage /></PrivateRoute></LayoutWrapper>} />

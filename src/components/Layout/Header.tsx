@@ -50,7 +50,7 @@ const Header: React.FC = memo(() => {
     { text: 'Protestas', path: '/protestas', icon: <FlagIcon /> },
     { text: 'Cabecillas', path: '/cabecillas', icon: <GroupIcon /> },
     { text: 'Naturalezas', path: '/naturalezas', icon: <CategoryIcon /> },
-    ...(isAdmin() ? [
+    ...(isAdmin ? [
       { text: 'Usuarios', path: '/usuarios', icon: <PeopleIcon /> },
       { text: 'Dashboard Admin', path: '/admin/dashboard', icon: <AnalyticsIcon /> }
     ] : []),

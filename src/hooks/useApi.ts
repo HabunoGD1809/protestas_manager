@@ -3,12 +3,14 @@ import { api } from '../services/apiService';
 import { AxiosError } from 'axios';
 import { logError } from '../services/loggingService';
 import { cacheService } from '../services/cacheService';
+import { useAuth } from './useAuth'; 
 
 type HttpMethod = 'get' | 'post' | 'put' | 'delete';
 
 export const useApi = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { refreshUserToken } = useAuth(); 
 
   useEffect(() => {
     const handlePotentialDataUpdate = () => {
@@ -47,27 +49,40 @@ export const useApi = () => {
         headers: data instanceof FormData ? { 'Content-Type': 'multipart/form-data' } : {}
       };
 
-      switch (method) {
-        case 'get':
-          response = await api.get<T>(url, config);
-          if (useCache) {
-            cacheService.set(cacheKey, response.data);
+      const executeRequest = async () => {
+        switch (method) {
+          case 'get':
+            return await api.get<T>(url, config);
+          case 'post':
+            return await api.post<T>(url, data, config);
+          case 'put':
+            return await api.put<T>(url, data, config);
+          case 'delete':
+            return await api.delete<T>(url, config);
+          default:
+            throw new Error(`Método HTTP no soportado: ${method}`);
+        }
+      };
+
+      try {
+        response = await executeRequest();
+      } catch (err) {
+        if (err instanceof AxiosError && err.response?.status === 401) {
+          const refreshSuccess = await refreshUserToken();
+          if (refreshSuccess) {
+            response = await executeRequest();
+          } else {
+            throw new Error('No se pudo renovar la sesión');
           }
-          break;
-        case 'post':
-          response = await api.post<T>(url, data, config);
-          cacheService.markAllAsStale();
-          break;
-        case 'put':
-          response = await api.put<T>(url, data, config);
-          cacheService.markAllAsStale();
-          break;
-        case 'delete':
-          response = await api.delete<T>(url, config);
-          cacheService.markAllAsStale();
-          break;
-        default:
-          throw new Error(`Método HTTP no soportado: ${method}`);
+        } else {
+          throw err;
+        }
+      }
+
+      if (method === 'get' && useCache) {
+        cacheService.set(cacheKey, response.data);
+      } else {
+        cacheService.markAllAsStale();
       }
 
       setLoading(false);
@@ -87,7 +102,7 @@ export const useApi = () => {
       }
       throw err;
     }
-  }, []);
+  }, [refreshUserToken]);
 
   const invalidateCache = useCallback((url: string) => {
     cacheService.remove(`get_${url}`);

@@ -152,7 +152,7 @@ const CabecillaList: React.FC = () => {
         loading={loading}
         onEdit={handleEdit}
         onDelete={handleDeleteClick}
-        isAdmin={isAdmin()}
+        isAdmin={isAdmin}
         editIcon="edit"  
         editTooltip="Editar" 
       />

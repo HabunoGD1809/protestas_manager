@@ -11,6 +11,7 @@ import {
   ResumenPrincipal,
   User,
   Token,
+  AllData
 } from "../types/types";
 import { FilterValues } from "../components/Protesta/ProtestaFilter";
 import { NaturalezaFilters } from "../components/Naturaleza/NaturalezaFilter";
@@ -39,63 +40,38 @@ api.interceptors.request.use((config: InternalAxiosRequestConfig) => {
   return config;
 });
 
-// Response interceptor
-let isRefreshing = false;
-let failedQueue: Array<{
-  resolve: (value: unknown) => void;
-  reject: (error: unknown) => void;
-}> = [];
+// // Response interceptor
+// let isRefreshing = false;
+// let failedQueue: Array<{
+//   resolve: (value: unknown) => void;
+//   reject: (error: unknown) => void;
+// }> = [];
 
-const processQueue = (error: AxiosError | null, token: string | null = null) => {
-  failedQueue.forEach((prom) => {
-    if (error) {
-      prom.reject(error);
-    } else {
-      prom.resolve(token);
-    }
-  });
-  failedQueue = [];
-};
+// const processQueue = (error: AxiosError | null, token: string | null = null) => {
+//   failedQueue.forEach((prom) => {
+//     if (error) {
+//       prom.reject(error);
+//     } else {
+//       prom.resolve(token);
+//     }
+//   });
+//   failedQueue = [];
+// };
 
 api.interceptors.response.use(
   (response: AxiosResponse) => response,
   async (error: AxiosError) => {
     const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
     if (error.response?.status === 401 && !originalRequest._retry) {
-      if (isRefreshing) {
-        return new Promise((resolve, reject) => {
-          failedQueue.push({ resolve, reject });
-        })
-          .then((token) => {
-            originalRequest.headers["Authorization"] = "Bearer " + token;
-            return api(originalRequest);
-          })
-          .catch((err) => Promise.reject(err));
-      }
-
       originalRequest._retry = true;
-      isRefreshing = true;
-
       try {
-        const refreshTokenValue = getCookie("refreshToken");
-        if (!refreshTokenValue) {
-          throw new Error("No hay token de actualización disponible");
+        const refreshSuccess = await authService.refreshUserToken();
+        if (refreshSuccess) {
+          return api(originalRequest);
         }
-        const newTokens = await authService.refreshToken(refreshTokenValue);
-        setCookie('token', newTokens.token_acceso, { path: '/', secure: true, sameSite: 'strict' });
-        setCookie('refreshToken', newTokens.token_actualizacion, { path: '/', secure: true, sameSite: 'strict' });
-        api.defaults.headers.common["Authorization"] = "Bearer " + newTokens.token_acceso;
-        processQueue(null, newTokens.token_acceso);
-        return api(originalRequest);
       } catch (refreshError) {
-        processQueue(refreshError as AxiosError, null);
-        removeCookie('token');
-        removeCookie('refreshToken');
         logError('Error al renovar el token', refreshError as Error);
         window.dispatchEvent(new CustomEvent("auth-error", { detail: "Sesión expirada" }));
-        return Promise.reject(refreshError);
-      } finally {
-        isRefreshing = false;
       }
     }
     return Promise.reject(error);
@@ -278,13 +254,25 @@ export const authService = {
       const { token_acceso, token_actualizacion } = response.data;
       setCookie('token', token_acceso, { path: '/', secure: true, sameSite: 'strict' });
       setCookie('refreshToken', token_actualizacion, { path: '/', secure: true, sameSite: 'strict' });
-      logInfo('Token renovado exitosamente');
       return response.data;
     } catch (error) {
       logError('Error al renovar el token', error as Error);
       removeCookie('token');
       removeCookie('refreshToken');
       throw error;
+    }
+  },
+
+  refreshUserToken: async (): Promise<boolean> => {
+    const refreshToken = getCookie('refreshToken');
+    if (!refreshToken) {
+      return false;
+    }
+    try {
+      await authService.refreshToken(refreshToken);
+      return true;
+    } catch (error) {
+      return false;
     }
   },
 
@@ -399,6 +387,40 @@ class ProtestaService extends BaseService<Protesta, CrearProtesta> {
     } catch (error) {
       console.error('Error al obtener cabecillas:', error);
       throw new Error('Error al cargar cabecillas');
+    }
+  }
+
+  async fetchAllData(page: number = 1, pageSize: number = 10, filters?: FilterValues): Promise<AllData> {
+    const cacheKey = `all_data_${page}_${pageSize}_${JSON.stringify(filters)}`;
+    const cachedData = cacheService.get<AllData>(cacheKey);
+
+    if (cachedData) {
+      this.backgroundRefreshAllData(cacheKey, page, pageSize, filters);
+      return cachedData;
+    }
+
+    try {
+      const response = await api.get<AllData>("/all-data", {
+        params: { page, page_size: pageSize, ...filters },
+      });
+      const data = response.data;
+      cacheService.set(cacheKey, data);
+      return data;
+    } catch (error) {
+      logError("Error al obtener todos los datos", error as Error);
+      throw error;
+    }
+  }
+
+  private async backgroundRefreshAllData(cacheKey: string, page: number, pageSize: number, filters?: FilterValues): Promise<void> {
+    try {
+      const response = await api.get<AllData>("/all-data", {
+        params: { page, page_size: pageSize, ...filters },
+      });
+      cacheService.set(cacheKey, response.data);
+      logInfo("Actualización en segundo plano completada para todos los datos", { cacheKey });
+    } catch (error) {
+      logError("Error en la actualización en segundo plano de todos los datos", error as Error);
     }
   }
 }

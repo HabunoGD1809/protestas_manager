@@ -15,10 +15,11 @@ interface AuthChannelMessage {
 
 export interface AuthContextType {
   user: User | null;
+  loading: boolean;
   login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
   register: (userData: FormData) => Promise<User>;
   logout: () => void;
-  isAdmin: () => boolean;
+  isAdmin: boolean;
   canEdit: (creatorId: string) => boolean;
   refreshUserToken: () => Promise<boolean>;
   checkUserExists: (email: string) => Promise<boolean>;
@@ -26,10 +27,11 @@ export interface AuthContextType {
 
 export const AuthContext = createContext<AuthContextType>({
   user: null,
+  loading: true,
   login: async () => ({ success: false, error: 'Not implemented' }),
   register: async () => ({} as User),
   logout: () => { },
-  isAdmin: () => false,
+  isAdmin: false,
   canEdit: () => false,
   refreshUserToken: async () => false,
   checkUserExists: async () => false,
@@ -47,6 +49,7 @@ const isProduction = process.env.NODE_ENV === 'production';
 
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const inactivityTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -61,38 +64,30 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const authChannel = useRef<BroadcastChannel<AuthChannelMessage> | null>(null);
 
-  const handleLogout = useCallback((reason?: 'inactivity' | 'manual' | 'error' | 'sync') => {
+  const handleLogout = useRef((reason?: 'inactivity' | 'manual' | 'error' | 'sync') => {
     logInfo('Cerrando sesión del usuario', { reason });
 
-    // Limpiar cookies
     removeCookie('token');
     removeCookie('refreshToken');
-
-    // Limpiar localStorage y sessionStorage
     localStorage.removeItem('user');
     sessionStorage.removeItem('user');
 
-    // Limpiar estado
     setUser(null);
     setIsAuthenticated(false);
 
-    // Limpiar caché
     cacheService.clear();
 
-    // Limpiar timers
     if (inactivityTimerRef.current) clearTimeout(inactivityTimerRef.current);
     if (refreshTimerRef.current) clearInterval(refreshTimerRef.current);
 
-    // Enviar mensaje de cierre de sesión a otras pestañas
     if (reason !== 'sync' && authChannel.current) {
       authChannel.current.postMessage({ type: 'logout' }).catch(error => {
         logError('Error al enviar mensaje de cierre de sesión', error);
       });
     }
 
-    // Redirigir al usuario
     navigate(reason === 'inactivity' ? '/login?inactivity=true' : '/login');
-  }, [navigate]);
+  }).current;
 
   useEffect(() => {
     authChannel.current = new BroadcastChannel<AuthChannelMessage>('auth_channel');
@@ -112,7 +107,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     };
   }, [handleLogout]);
 
-  const refreshUserToken = useCallback(async () => {
+  const refreshUserToken = useRef(async () => {
     if (isRefreshing) return false;
     setIsRefreshing(true);
     logInfo('Iniciando proceso de renovación de token');
@@ -130,41 +125,79 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       return true;
     } catch (error) {
       logError('Error al renovar el token', error);
+      handleLogout('error');
       return false;
     } finally {
       setIsRefreshing(false);
     }
-  }, [isRefreshing]);
+  }).current;
+
+  const checkAuthStatus = useCallback(async () => {
+    setLoading(true);
+    const token = getCookie('token');
+    if (!token) {
+      setLoading(false);
+      return;
+    }
+
+    const cachedUser = cacheService.get<User>('current_user');
+    if (cachedUser) {
+      setUser(cachedUser);
+      setIsAuthenticated(true);
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const userData = await authService.obtenerUsuarioActual();
+      setUser(userData);
+      setIsAuthenticated(true);
+      cacheService.set('current_user', userData);
+      logInfo('Autenticación inicializada exitosamente');
+    } catch (error) {
+      logError('Error al inicializar la autenticación', error);
+      if (error instanceof AxiosError && error.response?.status === 401) {
+        const refreshSuccess = await refreshUserToken();
+        if (!refreshSuccess) {
+          handleLogout('error');
+        }
+      } else {
+        handleLogout('error');
+      }
+    } finally {
+      setLoading(false);
+    }
+  }, [refreshUserToken, handleLogout]);
+
+  useEffect(() => {
+    checkAuthStatus();
+  }, [checkAuthStatus]);
 
   const startInactivityTimer = useCallback(() => {
     if (inactivityTimerRef.current) clearTimeout(inactivityTimerRef.current);
     inactivityTimerRef.current = setTimeout(() => {
-      showInactivityDialog();
-    }, INACTIVITY_TIMEOUT);
-  }, []);
-
-  const showInactivityDialog = useCallback(() => {
-    setDialogState({
-      open: true,
-      onKeepActive: async () => {
-        logInfo('Manteniendo la sesión activa');
-        setDialogState(prev => ({ ...prev, open: false }));
-        const success = await refreshUserToken();
-        if (success) {
-          logInfo('Sesión mantenida con éxito');
-          startInactivityTimer();
-        } else {
-          logInfo('No se pudo mantener la sesión activa');
+      setDialogState({
+        open: true,
+        onKeepActive: async () => {
+          logInfo('Manteniendo la sesión activa');
+          setDialogState(prev => ({ ...prev, open: false }));
+          const success = await refreshUserToken();
+          if (success) {
+            logInfo('Sesión mantenida con éxito');
+            startInactivityTimer();
+          } else {
+            logInfo('No se pudo mantener la sesión activa');
+            handleLogout('inactivity');
+          }
+        },
+        onLogout: () => {
+          logInfo('Finalizando sesión por inactividad');
+          setDialogState(prev => ({ ...prev, open: false }));
           handleLogout('inactivity');
-        }
-      },
-      onLogout: () => {
-        logInfo('Finalizando sesión por inactividad');
-        setDialogState(prev => ({ ...prev, open: false }));
-        handleLogout('inactivity');
-      },
-    });
-  }, [refreshUserToken, handleLogout, startInactivityTimer]);
+        },
+      });
+    }, INACTIVITY_TIMEOUT);
+  }, [refreshUserToken, handleLogout]);
 
   const startRefreshTokenTimer = useCallback(() => {
     if (refreshTimerRef.current) clearInterval(refreshTimerRef.current);
@@ -172,47 +205,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       await refreshUserToken();
     }, TOKEN_REFRESH_INTERVAL);
   }, [refreshUserToken]);
-
-  useEffect(() => {
-    const initAuth = async () => {
-      const token = getCookie('token');
-      if (!token) return;
-
-      try {
-        let userData = cacheService.get<User>('current_user');
-        if (!userData) {
-          userData = await authService.obtenerUsuarioActual();
-          cacheService.set('current_user', userData);
-        }
-        setUser(userData);
-        setIsAuthenticated(true);
-        logInfo('Autenticación inicializada exitosamente');
-      } catch (error) {
-        logError('Error al inicializar la autenticación', error);
-        if (error instanceof AxiosError && error.response?.status === 401) {
-          const refreshSuccess = await refreshUserToken();
-          if (refreshSuccess) {
-            try {
-              const userData = await authService.obtenerUsuarioActual();
-              setUser(userData);
-              setIsAuthenticated(true);
-              cacheService.set('current_user', userData);
-              logInfo('Autenticación recuperada después de refrescar token');
-            } catch (secondError) {
-              logError('Error al obtener usuario después de refrescar token', secondError);
-              handleLogout('error');
-            }
-          } else {
-            handleLogout('error');
-          }
-        } else {
-          handleLogout('error');
-        }
-      }
-    };
-
-    initAuth();
-  }, [handleLogout, refreshUserToken]);
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -230,20 +222,18 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   }, [isAuthenticated, startInactivityTimer, startRefreshTokenTimer]);
 
   useEffect(() => {
-    const resetInactivityTimer = () => {
+    const resetInactivityTimer = throttle(() => {
       if (isAuthenticated) {
         startInactivityTimer();
       }
-    };
+    }, 60000);
 
-    const throttledResetInactivityTimer = throttle(resetInactivityTimer, 60000);
-
-    window.addEventListener('mousemove', throttledResetInactivityTimer);
-    window.addEventListener('keypress', throttledResetInactivityTimer);
+    window.addEventListener('mousemove', resetInactivityTimer);
+    window.addEventListener('keypress', resetInactivityTimer);
 
     return () => {
-      window.removeEventListener('mousemove', throttledResetInactivityTimer);
-      window.removeEventListener('keypress', throttledResetInactivityTimer);
+      window.removeEventListener('mousemove', resetInactivityTimer);
+      window.removeEventListener('keypress', resetInactivityTimer);
     };
   }, [isAuthenticated, startInactivityTimer]);
 
@@ -263,13 +253,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       if (error instanceof Error) {
         switch (error.message) {
           case 'INVALID_CREDENTIALS':
-            return { success: false, error: 'INVALID_CREDENTIALS' };
           case 'USER_NOT_FOUND':
-            return { success: false, error: 'USER_NOT_FOUND' };
           case 'CONNECTION_TIMEOUT':
-            return { success: false, error: 'CONNECTION_TIMEOUT' };
           case 'NO_SERVER_RESPONSE':
-            return { success: false, error: 'NO_SERVER_RESPONSE' };
+            return { success: false, error: error.message };
           default:
             console.error('Error inesperado:', error);
             return { success: false, error: 'UNEXPECTED_ERROR' };
@@ -298,17 +285,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   }, []);
 
-  const isAdmin = useCallback(() => {
-    return user?.rol === 'admin';
-  }, [user]);
+  const isAdmin = useMemo(() => user?.rol === 'admin', [user]);
 
   const canEdit = useCallback((creatorId: string) => {
     if (!user) return false;
     return user.rol === 'admin' || user.id === creatorId;
   }, [user]);
 
-  const authContextValue: AuthContextType = useMemo(() => ({
+  const authContextValue = useMemo<AuthContextType>(() => ({
     user,
+    loading,
     login: handleLogin,
     register: handleRegister,
     logout: () => handleLogout('manual'),
@@ -316,7 +302,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     canEdit,
     refreshUserToken,
     checkUserExists,
-  }), [user, handleLogin, handleRegister, handleLogout, isAdmin, canEdit, refreshUserToken]);
+  }), [user, loading, handleLogin, handleRegister, handleLogout, isAdmin, canEdit, refreshUserToken]);
 
   return (
     <AuthContext.Provider value={authContextValue}>
@@ -331,7 +317,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   );
 };
 
-// Función de utilidad para limitación
 function throttle<T extends unknown[]>(func: (...args: T) => void, limit: number): (...args: T) => void {
   let inThrottle = false;
 

@@ -288,6 +288,7 @@ const UserList: React.FC = () => {
 
   useEffect(() => {
     fetchUsers(pagination.current, pagination.pageSize);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fetchUsers, pagination.current, pagination.pageSize]);
 
   useEffect(() => {

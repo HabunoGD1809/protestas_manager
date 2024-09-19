@@ -10,7 +10,7 @@ const AdminRoute: React.FC<AdminRouteProps> = ({ children }) => {
   const { user, isAdmin } = useAuth();
   const location = useLocation();
 
-  if (!user || !isAdmin()) {
+  if (!user || !isAdmin) {
     return <Navigate to="/" state={{ from: location }} replace />;
   }
 

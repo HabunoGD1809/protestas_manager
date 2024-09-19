@@ -114,3 +114,10 @@ export interface UsuarioActivo {
   nombre: string;
   protestas_creadas: number;
 }
+
+export interface AllData {
+  protestas: PaginatedResponse<Protesta>;
+  naturalezas: Naturaleza[];
+  provincias: Provincia[];
+  cabecillas: Cabecilla[];
+}
