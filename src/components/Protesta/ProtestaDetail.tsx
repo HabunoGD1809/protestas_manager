@@ -195,7 +195,7 @@ const ProtestaDetail: React.FC = () => {
               Editar
             </Button>
           )}
-          {isAdmin() && (
+          {isAdmin && (
             <Button
               icon={<DeleteOutlined />}
               danger

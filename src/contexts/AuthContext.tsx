@@ -41,8 +41,10 @@ interface AuthProviderProps {
   children: ReactNode;
 }
 
+
 const INACTIVITY_TIMEOUT = 5 * 60 * 1000; // 5 minutos
 const TOKEN_REFRESH_INTERVAL = 14 * 60 * 1000; // 14 minutos
+const TOKEN_EXPIRY_BUFFER = 60 * 1000; // 1 minuto antes del vencimiento
 const COUNTDOWN_DURATION = 60; // 60 segundos para el contador de inactividad
 
 const isProduction = process.env.NODE_ENV === 'production';
@@ -78,7 +80,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     cacheService.clear();
 
     if (inactivityTimerRef.current) clearTimeout(inactivityTimerRef.current);
-    if (refreshTimerRef.current) clearInterval(refreshTimerRef.current);
+    if (refreshTimerRef.current) clearTimeout(refreshTimerRef.current);
 
     if (reason !== 'sync' && authChannel.current) {
       authChannel.current.postMessage({ type: 'logout' }).catch(error => {
@@ -173,20 +175,40 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     checkAuthStatus();
   }, [checkAuthStatus]);
 
+  const scheduleTokenRefresh = useCallback((tokenExpiryTime: number) => {
+    if (refreshTimerRef.current) clearTimeout(refreshTimerRef.current);
+
+    const timeUntilExpiry = tokenExpiryTime - Date.now() - TOKEN_EXPIRY_BUFFER;
+
+    if (timeUntilExpiry > 0) {
+      refreshTimerRef.current = setTimeout(async () => {
+        const success = await refreshUserToken();
+        if (success) {
+          logInfo('Token renovado correctamente');
+          scheduleTokenRefresh(Date.now() + TOKEN_REFRESH_INTERVAL);
+        } else {
+          logInfo('Fallo en la renovación del token');
+          handleLogout('error');
+        }
+      }, timeUntilExpiry);
+    }
+  }, [refreshUserToken, handleLogout]);
+
   const startInactivityTimer = useCallback(() => {
     if (inactivityTimerRef.current) clearTimeout(inactivityTimerRef.current);
+
     inactivityTimerRef.current = setTimeout(() => {
       setDialogState({
         open: true,
         onKeepActive: async () => {
           logInfo('Manteniendo la sesión activa');
           setDialogState(prev => ({ ...prev, open: false }));
+
           const success = await refreshUserToken();
           if (success) {
             logInfo('Sesión mantenida con éxito');
             startInactivityTimer();
           } else {
-            logInfo('No se pudo mantener la sesión activa');
             handleLogout('inactivity');
           }
         },
@@ -199,34 +221,28 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }, INACTIVITY_TIMEOUT);
   }, [refreshUserToken, handleLogout]);
 
-  const startRefreshTokenTimer = useCallback(() => {
-    if (refreshTimerRef.current) clearInterval(refreshTimerRef.current);
-    refreshTimerRef.current = setInterval(async () => {
-      await refreshUserToken();
-    }, TOKEN_REFRESH_INTERVAL);
-  }, [refreshUserToken]);
-
   useEffect(() => {
     if (isAuthenticated) {
       startInactivityTimer();
-      startRefreshTokenTimer();
+      const tokenExpiryTime = Date.now() + TOKEN_REFRESH_INTERVAL;
+      scheduleTokenRefresh(tokenExpiryTime);
     } else {
       if (inactivityTimerRef.current) clearTimeout(inactivityTimerRef.current);
-      if (refreshTimerRef.current) clearInterval(refreshTimerRef.current);
+      if (refreshTimerRef.current) clearTimeout(refreshTimerRef.current);
     }
 
     return () => {
       if (inactivityTimerRef.current) clearTimeout(inactivityTimerRef.current);
-      if (refreshTimerRef.current) clearInterval(refreshTimerRef.current);
+      if (refreshTimerRef.current) clearTimeout(refreshTimerRef.current);
     };
-  }, [isAuthenticated, startInactivityTimer, startRefreshTokenTimer]);
+  }, [isAuthenticated, startInactivityTimer, scheduleTokenRefresh]);
 
   useEffect(() => {
     const resetInactivityTimer = throttle(() => {
       if (isAuthenticated) {
         startInactivityTimer();
       }
-    }, 60000);
+    }, 60000); // Throttle de 1 minuto para evitar demasiados reinicios
 
     window.addEventListener('mousemove', resetInactivityTimer);
     window.addEventListener('keypress', resetInactivityTimer);
@@ -236,6 +252,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       window.removeEventListener('keypress', resetInactivityTimer);
     };
   }, [isAuthenticated, startInactivityTimer]);
+  // dsdsdsads
 
   const handleLogin = useCallback(async (email: string, password: string): Promise<{ success: boolean; error?: string }> => {
     try {
