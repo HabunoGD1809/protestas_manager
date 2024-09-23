@@ -1,129 +1,99 @@
-import React, { useState, useMemo } from 'react';
-import {
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  TextField,
-  Grid,
-  IconButton,
-  Button,
-  Typography,
-  Box,
-  Divider,
-  useTheme
-} from '@mui/material';
+import React, { useState, useEffect, useMemo } from 'react';
+import { Dialog, DialogTitle, DialogContent, TextField, Grid, IconButton, Button, Box, Typography } from '@mui/material';
 import * as IconoirIcons from 'iconoir-react';
-import SearchIcon from '@mui/icons-material/Search';
-import CloseIcon from '@mui/icons-material/Close';
 
-interface IconSelectorProps {
+const ICONS_PER_PAGE = 25;
+
+type IconName = keyof typeof IconoirIcons;
+
+interface IconoirIconObject {
+  render: () => React.ReactElement;
+}
+
+const IconSelector = ({ open, onClose, onSelect }: {
   open: boolean;
   onClose: () => void;
   onSelect: (iconName: string) => void;
-}
+}) => {
+  const [searchTerm, setSearchTerm] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
 
-interface IconoirIconComponent extends React.FC<React.SVGProps<SVGSVGElement>> { }
+  const allIcons = useMemo(() => {
+    return Object.keys(IconoirIcons).filter(key => {
+      const icon = IconoirIcons[key as IconName];
+      return typeof icon === 'object' && icon !== null && 'render' in icon;
+    }) as IconName[];
+  }, []);
 
-const IconSelector: React.FC<IconSelectorProps> = ({ open, onClose, onSelect }) => {
-  const [search, setSearch] = useState('');
-  const [page, setPage] = useState(0);
-  const itemsPerPage = 100;
-  const theme = useTheme();
-
-  const iconList = useMemo(() => {
-    const searchTerms = search.toLowerCase().split(' ');
-    return Object.keys(IconoirIcons).filter(key =>
-      searchTerms.every(term =>
-        key.toLowerCase().includes(term) ||
-        key.toLowerCase().replace(/([a-z])([A-Z])/g, '$1 $2').toLowerCase().includes(term)
-      )
+  const filteredIcons = useMemo(() => {
+    return allIcons.filter(iconName =>
+      iconName.toLowerCase().includes(searchTerm.toLowerCase())
     );
-  }, [search]);
+  }, [allIcons, searchTerm]);
 
-  const paginatedIcons = iconList.slice(page * itemsPerPage, (page + 1) * itemsPerPage);
+  const totalPages = Math.ceil(filteredIcons.length / ICONS_PER_PAGE);
 
-  const handleSelect = (iconName: string) => {
+  const displayedIcons = useMemo(() => {
+    const startIndex = (currentPage - 1) * ICONS_PER_PAGE;
+    return filteredIcons.slice(startIndex, startIndex + ICONS_PER_PAGE);
+  }, [filteredIcons, currentPage]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm]);
+
+  const handleIconSelect = (iconName: IconName) => {
     onSelect(iconName);
     onClose();
   };
 
+  const renderIcon = (iconName: IconName): React.ReactElement | null => {
+    const IconObject = IconoirIcons[iconName] as unknown as IconoirIconObject;
+    if (IconObject && typeof IconObject === 'object' && 'render' in IconObject) {
+      return IconObject.render();
+    }
+    return null;
+  };
+
   return (
     <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
-      <DialogTitle sx={{ m: 0, p: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        Seleccionar un Icono
-        <IconButton
-          aria-label="close"
-          onClick={onClose}
-          sx={{
-            color: (theme) => theme.palette.grey[500],
-          }}
-        >
-          <CloseIcon />
-        </IconButton>
-      </DialogTitle>
-      <Divider />
+      <DialogTitle>Seleccionar Icono</DialogTitle>
       <DialogContent>
-        <Box sx={{ position: 'relative', mb: 2 }}>
-          <TextField
-            fullWidth
-            variant="outlined"
-            placeholder="Buscar iconos... / Search icons..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            InputProps={{
-              startAdornment: (
-                <SearchIcon color="action" sx={{ mr: 1 }} />
-              ),
-            }}
-          />
-        </Box>
-        <Box sx={{
-          maxHeight: '400px',
-          overflowY: 'auto',
-          border: `1px solid ${theme.palette.divider}`,
-          borderRadius: theme.shape.borderRadius,
-          p: 2
-        }}>
-          <Grid container spacing={1}>
-            {paginatedIcons.map((iconName) => {
-              const Icon = IconoirIcons[iconName as keyof typeof IconoirIcons] as IconoirIconComponent;
-              return (
-                <Grid item key={iconName}>
-                  <IconButton
-                    onClick={() => handleSelect(iconName)}
-                    title={iconName}
-                    sx={{
-                      '&:hover': {
-                        backgroundColor: theme.palette.action.hover
-                      }
-                    }}
-                  >
-                    <Icon />
-                  </IconButton>
-                </Grid>
-              );
-            })}
-          </Grid>
-        </Box>
-        <Box sx={{ mt: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Typography variant="body2" color="textSecondary">
-            Mostrando {paginatedIcons.length} de {iconList.length} iconos
-          </Typography>
-          <Box>
-            <Button
-              disabled={page === 0}
-              onClick={() => setPage(p => Math.max(0, p - 1))}
-              sx={{ mr: 1 }}
-            >
-              Anterior
-            </Button>
-            <Button
-              disabled={(page + 1) * itemsPerPage >= iconList.length}
-              onClick={() => setPage(p => p + 1)}
-            >
-              Siguiente
-            </Button>
+        <TextField
+          fullWidth
+          variant="outlined"
+          placeholder="Buscar icono..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          margin="normal"
+        />
+        <Typography variant="body2">Total de iconos: {allIcons.length}</Typography>
+        <Grid container spacing={1}>
+          {displayedIcons.map((iconName) => (
+            <Grid item key={iconName}>
+              <IconButton onClick={() => handleIconSelect(iconName)} title={iconName}>
+                {renderIcon(iconName)}
+              </IconButton>
+              <Typography variant="caption">{iconName}</Typography>
+            </Grid>
+          ))}
+        </Grid>
+        <Box display="flex" justifyContent="center" mt={2}>
+          <Button
+            disabled={currentPage === 1}
+            onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+          >
+            Anterior
+          </Button>
+          <Box mx={2}>
+            Página {currentPage} de {totalPages}
           </Box>
+          <Button
+            disabled={currentPage === totalPages}
+            onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
+          >
+            Siguiente
+          </Button>
         </Box>
       </DialogContent>
     </Dialog>
