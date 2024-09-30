@@ -3,14 +3,14 @@ import { api } from '../services/apiService';
 import { AxiosError } from 'axios';
 import { logError } from '../services/loggingService';
 import { cacheService } from '../services/cacheService';
-import { useAuth } from './useAuth'; 
+import { useAuth } from './useAuth';
 
 type HttpMethod = 'get' | 'post' | 'put' | 'delete';
 
 export const useApi = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const { refreshUserToken } = useAuth(); 
+  const { refreshUserToken } = useAuth();
 
   useEffect(() => {
     const handlePotentialDataUpdate = () => {
@@ -108,5 +108,5 @@ export const useApi = () => {
     cacheService.remove(`get_${url}`);
   }, []);
 
-  return { loading, error, request, invalidateCache };
+  return { loading, error, request, invalidateCache, setLoading, setError };
 };

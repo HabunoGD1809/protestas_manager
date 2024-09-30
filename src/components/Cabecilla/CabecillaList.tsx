@@ -34,14 +34,14 @@ const CabecillaList: React.FC = () => {
 
   const fetchCabecillas = useCallback(async (page: number, pageSize: number, newFilters?: CabecillaFilterValues) => {
     try {
-      const filterRecord: Record<string, string> = Object.entries(newFilters || filters).reduce((acc, [key, value]) => {
-        if (value !== undefined && value !== '') {
-          acc[key] = value.toString();
-        }
-        return acc;
-      }, {} as Record<string, string>);
+      const filterParams: Record<string, string> = {};
+      const currentFilters = newFilters || filters;
 
-      const data = await cabecillaService.getAll(page, pageSize, filterRecord);
+      if (currentFilters.nombre) filterParams.nombre = currentFilters.nombre;
+      if (currentFilters.apellido) filterParams.apellido = currentFilters.apellido;
+      if (currentFilters.cedula) filterParams.cedula = currentFilters.cedula;
+
+      const data = await cabecillaService.getAll(page, pageSize, filterParams);
       setCabecillas(data.items);
       setPagination({
         current: data.page,
@@ -133,7 +133,7 @@ const CabecillaList: React.FC = () => {
   return (
     <div>
       <Title level={2}>Lista de Cabecillas</Title>
-      <CabecillaFilter onFilter={handleFilter} />
+      <CabecillaFilter onFilter={handleFilter} cabecillas={cabecillas} />
       <Button
         type="primary"
         icon={<PlusOutlined />}
@@ -153,8 +153,8 @@ const CabecillaList: React.FC = () => {
         onEdit={handleEdit}
         onDelete={handleDeleteClick}
         isAdmin={isAdmin}
-        editIcon="edit"  
-        editTooltip="Editar" 
+        editIcon="edit"
+        editTooltip="Editar"
       />
     </div>
   );
